@@ -1,13 +1,27 @@
 model Collection {
-  id          String         @id @default(uuid())
+  id          String  @id @default(uuid())
   tenantId    String
   name        String
   slug        String
   description String?
   image       String?
-  type        CollectionType @default(MANUAL)
-  rule        String?
-  isActive    Boolean        @default(true)
+
+  // SEO
+  seoTitle       String?
+  seoDescription String?
+
+  // টাইপ ও রুলস (MANUAL বা RULE / Automated)
+  type CollectionType @default(MANUAL)
+  rule Json?
+
+  // ডিসপ্লে ও স্ট্যাটাস
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
+  order      Int     @default(0)
+
+  // ক্যাম্পেইন ও শিডিউলিং
+  startsAt DateTime?
+  endsAt   DateTime?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -19,5 +33,6 @@ model Collection {
 
   @@unique([tenantId, slug])
   @@index([tenantId, deletedAt])
+  @@index([tenantId, isActive, deletedAt])
   @@map("collections")
 }

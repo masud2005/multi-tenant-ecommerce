@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { productService } from '@/services/product-service';
+import { categoryService } from '@/services/category-service';
 import { images } from '@/data/images';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
@@ -127,16 +128,29 @@ export default function AdminNewCategoryPage() {
     };
 
     try {
-      // 1. Add to store context for instant state update
+      // 1. Add to store context for instant UI update
       addCategory(newCategory);
 
-      // 2. Call service layer (ready for backend API)
-      await productService.createCategory(newCategory);
+      // 2. Call backend API to create category in database
+      await categoryService.createCategory({
+        name: name.trim(),
+        slug: finalSlug || undefined,
+        description: description.trim() || undefined,
+        image: customImageUrl.trim() || image || undefined,
+        seoTitle: seoTitle.trim() || undefined,
+        seoDescription: seoDescription.trim() || undefined,
+        status: status,
+        isActive: true,
+        showInNav: showInNav,
+        parentId: parentKey !== 'none' ? parentKey : undefined,
+        tenantId: '68207cfd-a564-4000-8119-5d27e834b620',
+      });
 
       toast.success(`Category "${newCategory.name}" created successfully`);
       router.push('/admin/categories');
-    } catch {
-      toast.error('Failed to create category');
+    } catch (error: any) {
+      console.error('Failed to create category:', error);
+      toast.error(error?.message || 'Failed to create category');
     } finally {
       setIsSubmitting(false);
     }

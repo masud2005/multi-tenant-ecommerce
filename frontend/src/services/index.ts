@@ -6,4 +6,5 @@ export * from './return-service';
 export * from './review-service';
 export * from './analytics-service';
 export * from './admin-service';
+export * from './category-service';
 export * from './auth/getUserInfo';

@@ -4,7 +4,6 @@ model Category {
   name        String
   slug        String
   description String?
-  blurb       String?
   image       String?
 
   // SEO
@@ -22,9 +21,6 @@ model Category {
   parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children Category[] @relation("CategoryHierarchy")
 
-  // কুইক স্ট্রিং সাবক্যাটাগরি লিস্ট (ফ্রন্টএন্ডের সুবিধার জন্য)
-  subcategoriesList String[] @default([])
-
   // টেন্যান্ট রিলেশন
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -38,6 +34,8 @@ model Category {
 
   // একই টেন্যান্টের আন্ডারে স্লাগ ইউনিক হবে
   @@unique([tenantId, slug])
+  // একই প্যারেন্টের আন্ডারে একই নামের সাব-ক্যাটাগরি ডুপ্লিকেট হওয়া বন্ধ করবে
+  @@unique([tenantId, parentId, name])
   @@index([tenantId, deletedAt])
   @@map("categories")
 }

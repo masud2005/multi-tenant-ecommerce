@@ -52,7 +52,7 @@ export class AuthService {
                 phone: dto.phone,
                 email: dto.email,
                 password: hashedPassword,
-                role: UserRole.USER,
+                role: UserRole.CUSTOMER,
                 status: UserStatus.PENDING_VERIFICATION
             },
         });

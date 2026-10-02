@@ -5,7 +5,6 @@ model Brand {
   slug        String
   description String?
   logo        String?
-  website     String?
   isActive    Boolean @default(true)
 
   createdAt DateTime  @default(now())
