@@ -34,6 +34,7 @@ const sizes: Record<ButtonSize, string> = {
 export function Button({
   variant = 'primary',
   size = 'md',
+  type = 'button',
   to,
   href,
   loading,
@@ -63,7 +64,7 @@ export function Button({
   }
 
   return (
-    <button className={cls} disabled={disabled || loading} {...rest}>
+    <button type={type} className={cls} disabled={disabled || loading} {...rest}>
       {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
       {children}
     </button>

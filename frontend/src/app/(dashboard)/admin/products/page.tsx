@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Download, Plus, Search, Tag, Upload } from 'lucide-react';
+import { Download, Plus, Search, Tag, Upload, RefreshCw, Loader2 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
-import { categories } from '@/data/products';
+import { categories as seedCategories } from '@/data/products';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { DataTable, type Column } from '@/components/dashboard/shared/DataTable';
 import { BulkBar } from '@/components/dashboard/shared/BulkBar';
@@ -15,19 +15,63 @@ import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { productPrice, productStock, LOW_STOCK_THRESHOLD } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
-import type { Product, ProductStatus } from '@/types/commerce';
+import type { Product, ProductStatus } from '@/types';
+import { productService, categoryService, CategoryResponseData } from '@/services';
 
 type Tab = 'all' | ProductStatus;
 const statusTone = { published: 'success', draft: 'neutral', archived: 'warning' } as const;
 
 export default function AdminProductsPage() {
-  const { products, saveProduct } = useStore();
+  const { products: storeProducts, saveProduct } = useStore();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('all');
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
   const [stock, setStock] = useState<'all' | 'low' | 'out'>('all');
   const [selected, setSelected] = useState<string[]>([]);
+
+  // Live Database States
+  const [liveProducts, setLiveProducts] = useState<Product[]>([]);
+  const [dbCategories, setDbCategories] = useState<CategoryResponseData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch Products & Categories from Backend
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [prods, catRes] = await Promise.allSettled([
+        productService.getProducts(),
+        categoryService.getCategories(),
+      ]);
+
+      if (prods.status === 'fulfilled') {
+        setLiveProducts(prods.value);
+      }
+      if (catRes.status === 'fulfilled' && catRes.value?.data) {
+        setDbCategories(catRes.value.data);
+      }
+    } catch (err) {
+      console.error('Failed to load products from database:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Use live products if loaded, fallback to context products
+  const products = liveProducts.length > 0 ? liveProducts : storeProducts;
+
+  // Process Category List for Filter Dropdown
+  const categoryFilterOptions = useMemo(() => {
+    if (dbCategories.length > 0) {
+      const parents = dbCategories.filter((c) => !c.parentId);
+      return parents.map((c) => ({ key: c.slug || c.id, name: c.name }));
+    }
+    return seedCategories.map((c) => ({ key: c.key, name: c.name }));
+  }, [dbCategories]);
 
   const rows = useMemo(
     () =>
@@ -36,8 +80,14 @@ export default function AdminProductsPage() {
         return (
           (tab === 'all' || p.status === tab) &&
           (cat === 'all' || p.category === cat) &&
-          (stock === 'all' || (stock === 'out' ? s === 0 && !p.preorder : s > 0 && s <= LOW_STOCK_THRESHOLD * 2)) &&
-          (!q || `${p.title} ${p.variants.map((v) => v.sku).join(' ')} ${p.brand}`.toLowerCase().includes(q.toLowerCase()))
+          (stock === 'all' ||
+            (stock === 'out'
+              ? s === 0 && !p.preorder
+              : s > 0 && s <= LOW_STOCK_THRESHOLD * 2)) &&
+          (!q ||
+            `${p.title} ${p.variants?.map((v) => v.sku).join(' ') || ''} ${p.brand}`
+              .toLowerCase()
+              .includes(q.toLowerCase()))
         );
       }),
     [products, tab, cat, stock, q]
@@ -58,11 +108,18 @@ export default function AdminProductsPage() {
       header: 'Product',
       render: (p) => (
         <span className="flex items-center gap-3">
-          <img src={p.images[0]} alt="" className="h-11 w-9 rounded object-cover" />
+          <img
+            src={
+              p.images?.[0] ||
+              'https://raw.githubusercontent.com/masud2005/fashion-shop/HEAD/public/f00f02c2-3aa1-48e5-9485-304d964dcbb5.jpg'
+            }
+            alt={p.title}
+            className="h-11 w-9 rounded object-cover border border-line/60"
+          />
           <span>
             <span className="block font-medium text-ink">{p.title}</span>
             <span className="block text-xs text-ink-muted">
-              {p.variants.length} variants · {p.brand}
+              {p.variants?.length || 0} variants · {p.brand}
             </span>
           </span>
         </span>
@@ -72,8 +129,8 @@ export default function AdminProductsPage() {
       key: 'status',
       header: 'Status',
       render: (p) => (
-        <Badge tone={statusTone[p.status]} dot>
-          {p.status[0].toUpperCase() + p.status.slice(1)}
+        <Badge tone={statusTone[p.status] || 'neutral'} dot>
+          {p.status ? p.status[0].toUpperCase() + p.status.slice(1) : 'Draft'}
         </Badge>
       ),
     },
@@ -84,7 +141,15 @@ export default function AdminProductsPage() {
         const s = productStock(p);
         if (p.preorder) return <span className="text-info font-medium">Pre-order</span>;
         return (
-          <span className={s === 0 ? 'text-danger font-medium' : s <= LOW_STOCK_THRESHOLD * 2 ? 'text-warning font-medium' : 'text-ink'}>
+          <span
+            className={
+              s === 0
+                ? 'text-danger font-medium'
+                : s <= LOW_STOCK_THRESHOLD * 2
+                ? 'text-warning font-medium'
+                : 'text-ink'
+            }
+          >
             {s} in stock
           </span>
         );
@@ -93,11 +158,15 @@ export default function AdminProductsPage() {
     {
       key: 'cat',
       header: 'Category',
-      render: (p) => (
-        <span className="text-ink-muted">
-          {categories.find((c) => c.key === p.category)?.name} / {p.subcategory}
-        </span>
-      ),
+      render: (p) => {
+        const matchedCat = categoryFilterOptions.find((c) => c.key === p.category);
+        return (
+          <span className="text-ink-muted">
+            {matchedCat?.name || p.category}
+            {p.subcategory ? ` / ${p.subcategory}` : ''}
+          </span>
+        );
+      },
       hideOnMobile: true,
     },
     {
@@ -107,7 +176,11 @@ export default function AdminProductsPage() {
       render: (p) => (
         <span className="tabular-nums font-medium text-ink">
           {formatBDT(productPrice(p))}
-          {p.salePrice && <span className="ml-1.5 text-xs text-ink-muted line-through">{formatBDT(p.price)}</span>}
+          {p.salePrice && (
+            <span className="ml-1.5 text-xs text-ink-muted line-through">
+              {formatBDT(p.price)}
+            </span>
+          )}
         </span>
       ),
     },
@@ -115,7 +188,7 @@ export default function AdminProductsPage() {
       key: 'sold',
       header: 'Sold · 30d',
       align: 'right',
-      render: (p) => <span className="tabular-nums text-ink-muted">{p.sold}</span>,
+      render: (p) => <span className="tabular-nums text-ink-muted">{p.sold ?? 0}</span>,
       hideOnMobile: true,
     },
   ];
@@ -124,9 +197,22 @@ export default function AdminProductsPage() {
     <div className="w-full space-y-6">
       <PageHeader
         title="Products"
-        description={`${products.length} products · ${products.reduce((s, p) => s + p.variants.length, 0)} variants`}
+        description={`${products.length} products · ${products.reduce(
+          (s, p) => s + (p.variants?.length || 0),
+          0
+        )} variants`}
         actions={
           <>
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={isLoading}
+              className="inline-flex items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-subtle/50 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+              title="Refresh product list"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
+            </button>
             <GuardedButton
               module="products"
               action="create"
@@ -152,7 +238,7 @@ export default function AdminProductsPage() {
         }
       />
 
-      <div className="rounded-lg border border-line bg-surface overflow-hidden">
+      <div className="rounded-lg border border-line bg-surface overflow-hidden shadow-xs">
         <div className="px-4 pt-2">
           <Tabs
             value={tab}
@@ -162,16 +248,31 @@ export default function AdminProductsPage() {
             }}
             tabs={[
               { value: 'all', label: 'All', count: products.length },
-              { value: 'published', label: 'Published' },
-              { value: 'draft', label: 'Draft', count: products.filter((p) => p.status === 'draft').length },
-              { value: 'archived', label: 'Archived' },
+              {
+                value: 'published',
+                label: 'Published',
+                count: products.filter((p) => p.status === 'published').length,
+              },
+              {
+                value: 'draft',
+                label: 'Draft',
+                count: products.filter((p) => p.status === 'draft').length,
+              },
+              {
+                value: 'archived',
+                label: 'Archived',
+                count: products.filter((p) => p.status === 'archived').length,
+              },
             ]}
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
           <div className="relative min-w-[200px] flex-1">
-            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden />
+            <Search
+              className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+              aria-hidden
+            />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -187,7 +288,7 @@ export default function AdminProductsPage() {
             className="h-9 rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
           >
             <option value="all">All categories</option>
-            {categories.map((c) => (
+            {categoryFilterOptions.map((c) => (
               <option key={c.key} value={c.key}>
                 {c.name}
               </option>
@@ -205,28 +306,48 @@ export default function AdminProductsPage() {
           </select>
         </div>
 
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(p) => p.id}
-          onRowClick={(p) => router.push(`/admin/products/${p.id}`)}
-          selectable
-          selected={selected}
-          onSelectedChange={setSelected}
-          empty={<EmptyState icon={Tag} title="No products match" description="Adjust filters or add a new product." />}
-          mobileCard={(p) => (
-            <div className="flex items-center gap-3">
-              <img src={p.images[0]} alt="" className="h-12 w-10 rounded object-cover" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-ink">{p.title}</p>
-                <p className="text-xs text-ink-muted">
-                  {productStock(p)} in stock · {formatBDT(productPrice(p))}
-                </p>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-ink-muted gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-clay" />
+            <p className="text-xs">Loading products from database...</p>
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={rows}
+            rowKey={(p) => p.id}
+            onRowClick={(p) => router.push(`/admin/products/${p.id}`)}
+            selectable
+            selected={selected}
+            onSelectedChange={setSelected}
+            empty={
+              <EmptyState
+                icon={Tag}
+                title="No products match"
+                description="Adjust filters or add a new product."
+              />
+            }
+            mobileCard={(p) => (
+              <div className="flex items-center gap-3">
+                <img
+                  src={
+                    p.images?.[0] ||
+                    'https://raw.githubusercontent.com/masud2005/fashion-shop/HEAD/public/f00f02c2-3aa1-48e5-9485-304d964dcbb5.jpg'
+                  }
+                  alt={p.title}
+                  className="h-12 w-10 rounded object-cover"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-ink">{p.title}</p>
+                  <p className="text-xs text-ink-muted">
+                    {productStock(p)} in stock · {formatBDT(productPrice(p))}
+                  </p>
+                </div>
+                <Badge tone={statusTone[p.status] || 'neutral'}>{p.status}</Badge>
               </div>
-              <Badge tone={statusTone[p.status]}>{p.status}</Badge>
-            </div>
-          )}
-        />
+            )}
+          />
+        )}
       </div>
 
       <BulkBar count={selected.length} onClear={() => setSelected([])}>

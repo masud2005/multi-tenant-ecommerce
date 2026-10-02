@@ -2,16 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Sparkles, Hand, Pencil, Trash2, Star, ExternalLink, EyeOff } from 'lucide-react';
+import { Sparkles, Hand, Star, ExternalLink, EyeOff, Trash2 } from 'lucide-react';
 import type { CollectionItem } from '@/types/collection';
-import { cn } from '@/lib/utils';
 
 interface CollectionCardProps {
   collection: CollectionItem;
   productCount: number;
   onEdit?: (col: CollectionItem) => void;
   onDelete?: (col: CollectionItem) => void;
-  onToggleFeatured?: (col: CollectionItem) => void;
 }
 
 export function CollectionCard({
@@ -19,7 +17,6 @@ export function CollectionCard({
   productCount,
   onEdit,
   onDelete,
-  onToggleFeatured,
 }: CollectionCardProps) {
   return (
     <li className="group flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition-all duration-200 hover:shadow-md hover:border-line-strong relative">
@@ -33,7 +30,7 @@ export function CollectionCard({
           loading="lazy"
         />
 
-        {/* Top Floating Badges */}
+        {/* Top Floating Badges (Left) */}
         <div className="absolute top-2.5 left-2.5 flex flex-wrap items-center gap-1.5 z-10">
           {collection.isFeatured && (
             <span className="inline-flex items-center gap-1 rounded-full bg-clay px-2 py-0.5 text-[11px] font-medium text-white shadow-xs">
@@ -50,49 +47,23 @@ export function CollectionCard({
           )}
         </div>
 
-        {/* Top-right Quick Action Bar (Pencil, Star, Trash) */}
-        <div className="absolute top-2.5 right-2.5 flex items-center gap-1 rounded-lg bg-surface/90 backdrop-blur-sm p-1 shadow-xs border border-line opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-10">
-          {onToggleFeatured && (
+        {/* Top Floating Delete Button (Right) */}
+        {onDelete && (
+          <div className="absolute top-2.5 right-2.5 z-10">
             <button
               type="button"
-              onClick={() => onToggleFeatured(collection)}
-              title={collection.isFeatured ? 'Remove from featured' : 'Feature on homepage'}
-              className={cn(
-                'rounded p-1 transition-colors cursor-pointer',
-                collection.isFeatured
-                  ? 'text-clay hover:bg-clay/10'
-                  : 'text-ink-muted hover:text-clay hover:bg-subtle'
-              )}
-              aria-label="Toggle featured"
-            >
-              <Star className={cn('h-3.5 w-3.5', collection.isFeatured && 'fill-clay')} />
-            </button>
-          )}
-
-          {onEdit && (
-            <button
-              type="button"
-              onClick={() => onEdit(collection)}
-              title="Edit collection"
-              className="rounded p-1 text-ink-muted hover:text-ink hover:bg-subtle transition-colors cursor-pointer"
-              aria-label="Edit collection"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-          )}
-
-          {onDelete && (
-            <button
-              type="button"
-              onClick={() => onDelete(collection)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(collection);
+              }}
+              className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface/90 text-ink-muted backdrop-blur-xs border border-line/60 shadow-xs transition-all duration-200 hover:bg-danger hover:text-white hover:border-danger hover:scale-105 cursor-pointer opacity-90 group-hover:opacity-100"
               title="Delete collection"
-              className="rounded p-1 text-ink-muted hover:text-danger hover:bg-danger-soft/60 transition-colors cursor-pointer"
               aria-label="Delete collection"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Card Content */}
@@ -124,7 +95,7 @@ export function CollectionCard({
           </p>
         )}
 
-        {/* Card Footer: Product Count & Store Link */}
+        {/* Card Footer: Product Count & Action Buttons */}
         <div className="mt-auto flex items-center justify-between pt-4 border-t border-line/50 text-xs">
           <span className="font-medium text-ink-muted">
             <strong className="text-ink font-semibold">{productCount}</strong> {productCount === 1 ? 'product' : 'products'}

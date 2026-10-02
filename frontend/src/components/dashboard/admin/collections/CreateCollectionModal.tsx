@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/Switch';
 import { cn } from '@/lib/utils';
 import { images } from '@/data/images';
+import { collectionService } from '@/services/collection-service';
 import type { Product } from '@/types/product';
 import type { CollectionItem, CollectionType, CollectionRule } from '@/types/collection';
 
@@ -120,6 +121,7 @@ function CollectionForm({
   const [seoTitle, setSeoTitle] = useState(initialCollection?.seoTitle || '');
   const [seoDescription, setSeoDescription] = useState(initialCollection?.seoDescription || '');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Exclusive Image Mode & States
   const [imageMode, setImageMode] = useState<ImageMode>(() => {
@@ -248,7 +250,7 @@ function CollectionForm({
     setSelectedProductSlugs([]);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
       toast.error('Please enter a collection title');
@@ -303,18 +305,58 @@ function CollectionForm({
       seoDescription: seoDescription.trim() || finalDescription,
     };
 
-    if (onSaveCollection) {
-      onSaveCollection(savedCol, !isEditing);
-    } else if (onCreateCollection) {
-      onCreateCollection(savedCol);
-    }
+    setIsSubmitting(true);
+    try {
+      if (!isEditing) {
+        // 1. Call backend API to create collection in PostgreSQL DB
+        await collectionService.createCollection({
+          name: title.trim(),
+          slug,
+          description: finalDescription,
+          image: finalImage || undefined,
+          seoTitle: seoTitle.trim() || undefined,
+          seoDescription: seoDescription.trim() || undefined,
+          type: type.toUpperCase() as 'MANUAL' | 'RULE',
+          rule: type === 'rule' ? rule : undefined,
+          isActive,
+          isFeatured,
+          tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
+        });
+      } else if (initialCollection) {
+        // 2. Call backend API to update existing collection in PostgreSQL DB
+        await collectionService.updateCollection(initialCollection.slug, {
+          name: title.trim(),
+          slug,
+          description: finalDescription,
+          image: finalImage || undefined,
+          seoTitle: seoTitle.trim() || undefined,
+          seoDescription: seoDescription.trim() || undefined,
+          type: type.toUpperCase() as 'MANUAL' | 'RULE',
+          rule: type === 'rule' ? rule : undefined,
+          isActive,
+          isFeatured,
+          tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
+        });
+      }
 
-    toast.success(
-      isEditing
-        ? `Collection "${savedCol.name}" updated successfully`
-        : `Collection "${savedCol.name}" created successfully`
-    );
-    onClose();
+      if (onSaveCollection) {
+        onSaveCollection(savedCol, !isEditing);
+      } else if (onCreateCollection) {
+        onCreateCollection(savedCol);
+      }
+
+      toast.success(
+        isEditing
+          ? `Collection "${savedCol.name}" updated successfully`
+          : `Collection "${savedCol.name}" created successfully!`
+      );
+      onClose();
+    } catch (error: any) {
+      console.error('Failed to save collection:', error);
+      toast.error(error?.message || 'Failed to save collection');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
 
@@ -857,10 +899,10 @@ function CollectionForm({
       </div>
 
       <div className="flex justify-end gap-2 border-t border-line pt-4">
-        <Button variant="ghost" onClick={onClose} type="button">
+        <Button variant="ghost" onClick={onClose} type="button" disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="primary" loading={isSubmitting}>
           {isEditing ? 'Save changes' : 'Create collection'}
         </Button>
       </div>

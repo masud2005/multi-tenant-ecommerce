@@ -23,6 +23,11 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { searchProducts } from '@/utils/search';
 import { productPrice, productStock } from '@/utils/pricing';
+import { collectionService } from '@/services/collection-service';
+import { brandService } from '@/services/brand-service';
+import { images } from '@/data/images';
+import type { CollectionItem } from '@/types/collection';
+import type { BrandItem } from '@/types/brand';
 import { cn } from '@/utils/cn';
 
 type Sort =
@@ -67,12 +72,72 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
     setVisible(PAGE_SIZE);
   }, [pathname, q, searchParams]);
 
+  const [dbCollection, setDbCollection] = useState<CollectionItem | null>(null);
+  const [dbBrand, setDbBrand] = useState<BrandItem | null>(null);
+
+  useEffect(() => {
+    if (mode === 'collection' && slug) {
+      collectionService
+        .getCollectionBySlugOrId(slug, 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2')
+        .then((res) => {
+          if (res?.data) {
+            const d = res.data;
+            setDbCollection({
+              slug: d.slug,
+              name: d.name,
+              description: d.description || '',
+              image: d.image || images.hero,
+              type: (d.type?.toLowerCase() === 'rule' ? 'rule' : 'manual') as any,
+              ruleDetails: d.rule || undefined,
+              rule:
+                d.rule && typeof d.rule === 'object'
+                  ? `${d.rule.field || 'Tag'} ${d.rule.op || 'contains'} "${d.rule.value || ''}"`
+                  : undefined,
+              isFeatured: d.isFeatured,
+              isActive: d.isActive,
+              seoTitle: d.seoTitle || undefined,
+              seoDescription: d.seoDescription || undefined,
+            });
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load collection details from backend:', err);
+        });
+    }
+
+    if (mode === 'brand' && slug) {
+      brandService
+        .getBrandBySlugOrId(slug, 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2')
+        .then((res) => {
+          if (res?.data) {
+            const d = res.data;
+            setDbBrand({
+              id: d.id,
+              name: d.name,
+              slug: d.slug,
+              description: d.description || '',
+              logo: d.logo,
+              isActive: d.isActive,
+              _count: d._count,
+            });
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load brand details from backend:', err);
+        });
+    }
+  }, [mode, slug]);
+
   const category =
     mode === 'category' ? categories.find((c) => c.key === slug) : undefined;
-  const collection =
-    mode === 'collection' ? collections.find((c) => c.slug === slug) : undefined;
-  const brand =
-    mode === 'brand' ? brands.find((b) => b.slug === slug) : undefined;
+  const collection: CollectionItem | undefined =
+    mode === 'collection'
+      ? dbCollection || (collections as CollectionItem[]).find((c) => c.slug === slug)
+      : undefined;
+  const brand: BrandItem | undefined =
+    mode === 'brand'
+      ? dbBrand || (brands as BrandItem[]).find((b) => b.slug === slug)
+      : undefined;
 
   const { base, suggestion } = useMemo(() => {
     const live = products.filter((p) => p.status === 'published');
@@ -85,9 +150,31 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
       list = list.filter(
         (p) => p.category === category.key && (!sub || p.subcategory === sub)
       );
-    if (collection)
-      list = list.filter((p) => p.collections.includes(collection.slug));
-    if (brand) list = list.filter((p) => p.brand === brand.name);
+    if (collection) {
+      if (collection.type === 'rule' && collection.ruleDetails) {
+        const v = (collection.ruleDetails.value || '').toLowerCase().trim();
+        list = list.filter((p) => {
+          if (collection.ruleDetails!.field === 'Tag') {
+            return p.tags?.some((t) => t.toLowerCase().includes(v));
+          }
+          if (collection.ruleDetails!.field === 'Price') {
+            const num = Number(collection.ruleDetails!.value);
+            if (isNaN(num)) return false;
+            return (p.salePrice ?? p.price) < num;
+          }
+          return p.title.toLowerCase().includes(v);
+        });
+      } else {
+        list = list.filter((p) => p.collections?.includes(collection.slug));
+      }
+    }
+    if (brand) {
+      list = list.filter(
+        (p) =>
+          p.brand?.toLowerCase() === brand.name.toLowerCase() ||
+          p.brand?.toLowerCase() === brand.slug.toLowerCase()
+      );
+    }
     return { base: list, suggestion: null };
   }, [products, mode, q, category, collection, brand, sub]);
 
@@ -187,38 +274,37 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
     })),
     ...(filters.minPrice || filters.maxPrice
       ? [
-          {
-            label: `৳${filters.minPrice || 0} – ${
-              filters.maxPrice ? `৳${filters.maxPrice}` : 'any'
+        {
+          label: `৳${filters.minPrice || 0} – ${filters.maxPrice ? `৳${filters.maxPrice}` : 'any'
             }`,
-            clear: () =>
-              setFilters((f) => ({ ...f, minPrice: '', maxPrice: '' })),
-          },
-        ]
+          clear: () =>
+            setFilters((f) => ({ ...f, minPrice: '', maxPrice: '' })),
+        },
+      ]
       : []),
     ...(filters.inStock
       ? [
-          {
-            label: 'In stock',
-            clear: () => setFilters((f) => ({ ...f, inStock: false })),
-          },
-        ]
+        {
+          label: 'In stock',
+          clear: () => setFilters((f) => ({ ...f, inStock: false })),
+        },
+      ]
       : []),
     ...(filters.onSale
       ? [
-          {
-            label: 'On sale',
-            clear: () => setFilters((f) => ({ ...f, onSale: false })),
-          },
-        ]
+        {
+          label: 'On sale',
+          clear: () => setFilters((f) => ({ ...f, onSale: false })),
+        },
+      ]
       : []),
     ...(filters.minRating
       ? [
-          {
-            label: `${filters.minRating}★ & up`,
-            clear: () => setFilters((f) => ({ ...f, minRating: 0 })),
-          },
-        ]
+        {
+          label: `${filters.minRating}★ & up`,
+          clear: () => setFilters((f) => ({ ...f, minRating: 0 })),
+        },
+      ]
       : []),
   ];
 
@@ -229,8 +315,8 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
     (mode === 'search'
       ? `Results for “${suggestion ?? q}”`
       : filters.onSale
-      ? 'Sale'
-      : 'Shop all');
+        ? 'Sale'
+        : 'Shop all');
 
   const description =
     collection?.description ??
@@ -292,9 +378,30 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
               ))}
             </ol>
           </nav>
-          <h1 className="mt-3 font-display text-4xl text-ink">
-            {sub ?? title}
-          </h1>
+          {brand && brand.logo ? (
+            <div className="mt-4 flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-line bg-surface overflow-hidden shadow-xs">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={brand.logo}
+                  alt={brand.name}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-clay">
+                  Brand Showcase
+                </span>
+                <h1 className="font-display text-3xl sm:text-4xl text-ink font-semibold">
+                  {brand.name}
+                </h1>
+              </div>
+            </div>
+          ) : (
+            <h1 className="mt-3 font-display text-4xl text-ink">
+              {sub ?? title}
+            </h1>
+          )}
           {description && (
             <p className="mt-2 max-w-xl text-sm text-ink-muted">
               {description}

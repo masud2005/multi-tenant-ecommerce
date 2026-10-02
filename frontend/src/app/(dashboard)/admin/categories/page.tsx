@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import { categories, products } from '@/data/products';
 import { CategoryManager } from '@/components/dashboard/admin/categories';
 
 export const metadata: Metadata = {
@@ -11,9 +10,10 @@ export default function AdminCategoriesPage() {
   return (
     <div className="w-full">
       <CategoryManager
-        initialCategories={categories}
-        products={products}
+        initialCategories={[]}
+        products={[]}
       />
     </div>
   );
 }
+

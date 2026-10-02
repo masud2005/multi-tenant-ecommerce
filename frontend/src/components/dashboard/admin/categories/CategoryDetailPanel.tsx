@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { productService } from '@/services/product-service';
+import { categoryService } from '@/services/category-service';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -41,6 +42,7 @@ interface CategoryDetailPanelProps {
   products?: Product[];
   productCount: number;
   getProductCount?: (categoryKey: string, subcategory?: string) => number;
+  onRefresh?: () => void;
 }
 
 const sampleImages = [
@@ -63,6 +65,7 @@ export function CategoryDetailPanel({
   products = [],
   productCount,
   getProductCount,
+  onRefresh,
 }: CategoryDetailPanelProps) {
   const router = useRouter();
   const {
@@ -82,11 +85,14 @@ export function CategoryDetailPanel({
     category.status || 'published'
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(false);
 
   // Subcategory management state
   const [newSubName, setNewSubName] = useState('');
+  const [isAddingSub, setIsAddingSub] = useState(false);
   const [editingSub, setEditingSub] = useState<string | null>(null);
   const [editingSubValue, setEditingSubValue] = useState('');
   const [deleteSubTarget, setDeleteSubTarget] = useState<string | null>(null);
@@ -105,6 +111,8 @@ export function CategoryDetailPanel({
     setImageUrl(category.image || images.kurta);
     setParentKey(category.parentKey || 'none');
     setStatus(category.status || 'published');
+    setIsEditingCategory(false);
+    setShowImagePicker(false);
     setConfirmDeleteCategory(false);
     setEditingSub(null);
     setDeleteSubTarget(null);
@@ -143,9 +151,23 @@ export function CategoryDetailPanel({
     return list;
   }, [categoryProducts, activeSubcategory, activeFilterSub, productSearch]);
 
+  // Cancel editing category
+  const handleCancelEdit = () => {
+    setName(category.name);
+    setBlurb(category.blurb || '');
+    setImageUrl(category.image || images.kurta);
+    setParentKey(category.parentKey || 'none');
+    setStatus(category.status || 'published');
+    setShowImagePicker(false);
+    setIsEditingCategory(false);
+  };
+
   // Handle saving category details
-  const handleSaveCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveCategory = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!name.trim()) {
       toast.error('Category name cannot be empty');
       return;
@@ -160,10 +182,20 @@ export function CategoryDetailPanel({
         status,
       };
       saveCategory(category.key, patch);
-      await productService.updateCategory(category.key, patch);
-      toast.success(`Category "${name.trim()}" saved successfully`);
-    } catch {
-      toast.error('Failed to update category');
+      await categoryService.updateCategory(category.key, {
+        name: name.trim(),
+        description: blurb.trim() || undefined,
+        image: imageUrl.trim() || undefined,
+        status,
+        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
+      });
+      toast.success(`Category "${name.trim()}" updated successfully`);
+      setIsEditingCategory(false);
+      setShowImagePicker(false);
+      onRefresh?.();
+    } catch (error: any) {
+      console.error('Failed to update category:', error);
+      toast.error(error?.message || 'Failed to update category');
     } finally {
       setIsSaving(false);
     }
@@ -171,18 +203,26 @@ export function CategoryDetailPanel({
 
   // Handle category deletion
   const handleDeleteCategory = async () => {
+    setIsDeletingCategory(true);
     try {
       deleteCategory(category.key);
-      await productService.deleteCategory(category.key);
+      await categoryService.deleteCategory(
+        category.key,
+        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
+      );
       toast.success(`Category "${category.name}" has been deleted`);
       setConfirmDeleteCategory(false);
-    } catch {
-      toast.error('Failed to delete category');
+      onRefresh?.();
+    } catch (error: any) {
+      console.error('Failed to delete category:', error);
+      toast.error(error?.message || 'Failed to delete category');
+    } finally {
+      setIsDeletingCategory(false);
     }
   };
 
   // Handle quick add subcategory
-  const handleAddSubcategory = () => {
+  const handleAddSubcategory = async () => {
     const trimmed = newSubName.trim();
     if (!trimmed) {
       toast.error('Please enter a subcategory name');
@@ -192,13 +232,30 @@ export function CategoryDetailPanel({
       toast.error(`"${trimmed}" already exists in ${category.name}`);
       return;
     }
-    addSubcategory(category.key, trimmed);
-    toast.success(`Added subcategory "${trimmed}"`);
-    setNewSubName('');
+
+    setIsAddingSub(true);
+    try {
+      await categoryService.createCategory({
+        name: trimmed,
+        parentId: category.key,
+        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
+        status: 'published',
+      });
+
+      addSubcategory(category.key, trimmed);
+      toast.success(`Added subcategory "${trimmed}" to ${category.name}`);
+      setNewSubName('');
+      onRefresh?.();
+    } catch (error: any) {
+      console.error('Failed to add subcategory:', error);
+      toast.error(error?.message || 'Failed to add subcategory');
+    } finally {
+      setIsAddingSub(false);
+    }
   };
 
   // Handle inline rename subcategory
-  const handleInlineRenameSubmit = (oldSub: string) => {
+  const handleInlineRenameSubmit = async (oldSub: string) => {
     const trimmed = editingSubValue.trim();
     if (!trimmed) {
       toast.error('Subcategory name cannot be empty');
@@ -208,21 +265,42 @@ export function CategoryDetailPanel({
       toast.error(`"${trimmed}" already exists in ${category.name}`);
       return;
     }
-    renameSubcategory(category.key, oldSub, trimmed);
-    toast.success(`Renamed "${oldSub}" to "${trimmed}"`);
-    setEditingSub(null);
-    if (activeSubcategory === oldSub) {
-      onSelectSubcategory?.(trimmed);
+
+    try {
+      await categoryService.updateCategory(oldSub, {
+        name: trimmed,
+        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
+      });
+      renameSubcategory(category.key, oldSub, trimmed);
+      toast.success(`Renamed "${oldSub}" to "${trimmed}"`);
+      setEditingSub(null);
+      if (activeSubcategory === oldSub) {
+        onSelectSubcategory?.(trimmed);
+      }
+      onRefresh?.();
+    } catch (error: any) {
+      console.error('Failed to rename subcategory:', error);
+      toast.error(error?.message || 'Failed to rename subcategory');
     }
   };
 
   // Handle delete subcategory
-  const handleDeleteSubcategory = (sub: string) => {
-    removeSubcategory(category.key, sub);
-    toast.success(`Subcategory "${sub}" removed`);
-    setDeleteSubTarget(null);
-    if (activeSubcategory === sub) {
-      onSelectSubcategory?.(null);
+  const handleDeleteSubcategory = async (sub: string) => {
+    try {
+      removeSubcategory(category.key, sub);
+      await categoryService.deleteCategory(
+        sub,
+        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
+      );
+      toast.success(`Subcategory "${sub}" removed`);
+      setDeleteSubTarget(null);
+      if (activeSubcategory === sub) {
+        onSelectSubcategory?.(null);
+      }
+      onRefresh?.();
+    } catch (error: any) {
+      console.error('Failed to remove subcategory:', error);
+      toast.error('Failed to remove subcategory');
     }
   };
 
@@ -289,7 +367,7 @@ export function CategoryDetailPanel({
                   type="button"
                   variant="primary"
                   size="md"
-                  onClick={() => {
+                  onClick={async () => {
                     const trimmed = subRenameValue.trim();
                     if (!trimmed) {
                       toast.error('Subcategory name cannot be empty');
@@ -302,11 +380,21 @@ export function CategoryDetailPanel({
                       toast.error(`"${trimmed}" already exists in ${category.name}`);
                       return;
                     }
-                    renameSubcategory(category.key, activeSubcategory, trimmed);
-                    toast.success(
-                      `Updated "${activeSubcategory}" to "${trimmed}". Assigned products were updated.`
-                    );
-                    onSelectSubcategory?.(trimmed);
+                    try {
+                      await categoryService.updateCategory(activeSubcategory, {
+                        name: trimmed,
+                        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
+                      });
+                      renameSubcategory(category.key, activeSubcategory, trimmed);
+                      toast.success(
+                        `Updated "${activeSubcategory}" to "${trimmed}". Assigned products were updated.`
+                      );
+                      onSelectSubcategory?.(trimmed);
+                      onRefresh?.();
+                    } catch (error: any) {
+                      console.error('Failed to update subcategory:', error);
+                      toast.error(error?.message || 'Failed to update subcategory');
+                    }
                   }}
                   className="cursor-pointer shrink-0"
                 >
@@ -469,14 +557,42 @@ export function CategoryDetailPanel({
   // Main Category View (when activeSubcategory is null)
   return (
     <div className="space-y-6">
-      {/* Category Details Form */}
-      <form onSubmit={handleSaveCategory}>
-        <Panel
-          title={category.name}
-          description={`/category/${category.key} · ${productCount} ${
-            productCount === 1 ? 'product' : 'products'
-          }`}
-          actions={
+      {/* Category Details Panel */}
+      <Panel
+        title={category.name}
+        description={`/category/${category.key} · ${productCount} ${
+          productCount === 1 ? 'product' : 'products'
+        }`}
+        actions={
+          isEditingCategory ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleCancelEdit();
+                }}
+                disabled={isSaving}
+                className="inline-flex items-center gap-1 rounded-[4px] border border-line bg-surface hover:bg-subtle text-ink-muted hover:text-ink px-3 py-1.5 text-xs font-medium transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSaveCategory(e);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-[4px] bg-clay hover:bg-clay-dark text-white px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span>{isSaving ? 'Saving...' : 'Save changes'}</span>
+              </button>
+            </div>
+          ) : (
             <div className="flex items-center gap-2">
               <Badge
                 tone={
@@ -490,151 +606,194 @@ export function CategoryDetailPanel({
               >
                 {status}
               </Badge>
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                loading={isSaving}
-                className="cursor-pointer"
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsEditingCategory(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-[4px] bg-clay/10 hover:bg-clay text-clay hover:text-white border border-clay/30 px-3.5 py-1.5 text-xs font-medium transition-all duration-150 cursor-pointer shadow-2xs"
               >
-                Save category
-              </Button>
+                <Edit2 className="h-3.5 w-3.5" />
+                <span>Update category</span>
+              </button>
             </div>
-          }
-        >
-          <div className="space-y-5">
-            <div className="grid gap-5 sm:grid-cols-[160px_1fr]">
-              {/* Media preview & picker */}
-              <div className="space-y-2">
-                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md border border-line bg-subtle">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageUrl}
-                    alt={category.name}
-                    className="h-full w-full object-cover"
-                  />
+          )
+        }
+      >
+        <div className="space-y-5">
+          <div className="grid gap-6 sm:grid-cols-[160px_1fr] items-start">
+            {/* Media column */}
+            <div className="space-y-2">
+              <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[6px] border border-line bg-subtle shadow-2xs">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl}
+                  alt={category.name}
+                  className="h-full w-full object-cover"
+                />
+                {isEditingCategory && (
                   <button
                     type="button"
                     onClick={() => setShowImagePicker((prev) => !prev)}
-                    className="absolute inset-x-0 bottom-0 bg-ink/70 hover:bg-ink text-white py-1.5 text-xs font-medium text-center cursor-pointer transition-colors backdrop-blur-xs flex items-center justify-center gap-1"
+                    className="absolute inset-x-0 bottom-0 bg-ink/80 hover:bg-ink text-white py-2 text-xs font-medium text-center cursor-pointer transition-colors backdrop-blur-xs flex items-center justify-center gap-1.5"
                   >
-                    <ImageIcon className="h-3 w-3" />
+                    <ImageIcon className="h-3.5 w-3.5" />
                     <span>Change photo</span>
                   </button>
-                </div>
-              </div>
-
-              {/* Form fields */}
-              <div className="space-y-4">
-                <Input
-                  label="Category Name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Category name"
-                  required
-                />
-
-                <Textarea
-                  label="Description"
-                  rows={2}
-                  value={blurb}
-                  onChange={(e) => setBlurb(e.target.value)}
-                  placeholder="Brief description for category banner and SEO"
-                />
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink">
-                      Parent Category
-                    </label>
-                    <select
-                      value={parentKey}
-                      onChange={(e) => setParentKey(e.target.value)}
-                      className="h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:border-clay focus:outline-none"
-                    >
-                      <option value="none">— None (Top level category)</option>
-                      {allCategories
-                        .filter((c) => c.key !== category.key)
-                        .map((c) => (
-                          <option key={c.key} value={c.key}>
-                            {c.name}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-ink">
-                      Status
-                    </label>
-                    <select
-                      value={status}
-                      onChange={(e) =>
-                        setStatus(e.target.value as 'published' | 'draft' | 'hidden')
-                      }
-                      className="h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:border-clay focus:outline-none"
-                    >
-                      <option value="published">Published</option>
-                      <option value="draft">Draft</option>
-                      <option value="hidden">Hidden</option>
-                    </select>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Expandable Image picker */}
-            {showImagePicker && (
-              <div className="rounded-md border border-line bg-canvas p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-ink">
-                    Select a theme photo or paste image URL:
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowImagePicker(false)}
-                    className="text-xs text-ink-muted hover:text-ink cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="grid grid-cols-4 sm:grid-cols-9 gap-2">
-                  {sampleImages.map((s) => (
-                    <button
-                      key={s.label}
-                      type="button"
-                      onClick={() => {
-                        setImageUrl(s.src);
-                      }}
-                      className={cn(
-                        'relative aspect-[3/4] overflow-hidden rounded border transition-all cursor-pointer',
-                        imageUrl === s.src
-                          ? 'border-clay ring-2 ring-clay'
-                          : 'border-line hover:border-ink/60'
-                      )}
-                      title={s.label}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={s.src}
-                        alt={s.label}
-                        className="h-full w-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-                <Input
-                  label="Custom Image URL"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="text-xs"
+            {/* Input fields column */}
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-ink">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  readOnly={!isEditingCategory}
+                  placeholder="Category name"
+                  required
+                  autoFocus={isEditingCategory}
+                  className={cn(
+                    'h-10 w-full rounded-[4px] border border-line-strong bg-surface px-3 text-sm text-ink transition-all',
+                    isEditingCategory
+                      ? 'focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/20 cursor-text'
+                      : 'cursor-default select-text'
+                  )}
                 />
               </div>
-            )}
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-ink">
+                  Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={blurb}
+                  onChange={(e) => setBlurb(e.target.value)}
+                  readOnly={!isEditingCategory}
+                  placeholder="Category description"
+                  className={cn(
+                    'w-full rounded-[4px] border border-line-strong bg-surface px-3 py-2 text-sm text-ink transition-all',
+                    isEditingCategory
+                      ? 'focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/20 cursor-text'
+                      : 'cursor-default select-text resize-none'
+                  )}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-ink">
+                  Parent
+                </label>
+                {isEditingCategory ? (
+                  <select
+                    value={parentKey}
+                    onChange={(e) => setParentKey(e.target.value)}
+                    className="h-10 w-full rounded-[4px] border border-line-strong bg-surface px-3 text-sm text-ink focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/20 cursor-pointer"
+                  >
+                    <option value="none">— None (top level)</option>
+                    {allCategories
+                      .filter((c) => c.key !== category.key)
+                      .map((c) => (
+                        <option key={c.key} value={c.key}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    readOnly
+                    value={
+                      parentKey === 'none' || !parentKey
+                        ? '— None (top level)'
+                        : allCategories.find((c) => c.key === parentKey)?.name ||
+                          parentKey
+                    }
+                    className="h-10 w-full rounded-[4px] border border-line-strong bg-surface px-3 text-sm text-ink cursor-default"
+                  />
+                )}
+              </div>
+
+              {isEditingCategory && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-ink">
+                    Status
+                  </label>
+                  <select
+                    value={status}
+                    onChange={(e) =>
+                      setStatus(e.target.value as 'published' | 'draft' | 'hidden')
+                    }
+                    className="h-10 w-full rounded-[4px] border border-line-strong bg-surface px-3 text-sm text-ink focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/20 cursor-pointer"
+                  >
+                    <option value="published">Published</option>
+                    <option value="draft">Draft</option>
+                    <option value="hidden">Hidden</option>
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
-        </Panel>
-      </form>
+
+          {/* Expandable Image picker when editing */}
+          {isEditingCategory && showImagePicker && (
+            <div className="rounded-xl border border-line bg-canvas p-4 space-y-3 animate-in fade-in-50 duration-150">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-ink">
+                  Select a theme photo or paste image URL:
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowImagePicker(false)}
+                  className="text-xs text-ink-muted hover:text-ink cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="grid grid-cols-4 sm:grid-cols-9 gap-2">
+                {sampleImages.map((s) => (
+                  <button
+                    key={s.label}
+                    type="button"
+                    onClick={() => {
+                      setImageUrl(s.src);
+                    }}
+                    className={cn(
+                      'relative aspect-[3/4] overflow-hidden rounded-lg border transition-all cursor-pointer',
+                      imageUrl === s.src
+                        ? 'border-clay ring-2 ring-clay'
+                        : 'border-line hover:border-ink/60'
+                    )}
+                    title={s.label}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={s.src}
+                      alt={s.label}
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+              <Input
+                label="Custom Image URL"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://..."
+                className="text-xs"
+              />
+            </div>
+          )}
+        </div>
+      </Panel>
 
       {/* Subcategories Management Panel */}
       <Panel
@@ -659,6 +818,7 @@ export function CategoryDetailPanel({
             <Button
               type="button"
               variant="secondary"
+              loading={isAddingSub}
               onClick={handleAddSubcategory}
               className="cursor-pointer shrink-0"
             >
@@ -988,6 +1148,7 @@ export function CategoryDetailPanel({
                 variant="ghost"
                 size="sm"
                 onClick={() => setConfirmDeleteCategory(false)}
+                disabled={isDeletingCategory}
                 className="cursor-pointer"
               >
                 Cancel
@@ -995,6 +1156,7 @@ export function CategoryDetailPanel({
               <Button
                 variant="danger"
                 size="sm"
+                loading={isDeletingCategory}
                 onClick={handleDeleteCategory}
                 className="cursor-pointer"
               >

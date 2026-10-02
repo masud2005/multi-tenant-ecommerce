@@ -13,11 +13,14 @@ class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+    this.baseUrl =
+      process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    const url = endpoint.startsWith('http')
+      ? endpoint
+      : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -30,7 +33,9 @@ class ApiClient {
       if (token) {
         (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
       }
-      const tenantSlug = localStorage.getItem('tenant_slug') || window.location.hostname.split('.')[0];
+      const tenantSlug =
+        localStorage.getItem('tenant_slug') ||
+        window.location.hostname.split('.')[0];
       if (tenantSlug) {
         (headers as Record<string, string>)['x-tenant-slug'] = tenantSlug;
       }
@@ -44,7 +49,15 @@ class ApiClient {
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
-        throw new Error(errorBody.message || `Request failed with status ${response.status}`);
+        const errorMessage =
+          (typeof errorBody.message === 'string'
+            ? errorBody.message
+            : Array.isArray(errorBody.message)
+            ? errorBody.message.join(', ')
+            : null) ||
+          errorBody.error ||
+          `Request failed with status ${response.status}`;
+        throw new Error(errorMessage);
       }
 
       return await response.json();

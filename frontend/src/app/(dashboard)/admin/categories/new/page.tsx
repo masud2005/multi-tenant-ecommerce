@@ -143,7 +143,7 @@ export default function AdminNewCategoryPage() {
         isActive: true,
         showInNav: showInNav,
         parentId: parentKey !== 'none' ? parentKey : undefined,
-        tenantId: '68207cfd-a564-4000-8119-5d27e834b620',
+        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
       });
 
       toast.success(`Category "${newCategory.name}" created successfully`);

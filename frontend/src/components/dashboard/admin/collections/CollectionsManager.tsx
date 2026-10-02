@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useSyncExternalStore } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Plus,
@@ -9,8 +9,8 @@ import {
   Sparkles,
   Hand,
   Star,
-  RotateCcw,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -18,12 +18,11 @@ import { Modal } from '@/components/ui/Modal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CollectionCard } from './CollectionCard';
 import { CreateCollectionModal } from './CreateCollectionModal';
+import { collectionService } from '@/services/collection-service';
+import { images } from '@/data/images';
 import type { CollectionItem } from '@/types/collection';
 import type { Product } from '@/types/product';
 import { cn } from '@/lib/utils';
-
-const STORAGE_KEY = 'tanti_admin_collections_store_v1';
-const emptySubscribe = () => () => {};
 
 interface CollectionsManagerProps {
   initialCollections: CollectionItem[];
@@ -69,49 +68,57 @@ export function CollectionsManager({
   initialCollections,
   products,
 }: CollectionsManagerProps) {
-  // SSR-safe isClient check using useSyncExternalStore (React 19 standard)
-  const isClient = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
+  const [collectionsList, setCollectionsList] =
+    useState<CollectionItem[]>(initialCollections);
+  const [loading, setLoading] = useState(false);
 
-  // Collections list with lazy localStorage initialization
-  const [collectionsList, setCollectionsList] = useState<CollectionItem[]>(() => {
-    if (typeof window === 'undefined') return initialCollections;
+  // Fetch collections from backend database
+  const fetchCollections = useCallback(async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
+      setLoading(true);
+      const res = await collectionService.getCollections(
+        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
+      );
+      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+        const backendCols: CollectionItem[] = res.data.map((c) => ({
+          slug: c.slug,
+          name: c.name,
+          description: c.description || '',
+          image: c.image || images.hero,
+          type: (c.type?.toLowerCase() === 'rule' ? 'rule' : 'manual') as 'manual' | 'rule',
+          ruleDetails: c.rule || undefined,
+          rule:
+            c.rule && typeof c.rule === 'object'
+              ? `${c.rule.field || 'Tag'} ${c.rule.op || 'contains'} "${c.rule.value || ''}"`
+              : undefined,
+          isFeatured: Boolean(c.isFeatured),
+          isActive: c.isActive ?? true,
+          seoTitle: c.seoTitle || undefined,
+          seoDescription: c.seoDescription || undefined,
+        }));
+        setCollectionsList(backendCols);
       }
-    } catch {
-      // Ignore parse errors
+    } catch (error) {
+      console.error('Failed to fetch collections from DB:', error);
+    } finally {
+      setLoading(false);
     }
-    return initialCollections;
-  });
+  }, []);
+
+  useEffect(() => {
+    fetchCollections();
+  }, [fetchCollections]);
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<CollectionItem | null>(null);
   const [deletingCollection, setDeletingCollection] = useState<CollectionItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Search & Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [sortBy, setSortBy] = useState<SortOption>('default');
-
-  // Save to localStorage whenever collectionsList changes
-  const saveCollections = (newList: CollectionItem[]) => {
-    setCollectionsList(newList);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
-    } catch {
-      // Ignore quota errors
-    }
-  };
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -127,46 +134,51 @@ export function CollectionsManager({
 
   // Save (Create or Update)
   const handleSaveCollection = (col: CollectionItem, isNew: boolean) => {
-    let updated: CollectionItem[];
     if (isNew) {
       // Prepend newly created collection
-      updated = [col, ...collectionsList.filter((c) => c.slug !== col.slug)];
+      setCollectionsList((prev) => [col, ...prev.filter((c) => c.slug !== col.slug)]);
     } else {
       // Update existing
-      updated = collectionsList.map((c) => (c.slug === col.slug ? col : c));
+      setCollectionsList((prev) => prev.map((c) => (c.slug === col.slug ? col : c)));
     }
-    saveCollections(updated);
+    // Sync with database
+    fetchCollections();
   };
 
   // Delete Collection
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deletingCollection) return;
     const name = deletingCollection.name;
-    const updated = collectionsList.filter((c) => c.slug !== deletingCollection.slug);
-    saveCollections(updated);
-    setDeletingCollection(null);
-    toast.success(`Collection "${name}" deleted`);
+    const slug = deletingCollection.slug;
+    setIsDeleting(true);
+    try {
+      // 1. Delete in database
+      await collectionService.deleteCollection(
+        slug,
+        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
+      );
+      // 2. Update local state
+      setCollectionsList((prev) => prev.filter((c) => c.slug !== slug));
+      setDeletingCollection(null);
+      toast.success(`Collection "${name}" deleted successfully`);
+    } catch (error: any) {
+      console.error('Failed to delete collection:', error);
+      toast.error(error?.message || 'Failed to delete collection');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Toggle Featured status
   const handleToggleFeatured = (col: CollectionItem) => {
-    const updated = collectionsList.map((c) =>
-      c.slug === col.slug ? { ...c, isFeatured: !c.isFeatured } : c
+    setCollectionsList((prev) =>
+      prev.map((c) => (c.slug === col.slug ? { ...c, isFeatured: !c.isFeatured } : c))
     );
-    saveCollections(updated);
     toast.success(
       col.isFeatured
         ? `Removed "${col.name}" from featured`
         : `Marked "${col.name}" as featured on homepage`
     );
-  };
-
-  // Reset to initial demo data
-  const handleResetToDemo = () => {
-    if (window.confirm('Reset all collections to initial demo data?')) {
-      saveCollections(initialCollections);
-      toast.info('Restored default demo collections');
-    }
   };
 
   // Tab counts
@@ -224,30 +236,15 @@ export function CollectionsManager({
         title="Collections"
         description="Group products for campaigns and navigation — pick them by hand or let rules keep them up to date."
         actions={
-          <div className="flex items-center gap-2">
-            {isClient && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleResetToDemo}
-                title="Reset to default demo data"
-                className="text-xs text-ink-muted hover:text-ink cursor-pointer"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Reset demo</span>
-              </Button>
-            )}
-
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleOpenCreate}
-              className="cursor-pointer"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              <span>Create collection</span>
-            </Button>
-          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleOpenCreate}
+            className="cursor-pointer"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            <span>Create collection</span>
+          </Button>
         }
       />
 
@@ -393,7 +390,6 @@ export function CollectionsManager({
                 productCount={productCount}
                 onEdit={handleOpenEdit}
                 onDelete={setDeletingCollection}
-                onToggleFeatured={handleToggleFeatured}
               />
             );
           })}
@@ -424,6 +420,7 @@ export function CollectionsManager({
               variant="ghost"
               onClick={() => setDeletingCollection(null)}
               type="button"
+              disabled={isDeleting}
             >
               Cancel
             </Button>
@@ -431,6 +428,7 @@ export function CollectionsManager({
               variant="danger"
               onClick={handleConfirmDelete}
               type="button"
+              loading={isDeleting}
             >
               Delete collection
             </Button>
