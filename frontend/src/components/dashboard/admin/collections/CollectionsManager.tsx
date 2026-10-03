@@ -76,9 +76,7 @@ export function CollectionsManager({
   const fetchCollections = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await collectionService.getCollections(
-        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
-      );
+      const res = await collectionService.getCollections();
       if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
         const backendCols: CollectionItem[] = res.data.map((c) => ({
           slug: c.slug,
@@ -153,10 +151,7 @@ export function CollectionsManager({
     setIsDeleting(true);
     try {
       // 1. Delete in database
-      await collectionService.deleteCollection(
-        slug,
-        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
-      );
+      await collectionService.deleteCollection(slug);
       // 2. Update local state
       setCollectionsList((prev) => prev.filter((c) => c.slug !== slug));
       setDeletingCollection(null);

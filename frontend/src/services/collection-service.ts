@@ -14,7 +14,6 @@ export interface CreateCollectionPayload {
   order?: number;
   startsAt?: string;
   endsAt?: string;
-  tenantId?: string;
 }
 
 export interface CollectionResponseData {
@@ -43,12 +42,9 @@ export const collectionService = {
   /**
    * Get all collections from the backend
    */
-  async getCollections(
-    tenantId?: string,
-  ): Promise<ApiResponse<CollectionResponseData[]>> {
+  async getCollections(): Promise<ApiResponse<CollectionResponseData[]>> {
     return await apiClient.get<ApiResponse<CollectionResponseData[]>>(
-      '/collections',
-      tenantId ? { tenantId } : undefined,
+      '/owner/collections',
     );
   },
 
@@ -57,11 +53,9 @@ export const collectionService = {
    */
   async getCollectionBySlugOrId(
     idOrSlug: string,
-    tenantId?: string,
   ): Promise<ApiResponse<CollectionResponseData>> {
     return await apiClient.get<ApiResponse<CollectionResponseData>>(
-      `/collections/${idOrSlug}`,
-      tenantId ? { tenantId } : undefined,
+      `/owner/collections/${idOrSlug}`,
     );
   },
 
@@ -72,7 +66,7 @@ export const collectionService = {
     payload: CreateCollectionPayload,
   ): Promise<ApiResponse<CollectionResponseData>> {
     return await apiClient.post<ApiResponse<CollectionResponseData>>(
-      '/collections',
+      '/owner/collections',
       payload,
     );
   },
@@ -85,7 +79,7 @@ export const collectionService = {
     payload: Partial<CreateCollectionPayload>,
   ): Promise<ApiResponse<CollectionResponseData>> {
     return await apiClient.patch<ApiResponse<CollectionResponseData>>(
-      `/collections/${idOrSlug}`,
+      `/owner/collections/${idOrSlug}`,
       payload,
     );
   },
@@ -95,11 +89,9 @@ export const collectionService = {
    */
   async deleteCollection(
     idOrSlug: string,
-    tenantId?: string,
   ): Promise<ApiResponse<null>> {
     return await apiClient.delete<ApiResponse<null>>(
-      `/collections/${idOrSlug}`,
-      tenantId ? { tenantId } : undefined,
+      `/owner/collections/${idOrSlug}`,
     );
   },
 };

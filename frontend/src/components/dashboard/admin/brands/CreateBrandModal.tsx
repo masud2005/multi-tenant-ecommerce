@@ -75,7 +75,6 @@ export function CreateBrandModal({
             description: description.trim() || undefined,
             logo: logo.trim() || undefined,
             isActive,
-            tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
           }
         );
 
@@ -111,7 +110,6 @@ export function CreateBrandModal({
           description: description.trim() || undefined,
           logo: logo.trim() || undefined,
           isActive,
-          tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
         });
 
         const newBrandItem: BrandItem = {

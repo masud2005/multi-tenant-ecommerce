@@ -109,7 +109,7 @@ export const productService = {
     payload: CreateProductPayload,
   ): Promise<ApiResponse<ProductResponseData>> {
     return await apiClient.post<ApiResponse<ProductResponseData>>(
-      '/products',
+      '/owner/products',
       payload,
     );
   },
@@ -124,7 +124,6 @@ export const productService = {
     collection?: string;
     status?: ProductStatus;
     search?: string;
-    tenantId?: string;
   }): Promise<Product[]> {
     try {
       const searchParams = new URLSearchParams();
@@ -146,12 +145,9 @@ export const productService = {
       if (params?.search) {
         searchParams.append('search', params.search);
       }
-      if (params?.tenantId) {
-        searchParams.append('tenantId', params.tenantId);
-      }
 
       const queryString = searchParams.toString();
-      const endpoint = queryString ? `/products?${queryString}` : '/products';
+      const endpoint = queryString ? `/owner/products?${queryString}` : '/owner/products';
       const res = await apiClient.get<any>(endpoint);
       const rawList = res?.data || res;
 
@@ -184,11 +180,9 @@ export const productService = {
   /**
    * Get a single product by ID or Slug from backend
    */
-  async getProductById(idOrSlug: string, tenantId?: string): Promise<Product | undefined> {
+  async getProductById(idOrSlug: string): Promise<Product | undefined> {
     try {
-      const endpoint = tenantId
-        ? `/products/${idOrSlug}?tenantId=${tenantId}`
-        : `/products/${idOrSlug}`;
+      const endpoint = `/owner/products/${idOrSlug}`;
       const res = await apiClient.get<any>(endpoint);
       const rawProduct = res?.data || res;
       if (rawProduct && rawProduct.id) {
@@ -206,9 +200,9 @@ export const productService = {
   async saveProduct(product: Product): Promise<Product> {
     try {
       if (product.id) {
-        return await apiClient.put<Product>(`/products/${product.id}`, product);
+        return await apiClient.put<Product>(`/owner/products/${product.id}`, product);
       }
-      return await apiClient.post<Product>('/products', product);
+      return await apiClient.post<Product>('/owner/products', product);
     } catch {
       return product;
     }
@@ -219,7 +213,7 @@ export const productService = {
    */
   async deleteProduct(id: string): Promise<boolean> {
     try {
-      await apiClient.delete(`/products/${id}`);
+      await apiClient.delete(`/owner/products/${id}`);
       return true;
     } catch {
       return true;
@@ -235,7 +229,7 @@ export const productService = {
     delta: number,
   ): Promise<boolean> {
     try {
-      await apiClient.patch(`/products/${productId}/variants/${variantId}/stock`, {
+      await apiClient.patch(`/owner/products/${productId}/variants/${variantId}/stock`, {
         delta,
       });
       return true;

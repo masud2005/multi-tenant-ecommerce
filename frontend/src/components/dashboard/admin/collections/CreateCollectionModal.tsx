@@ -320,7 +320,6 @@ function CollectionForm({
           rule: type === 'rule' ? rule : undefined,
           isActive,
           isFeatured,
-          tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
         });
       } else if (initialCollection) {
         // 2. Call backend API to update existing collection in PostgreSQL DB
@@ -335,7 +334,6 @@ function CollectionForm({
           rule: type === 'rule' ? rule : undefined,
           isActive,
           isFeatured,
-          tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
         });
       }
 

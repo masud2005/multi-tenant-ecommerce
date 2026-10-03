@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
-import { CategoryModule } from './ower/category/category.module';
-import { BrandModule } from './ower/brand/brand.module';
-import { CollectionModule } from './ower/collection/collection.module';
-import { ProductModule } from './ower/product/product.module';
+import { CategoryModule } from './owner/category/category.module';
+import { BrandModule } from './owner/brand/brand.module';
+import { CollectionModule } from './owner/collection/collection.module';
+import { ProductModule } from './owner/product/product.module';
+import { InventoryModule } from './owner/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -12,7 +13,8 @@ import { ProductModule } from './ower/product/product.module';
     BrandModule,
     CollectionModule,
     ProductModule,
+    InventoryModule,
   ],
 })
-export class ModulesModule {}
+export class ModulesModule { }
 

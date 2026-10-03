@@ -258,13 +258,26 @@ export const reportCatalog: { group: string; items: { name: string; description:
   }
 ];
 
-export const stockMovements = [
-  { id: 'sm1', at: '2026-09-26T08:30:00', sku: 'TN-P03-SAG-L', product: 'Sage Cotton Panjabi', change: 24, reason: 'Received', by: 'Rahim Uddin', ref: 'PO-0412' },
-  { id: 'sm2', at: '2026-09-25T15:47:00', sku: 'TN-P10-OLI-M', product: 'Olive Linen Co-ord Set', change: -1, reason: 'Order', by: 'System', ref: 'TN-10496' },
-  { id: 'sm3', at: '2026-09-25T11:00:00', sku: 'TN-P01-IND-L', product: 'Indigo Block-Print Kurta Set', change: -2, reason: 'Damaged', by: 'Mitu Akter', ref: '' },
-  { id: 'sm4', at: '2026-09-24T17:20:00', sku: 'TN-P04-WHI-41', product: 'Everyday Leather Sneakers', change: -6, reason: 'Correction', by: 'Rahim Uddin', ref: 'COR-088' },
-  { id: 'sm5', at: '2026-09-24T17:20:00', sku: 'TN-P04-WHI-41', product: 'Everyday Leather Sneakers', change: 6, reason: 'Received', by: 'Rahim Uddin', ref: 'PO-088' },
-  { id: 'sm6', at: '2026-09-23T10:00:00', sku: 'TN-P12-DUS-ONE', product: 'Hand-dyed Silk Dupatta', change: -1, reason: 'Physical count', by: 'Mitu Akter', ref: 'CNT-19' }
+export interface StockMovementItem {
+  id: string;
+  at: string;
+  sku: string;
+  product: string;
+  change: number;
+  stockAfter?: number;
+  reason: string;
+  by: string;
+  ref?: string;
+  note?: string;
+}
+
+export const stockMovements: StockMovementItem[] = [
+  { id: 'sm1', at: '2026-09-26T08:30:00', sku: 'TN-P03-SAG-L', product: 'Sage Cotton Panjabi', change: 24, stockAfter: 36, reason: 'Received', by: 'Rahim Uddin', ref: 'PO-0412', note: 'Bulk shipment received from artisan workshop' },
+  { id: 'sm2', at: '2026-09-25T15:47:00', sku: 'TN-P10-OLI-M', product: 'Olive Linen Co-ord Set', change: -1, stockAfter: 2, reason: 'Order', by: 'System', ref: 'TN-10496', note: 'Customer order checkout' },
+  { id: 'sm3', at: '2026-09-25T11:00:00', sku: 'TN-P01-IND-L', product: 'Indigo Block-Print Kurta Set', change: -2, stockAfter: 0, reason: 'Damaged', by: 'Mitu Akter', ref: '', note: 'Defective stitching found during QC' },
+  { id: 'sm4', at: '2026-09-24T17:20:00', sku: 'TN-P04-WHI-41', product: 'Everyday Leather Sneakers', change: -6, stockAfter: 12, reason: 'Correction', by: 'Rahim Uddin', ref: 'COR-088', note: 'Inventory reconciliation adjustment' },
+  { id: 'sm5', at: '2026-09-24T17:20:00', sku: 'TN-P04-WHI-41', product: 'Everyday Leather Sneakers', change: 6, stockAfter: 18, reason: 'Received', by: 'Rahim Uddin', ref: 'PO-088', note: 'Stock delivery confirmation' },
+  { id: 'sm6', at: '2026-09-23T10:00:00', sku: 'TN-P12-DUS-ONE', product: 'Hand-dyed Silk Dupatta', change: -1, stockAfter: 4, reason: 'Physical count', by: 'Mitu Akter', ref: 'CNT-19', note: 'Physical cycle count mismatch correction' }
 ];
 
 export const abandonedCheckouts = [

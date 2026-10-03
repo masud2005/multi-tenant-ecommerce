@@ -25,7 +25,7 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
   const fetchCategories = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await categoryService.getCategories('e0f8bdb1-da0a-4907-9d82-08ef1be77ac2');
+      const res = await categoryService.getCategories();
       if (res?.data && Array.isArray(res.data)) {
         // Map backend categories (top-level categories with subcategories from children)
         const topLevel = res.data.filter((c: any) => !c.parentId);

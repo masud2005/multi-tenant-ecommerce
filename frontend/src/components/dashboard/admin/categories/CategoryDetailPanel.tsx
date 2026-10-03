@@ -187,7 +187,6 @@ export function CategoryDetailPanel({
         description: blurb.trim() || undefined,
         image: imageUrl.trim() || undefined,
         status,
-        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
       });
       toast.success(`Category "${name.trim()}" updated successfully`);
       setIsEditingCategory(false);
@@ -206,10 +205,7 @@ export function CategoryDetailPanel({
     setIsDeletingCategory(true);
     try {
       deleteCategory(category.key);
-      await categoryService.deleteCategory(
-        category.key,
-        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
-      );
+      await categoryService.deleteCategory(category.key);
       toast.success(`Category "${category.name}" has been deleted`);
       setConfirmDeleteCategory(false);
       onRefresh?.();
@@ -238,7 +234,6 @@ export function CategoryDetailPanel({
       await categoryService.createCategory({
         name: trimmed,
         parentId: category.key,
-        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
         status: 'published',
       });
 
@@ -269,7 +264,6 @@ export function CategoryDetailPanel({
     try {
       await categoryService.updateCategory(oldSub, {
         name: trimmed,
-        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
       });
       renameSubcategory(category.key, oldSub, trimmed);
       toast.success(`Renamed "${oldSub}" to "${trimmed}"`);
@@ -288,10 +282,7 @@ export function CategoryDetailPanel({
   const handleDeleteSubcategory = async (sub: string) => {
     try {
       removeSubcategory(category.key, sub);
-      await categoryService.deleteCategory(
-        sub,
-        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
-      );
+      await categoryService.deleteCategory(sub);
       toast.success(`Subcategory "${sub}" removed`);
       setDeleteSubTarget(null);
       if (activeSubcategory === sub) {
@@ -383,7 +374,6 @@ export function CategoryDetailPanel({
                     try {
                       await categoryService.updateCategory(activeSubcategory, {
                         name: trimmed,
-                        tenantId: 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2',
                       });
                       renameSubcategory(category.key, activeSubcategory, trimmed);
                       toast.success(

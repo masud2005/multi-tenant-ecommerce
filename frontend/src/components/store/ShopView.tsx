@@ -78,7 +78,7 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
   useEffect(() => {
     if (mode === 'collection' && slug) {
       collectionService
-        .getCollectionBySlugOrId(slug, 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2')
+        .getCollectionBySlugOrId(slug)
         .then((res) => {
           if (res?.data) {
             const d = res.data;
@@ -107,7 +107,7 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
 
     if (mode === 'brand' && slug) {
       brandService
-        .getBrandBySlugOrId(slug, 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2')
+        .getBrandBySlugOrId(slug)
         .then((res) => {
           if (res?.data) {
             const d = res.data;

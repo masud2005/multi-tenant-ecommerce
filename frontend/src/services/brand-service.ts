@@ -6,7 +6,6 @@ export interface CreateBrandPayload {
   description?: string;
   logo?: string;
   isActive?: boolean;
-  tenantId?: string;
 }
 
 export interface BrandResponseData {
@@ -30,11 +29,8 @@ export const brandService = {
   /**
    * Get all brands from the backend
    */
-  async getBrands(
-    tenantId?: string,
-  ): Promise<ApiResponse<BrandResponseData[]>> {
-    const endpoint = tenantId ? `/brands?tenantId=${tenantId}` : '/brands';
-    return await apiClient.get<ApiResponse<BrandResponseData[]>>(endpoint);
+  async getBrands(): Promise<ApiResponse<BrandResponseData[]>> {
+    return await apiClient.get<ApiResponse<BrandResponseData[]>>('/owner/brands');
   },
 
   /**
@@ -42,12 +38,8 @@ export const brandService = {
    */
   async getBrandBySlugOrId(
     idOrSlug: string,
-    tenantId?: string,
   ): Promise<ApiResponse<BrandResponseData>> {
-    const endpoint = tenantId
-      ? `/brands/${idOrSlug}?tenantId=${tenantId}`
-      : `/brands/${idOrSlug}`;
-    return await apiClient.get<ApiResponse<BrandResponseData>>(endpoint);
+    return await apiClient.get<ApiResponse<BrandResponseData>>(`/owner/brands/${idOrSlug}`);
   },
 
   /**
@@ -57,7 +49,7 @@ export const brandService = {
     payload: CreateBrandPayload,
   ): Promise<ApiResponse<BrandResponseData>> {
     return await apiClient.post<ApiResponse<BrandResponseData>>(
-      '/brands',
+      '/owner/brands',
       payload,
     );
   },
@@ -70,7 +62,7 @@ export const brandService = {
     payload: Partial<CreateBrandPayload>,
   ): Promise<ApiResponse<BrandResponseData>> {
     return await apiClient.patch<ApiResponse<BrandResponseData>>(
-      `/brands/${idOrSlug}`,
+      `/owner/brands/${idOrSlug}`,
       payload,
     );
   },
@@ -80,12 +72,8 @@ export const brandService = {
    */
   async deleteBrand(
     idOrSlug: string,
-    tenantId?: string,
   ): Promise<ApiResponse<null>> {
-    const endpoint = tenantId
-      ? `/brands/${idOrSlug}?tenantId=${tenantId}`
-      : `/brands/${idOrSlug}`;
-    return await apiClient.delete<ApiResponse<null>>(endpoint);
+    return await apiClient.delete<ApiResponse<null>>(`/owner/brands/${idOrSlug}`);
   },
 };
 

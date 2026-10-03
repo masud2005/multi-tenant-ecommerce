@@ -12,7 +12,6 @@ export interface CreateCategoryPayload {
   showInNav?: boolean;
   order?: number;
   parentId?: string;
-  tenantId?: string;
 }
 
 export interface CategoryResponseData {
@@ -46,7 +45,7 @@ export const categoryService = {
     payload: CreateCategoryPayload,
   ): Promise<ApiResponse<CategoryResponseData>> {
     return await apiClient.post<ApiResponse<CategoryResponseData>>(
-      '/categories',
+      '/owner/categories',
       payload,
     );
   },
@@ -59,7 +58,7 @@ export const categoryService = {
     payload: Partial<CreateCategoryPayload>,
   ): Promise<ApiResponse<CategoryResponseData>> {
     return await apiClient.patch<ApiResponse<CategoryResponseData>>(
-      `/categories/${idOrSlug}`,
+      `/owner/categories/${idOrSlug}`,
       payload,
     );
   },
@@ -67,11 +66,8 @@ export const categoryService = {
   /**
    * Get all categories for tenant
    */
-  async getCategories(
-    tenantId?: string,
-  ): Promise<ApiResponse<CategoryResponseData[]>> {
-    const endpoint = tenantId ? `/categories?tenantId=${tenantId}` : '/categories';
-    return await apiClient.get<ApiResponse<CategoryResponseData[]>>(endpoint);
+  async getCategories(): Promise<ApiResponse<CategoryResponseData[]>> {
+    return await apiClient.get<ApiResponse<CategoryResponseData[]>>('/owner/categories');
   },
 
   /**
@@ -79,12 +75,8 @@ export const categoryService = {
    */
   async getCategoryBySlugOrId(
     idOrSlug: string,
-    tenantId?: string,
   ): Promise<ApiResponse<CategoryResponseData>> {
-    const endpoint = tenantId
-      ? `/categories/${idOrSlug}?tenantId=${tenantId}`
-      : `/categories/${idOrSlug}`;
-    return await apiClient.get<ApiResponse<CategoryResponseData>>(endpoint);
+    return await apiClient.get<ApiResponse<CategoryResponseData>>(`/owner/categories/${idOrSlug}`);
   },
 
   /**
@@ -92,12 +84,8 @@ export const categoryService = {
    */
   async deleteCategory(
     idOrSlug: string,
-    tenantId?: string,
   ): Promise<ApiResponse<null>> {
-    const endpoint = tenantId
-      ? `/categories/${idOrSlug}?tenantId=${tenantId}`
-      : `/categories/${idOrSlug}`;
-    return await apiClient.delete<ApiResponse<null>>(endpoint);
+    return await apiClient.delete<ApiResponse<null>>(`/owner/categories/${idOrSlug}`);
   },
 };
 

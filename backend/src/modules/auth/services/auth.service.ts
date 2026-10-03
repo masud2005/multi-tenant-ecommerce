@@ -86,6 +86,9 @@ export class AuthService {
     async login(dto: LoginDto) {
         const user = await this.prisma.user.findUnique({
             where: { email: dto.email },
+            include: {
+                tenantMemberships: true,
+            },
         });
         if (!user || !user.password) {
             throw new InvalidCredentialsException();
@@ -123,7 +126,8 @@ export class AuthService {
             metadata: { userId: user.id },
         });
 
-        const payload = { sub: user.id, email: user.email, role: user.role };
+        const tenantId = user.tenantMemberships?.[0]?.tenantId;
+        const payload = { sub: user.id, email: user.email, role: user.role, tenantId };
         const { accessToken, refreshToken } = generateTokens(
             this.jwtService,
             this.configService,
@@ -144,6 +148,7 @@ export class AuthService {
                     id: user.id,
                     email: user.email,
                     role: user.role,
+                    tenantId,
                 },
             },
             'Login successful',

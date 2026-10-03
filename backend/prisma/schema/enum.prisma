@@ -144,9 +144,9 @@ enum CustomerSegment {
 enum StockMovementReason {
   RECEIVED
   ORDER
+  CORRECTION
   DAMAGED
-  TRANSFER_IN
-  TRANSFER_OUT
+  LOST_STOLEN
   PHYSICAL_COUNT
   RETURN
 }

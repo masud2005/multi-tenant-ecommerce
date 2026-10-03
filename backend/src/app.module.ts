@@ -14,8 +14,10 @@ import {
   adminConfig,
   jwtConfig,
   mailConfig,
+  cloudinaryConfig,
 } from './config';
 import { RedisModule } from './shared/redis/redis.module';
+import { StorageModule } from './shared/storage/storage.module';
 
 @Module({
   imports: [
@@ -29,12 +31,14 @@ import { RedisModule } from './shared/redis/redis.module';
         adminConfig,
         jwtConfig,
         mailConfig,
+        cloudinaryConfig,
       ],
     }),
     EventEmitterModule.forRoot(),
     ThrottlerConfigModule,
     PrismaModule,
     RedisModule,
+    StorageModule,
     ModulesModule,
   ],
   controllers: [AppController],

@@ -27,10 +27,36 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
         const user = await this.prisma.user.findUnique({
             where: { id: payload.sub },
+            include: {
+                tenantMemberships: {
+                    select: {
+                        tenantId: true,
+                        role: true,
+                    },
+                },
+            },
         });
         if (!user) {
             throw new UnauthorizedException();
         }
-        return user;
+        let tenantId = payload.tenantId || user.tenantMemberships?.[0]?.tenantId;
+        if (!tenantId) {
+            const membership = await this.prisma.tenantMember.findFirst({
+                where: { userId: user.id },
+            });
+            tenantId = membership?.tenantId;
+            if (!tenantId) {
+                const defaultTenant = await this.prisma.tenant.findFirst({
+                    where: { deletedAt: null },
+                    orderBy: { createdAt: 'asc' },
+                });
+                tenantId = defaultTenant?.id;
+            }
+        }
+
+        return {
+            ...user,
+            tenantId,
+        };
     }
 }

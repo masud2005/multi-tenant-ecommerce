@@ -52,9 +52,7 @@ export function BrandsManager({
   const fetchBrands = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await brandService.getBrands(
-        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
-      );
+      const res = await brandService.getBrands();
       if (res?.data && Array.isArray(res.data)) {
         const backendBrands: BrandItem[] = res.data.map((b) => ({
           id: b.id,
@@ -110,10 +108,7 @@ export function BrandsManager({
     setIsDeleting(true);
 
     try {
-      await brandService.deleteBrand(
-        identifier,
-        'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
-      );
+      await brandService.deleteBrand(identifier);
       // Remove locally
       setBrandList((prev) =>
         prev.filter((b) => b.slug !== deletingBrand.slug && b.id !== deletingBrand.id)
