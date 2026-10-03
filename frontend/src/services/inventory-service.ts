@@ -1,5 +1,7 @@
 import { apiClient, ApiResponse } from './api-client';
 
+export type StockAdjustmentType = 'ADD' | 'SUBTRACT' | 'SET';
+
 export interface InventoryStats {
   totalVariants: number;
   totalStock: number;
@@ -67,6 +69,33 @@ export interface QueryInventoryParams {
   tenantId?: string;
 }
 
+export interface AdjustStockPayload {
+  variantId: string;
+  type: StockAdjustmentType;
+  quantity: number;
+  reason: string;
+  ref?: string;
+  note?: string;
+  tenantId?: string;
+}
+
+export interface AdjustStockResponseData {
+  variant: InventoryVariantItem;
+  movement: {
+    id: string;
+    tenantId: string;
+    variantId: string;
+    change: number;
+    stockBefore: number;
+    stockAfter: number;
+    reason: string;
+    ref: string | null;
+    note: string | null;
+    by: string | null;
+    createdAt: string;
+  };
+}
+
 export const inventoryService = {
   /**
    * Get inventory stock overview, statistics, and variants
@@ -93,8 +122,20 @@ export const inventoryService = {
     if (params?.tenantId) query.append('tenantId', params.tenantId);
 
     const queryString = query.toString();
-    const endpoint = queryString ? `/inventory?${queryString}` : '/inventory';
+    const endpoint = queryString ? `/owner/inventory?${queryString}` : '/owner/inventory';
 
     return await apiClient.get<ApiResponse<InventoryOverviewData>>(endpoint);
+  },
+
+  /**
+   * Adjust variant stock quantity with audit reason and note
+   */
+  async adjustStock(
+    payload: AdjustStockPayload,
+  ): Promise<ApiResponse<AdjustStockResponseData>> {
+    return await apiClient.post<ApiResponse<AdjustStockResponseData>>(
+      '/owner/inventory/adjust',
+      payload,
+    );
   },
 };

@@ -23,6 +23,15 @@ import { AdjustStockModal, type AdjustModalTarget } from './AdjustStockModal';
 
 type Tab = 'stock' | 'ledger';
 
+const REASON_MAP: Record<string, string> = {
+  'Received': 'RECEIVED',
+  'Correction': 'CORRECTION',
+  'Damaged': 'DAMAGED',
+  'Lost / stolen': 'LOST_STOLEN',
+  'Physical count': 'PHYSICAL_COUNT',
+  'Returned to stock': 'RETURN',
+};
+
 export function InventoryManager() {
   const { actor } = useAdmin();
   const [tab, setTab] = useState<Tab>('stock');
@@ -89,7 +98,7 @@ export function InventoryManager() {
     });
   };
 
-  const handleSaveAdjust = ({
+  const handleSaveAdjust = async ({
     target,
     delta,
     reason,
@@ -102,36 +111,60 @@ export function InventoryManager() {
     reference: string;
     note: string;
   }) => {
-    // Update local state for instant feedback
-    if (inventoryData) {
-      const updatedItems = inventoryData.items.map((item) =>
-        item.id === target.vid ? { ...item, stock: target.current + delta } : item
-      );
-      setInventoryData({
-        ...inventoryData,
-        items: updatedItems,
-      });
-    }
+    const reasonEnum = REASON_MAP[reason] || 'CORRECTION';
+    const type: 'ADD' | 'SUBTRACT' | 'SET' = delta >= 0 ? 'ADD' : 'SUBTRACT';
+    const quantity = Math.abs(delta);
 
-    // Record movement in audit ledger
-    setLedger((prev) => [
-      {
-        id: `sm${Date.now()}`,
-        at: new Date().toISOString(),
-        sku: target.vid,
-        product: target.label,
-        change: delta,
-        stockAfter: target.current + delta,
-        reason,
-        by: actor || 'Admin',
+    try {
+      const res = await inventoryService.adjustStock({
+        variantId: target.vid,
+        type,
+        quantity,
+        reason: reasonEnum,
         ref: reference || undefined,
         note: note || undefined,
-      },
-      ...prev,
-    ]);
+      });
 
-    toast.success(`Stock ${delta > 0 ? '+' : ''}${delta} · ${reason}`);
-    setAdjustTarget(null);
+      // Update local item stock immediately from response
+      const updatedStock = res?.data?.variant?.stock ?? (target.current + delta);
+      if (inventoryData) {
+        const updatedItems = inventoryData.items.map((item) =>
+          item.id === target.vid ? { ...item, stock: updatedStock } : item
+        );
+        setInventoryData({
+          ...inventoryData,
+          items: updatedItems,
+        });
+      }
+
+      // Record movement in audit ledger
+      setLedger((prev) => [
+        {
+          id: res?.data?.movement?.id || `sm${Date.now()}`,
+          at: res?.data?.movement?.createdAt || new Date().toISOString(),
+          sku: target.vid,
+          product: target.label,
+          change: delta,
+          stockAfter: updatedStock,
+          reason,
+          by: actor || 'Store Owner',
+          ref: reference || undefined,
+          note: note || undefined,
+        },
+        ...prev,
+      ]);
+
+      toast.success(
+        res?.message || `Stock ${delta > 0 ? '+' : ''}${delta} (${reason}) saved to database!`
+      );
+      setAdjustTarget(null);
+
+      // Silently refresh stats in the background
+      fetchInventory(true);
+    } catch (err: any) {
+      console.error('Failed to adjust stock:', err);
+      toast.error(err?.message || 'Failed to adjust stock in database');
+    }
   };
 
   const items = inventoryData?.items ?? [];

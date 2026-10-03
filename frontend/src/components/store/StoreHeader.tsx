@@ -107,12 +107,14 @@ export function StoreHeader() {
             >
               <SearchIcon className="h-5 w-5" />
             </button>
-            <Link
-              href="/admin"
-              className="mr-1 hidden whitespace-nowrap rounded-full border border-line px-3 py-1 text-xs font-medium text-ink-soft hover:border-ink hover:text-ink md:inline-block transition-colors"
-            >
-              Merchant admin
-            </Link>
+            {user?.role === 'OWNER' ? (
+              <Link
+                href="/admin"
+                className="mr-1 hidden whitespace-nowrap rounded-full border border-clay bg-clay/10 px-3 py-1 text-xs font-medium text-clay hover:bg-clay/20 md:inline-block transition-colors"
+              >
+                Owner dashboard
+              </Link>
+            ) : null}
             <Link
               href="/wishlist"
               className="relative rounded-md p-2 hover:bg-subtle text-ink cursor-pointer"
@@ -127,9 +129,9 @@ export function StoreHeader() {
               )}
             </Link>
             <Link
-              href={user ? '/account' : '/login'}
+              href={user ? (user.role === 'OWNER' ? '/admin' : '/account') : '/login'}
               className="hidden rounded-md p-2 hover:bg-subtle sm:block text-ink cursor-pointer"
-              aria-label={user ? 'My account' : 'Sign in'}
+              aria-label={user ? (user.role === 'OWNER' ? 'Owner dashboard' : 'My account') : 'Sign in'}
             >
               <UserIcon className="h-5 w-5" />
             </Link>

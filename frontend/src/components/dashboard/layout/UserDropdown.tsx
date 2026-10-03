@@ -4,14 +4,39 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { User, Settings, LogOut, ExternalLink } from 'lucide-react';
 import type { UserInfo } from '@/types/user';
+import { authService } from '@/services/auth';
 
 interface UserDropdownProps {
   user?: UserInfo;
 }
 
-export function UserDropdown({ user }: UserDropdownProps) {
+export function UserDropdown({ user: propUser }: UserDropdownProps) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [storedUser, setStoredUser] = useState<UserInfo | null>(null);
+
+  useEffect(() => {
+    const u = authService.getStoredUser();
+    if (u) {
+      const name = u.name || u.email?.split('@')[0] || 'Store Owner';
+      const initials = name
+        .split(' ')
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'SO';
+
+      setStoredUser({
+        id: u.id,
+        name,
+        email: u.email,
+        role: (u.role as any) || 'OWNER',
+        initials,
+        phone: u.phone,
+      });
+    }
+  }, []);
 
   // Close on outside click
   useEffect(() => {
@@ -25,9 +50,25 @@ export function UserDropdown({ user }: UserDropdownProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  const displayName = user?.name || 'Shahana Parvin';
-  const roleLabel = user?.role || 'OWNER';
-  const initials = user?.initials || displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const activeUser = storedUser || propUser;
+  const displayName = activeUser?.name || activeUser?.email?.split('@')[0] || 'Store Owner';
+  const roleLabel = activeUser?.role || 'OWNER';
+  const initials =
+    activeUser?.initials ||
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() ||
+    'SO';
+
+  const handleSignOut = async () => {
+    setOpen(false);
+    await authService.logout();
+    window.location.href = '/login';
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -51,14 +92,14 @@ export function UserDropdown({ user }: UserDropdownProps) {
         <div className="absolute right-0 z-40 mt-2 w-56 rounded-lg border border-line bg-surface shadow-pop py-1 animate-in fade-in-0 slide-in-from-top-1 duration-150">
           <div className="px-3 py-2 border-b border-line">
             <p className="text-xs font-semibold text-ink">{displayName}</p>
-            <p className="text-xs text-ink-muted truncate">{user?.email || 'shahana@tanti.com.bd'}</p>
+            <p className="text-xs text-ink-muted truncate">{activeUser?.email || ''}</p>
           </div>
 
           <div className="py-1">
             <Link
               href="/admin/settings"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-ink-soft hover:bg-subtle hover:text-ink transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs text-ink-soft hover:bg-subtle hover:text-ink transition-colors cursor-pointer"
             >
               <Settings className="h-3.5 w-3.5 text-ink-muted" />
               <span>Store Settings</span>
@@ -66,7 +107,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
             <Link
               href="/admin/staff"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-ink-soft hover:bg-subtle hover:text-ink transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs text-ink-soft hover:bg-subtle hover:text-ink transition-colors cursor-pointer"
             >
               <User className="h-3.5 w-3.5 text-ink-muted" />
               <span>Account & Roles</span>
@@ -75,7 +116,7 @@ export function UserDropdown({ user }: UserDropdownProps) {
               href="/"
               target="_blank"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-ink-soft hover:bg-subtle hover:text-ink transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs text-ink-soft hover:bg-subtle hover:text-ink transition-colors cursor-pointer"
             >
               <ExternalLink className="h-3.5 w-3.5 text-ink-muted" />
               <span>View Online Store</span>
@@ -83,14 +124,14 @@ export function UserDropdown({ user }: UserDropdownProps) {
           </div>
 
           <div className="border-t border-line pt-1">
-            <Link
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs text-danger hover:bg-danger-soft/40 transition-colors"
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-danger hover:bg-danger-soft/40 transition-colors cursor-pointer text-left"
             >
               <LogOut className="h-3.5 w-3.5" />
               <span>Sign Out</span>
-            </Link>
+            </button>
           </div>
         </div>
       )}

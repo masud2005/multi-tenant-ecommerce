@@ -4,11 +4,13 @@ import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
+import { authService } from '@/services/auth';
 
 function ResetPasswordFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
+  const next = searchParams.get('next') ?? '';
 
   const [pw, setPw] = useState({ a: '', b: '' });
   const [error, setError] = useState('');
@@ -32,43 +34,27 @@ function ResetPasswordFormContent() {
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-      const res = await fetch(`${apiUrl}/auth/reset-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          resetToken: token,
-          newPassword: pw.a,
-        }),
+      const res = await authService.resetPassword({
+        resetToken: token,
+        newPassword: pw.a,
       });
 
-      const data = await res.json();
+      // Redirect to appropriate dashboard based on user role
+      const role = (res.data?.user?.role || authService.getUserRole() || '').toUpperCase();
+      const isOwnerOrAdmin = ['OWNER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'STAFF'].includes(role);
 
-      if (!res.ok) {
-        const errMsg = Array.isArray(data.message)
-          ? data.message.join(', ')
-          : data.message || 'Failed to reset password. Please request a new code.';
-        setError(errMsg);
-        return;
-      }
-
-      // Save tokens and user info for instant auto-login
-      if (data.data?.accessToken) {
-        localStorage.setItem('accessToken', data.data.accessToken);
-        if (data.data.refreshToken) {
-          localStorage.setItem('refreshToken', data.data.refreshToken);
-        }
-        if (data.data.user) {
-          localStorage.setItem('user', JSON.stringify(data.data.user));
+      let targetUrl = isOwnerOrAdmin ? '/admin' : '/account';
+      if (next && !next.startsWith('/login') && !next.startsWith('/register')) {
+        if (next.startsWith('/admin')) {
+          targetUrl = isOwnerOrAdmin ? next : '/account';
+        } else {
+          targetUrl = next;
         }
       }
 
-      const next = searchParams.get('next') ?? '/';
-      router.push(next);
-    } catch (err) {
-      setError('Unable to connect to server. Please check backend connection.');
+      window.location.href = targetUrl;
+    } catch (err: any) {
+      setError(err?.message || 'Failed to reset password. Please request a new code.');
     } finally {
       setLoading(false);
     }

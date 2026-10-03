@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useMemo } from 'react';
 import { roleMeta, rolePermissions } from '../data/admin';
 import type { AdminModule, AdminRole, PermissionAction, PlanState } from '../types/commerce';
+import { authService } from '@/services/auth';
 
 export interface AdminContextValue {
   role: AdminRole;
@@ -26,12 +27,13 @@ export function AdminProvider({
   const value = useMemo<AdminContextValue>(() => {
     const perms = rolePermissions[role] ?? rolePermissions.owner;
     const readOnly = planState === 'suspended';
-    const meta = roleMeta[role] ?? roleMeta.owner;
+    const currentUser = typeof window !== 'undefined' ? authService.getStoredUser() : null;
+    const actorName = currentUser?.name || currentUser?.email?.split('@')[0] || (role === 'owner' ? 'Owner' : 'Staff');
     return {
       role,
       planState,
       readOnly,
-      actor: `${meta.person.split(' ')[0]} (${meta.name})`,
+      actor: `${actorName} (${role.toUpperCase()})`,
       can: (module, action = 'view') => {
         if (module === 'billing' && role === 'owner') return true;
         if (readOnly && action !== 'view' && action !== 'export') return false;
@@ -46,11 +48,12 @@ export function AdminProvider({
 export function useAdmin() {
   const ctx = useContext(AdminContext);
   if (!ctx) {
-    const meta = roleMeta.owner;
+    const currentUser = typeof window !== 'undefined' ? authService.getStoredUser() : null;
+    const actorName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Owner';
     return {
       role: 'owner' as AdminRole,
       planState: 'active' as PlanState,
-      actor: `${meta.person.split(' ')[0]} (${meta.name})`,
+      actor: `${actorName} (OWNER)`,
       readOnly: false,
       can: () => true
     };

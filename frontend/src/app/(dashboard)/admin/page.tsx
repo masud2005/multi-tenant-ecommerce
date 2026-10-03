@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowUpRight, ChevronRight, Package, RotateCcw, AlertTriangle, Star, CreditCard } from 'lucide-react';
@@ -15,18 +15,35 @@ import { orderStatusMeta } from '@/utils/status';
 import { formatBDT, formatCompactBDT, formatNumber, timeAgo } from '@/utils/format';
 import { available } from '@/utils/pricing';
 import { cn } from '@/lib/utils';
+import { authService } from '@/services/auth';
 
 type Range = '7d' | '30d';
 
 export default function AdminDashboardPage() {
   const { orders, returns, reviews, products } = useStore();
   const { role, can } = useAdmin();
+  const [userName, setUserName] = useState<string>('');
   const [range, setRange] = useState<Range>('30d');
   const series = range === '7d' ? salesSeries.slice(-4) : salesSeries;
   const total = series.reduce((s, d) => s + d.sales, 0);
   const prev = series.reduce((s, d) => s + d.prev, 0);
   const change = ((total - prev) / prev) * 100;
   const showMoney = can('analytics');
+
+  useEffect(() => {
+    const user = authService.getStoredUser();
+    if (user?.name) {
+      setUserName(user.name.split(' ')[0]);
+    } else if (user?.email) {
+      setUserName(user.email.split('@')[0]);
+    }
+  }, []);
+
+  const todayFormatted = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date());
 
   const toFulfill = orders.filter((o) => ['confirmed', 'processing'].includes(o.status));
   const toShip = orders.filter((o) => o.status === 'packed');
@@ -53,9 +70,9 @@ export default function AdminDashboardPage() {
     <div className="w-full space-y-6">
       <div className="mb-6">
         <h1 className="text-xl font-semibold tracking-tight text-ink">
-          Good morning, {me.person.split(' ')[0]}
+          Good morning, {userName || me.person.split(' ')[0]}
         </h1>
-        <p className="mt-1 text-sm text-ink-muted">Here’s what’s happening at Tanti today · Saturday, 26 September</p>
+        <p className="mt-1 text-sm text-ink-muted">Here’s what’s happening at Tanti today · {todayFormatted}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

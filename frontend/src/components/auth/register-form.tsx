@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { cn } from '@/lib/utils';
+import { authService } from '@/services/auth';
 
 function getPasswordStrength(pw: string): number {
   let s = 0;
@@ -60,34 +61,17 @@ export function RegisterForm() {
 
     setLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-      const res = await fetch(`${apiUrl}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: form.name,
-          phone: form.phone,
-          email: form.email,
-          password: form.password,
-        }),
+      await authService.register({
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        password: form.password,
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = Array.isArray(data.message)
-          ? data.message.join(', ')
-          : data.message || 'Registration failed. Please try again.';
-        setErrors({ email: errMsg });
-        return;
-      }
-
-      // Registration success -> redirect to verify Email OTP
-      router.push(`/verify?type=otp&to=${encodeURIComponent(form.email)}&next=/`);
-    } catch (err) {
-      setErrors({ email: 'Unable to connect to server. Please check backend connection.' });
+      // Redirect to verification OTP page
+      router.push(`/verify?type=otp&to=${encodeURIComponent(form.email)}&next=/account`);
+    } catch (err: any) {
+      setErrors({ email: err?.message || 'Registration failed. Please try again.' });
     } finally {
       setLoading(false);
     }

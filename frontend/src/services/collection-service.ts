@@ -1,56 +1,23 @@
-import { apiClient, ApiResponse } from './api-client';
+// Collection management service communicating with owner collection endpoints
+import { apiClient } from './api-client';
+import type {
+  ApiResponse,
+  CollectionResponseData,
+  CreateCollectionPayload,
+  UpdateCollectionPayload,
+} from '@/types';
 
-export interface CreateCollectionPayload {
-  name: string;
-  slug?: string;
-  description?: string;
-  image?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  type?: 'MANUAL' | 'RULE';
-  rule?: any;
-  isActive?: boolean;
-  isFeatured?: boolean;
-  order?: number;
-  startsAt?: string;
-  endsAt?: string;
-}
-
-export interface CollectionResponseData {
-  id: string;
-  tenantId: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  image: string | null;
-  seoTitle: string | null;
-  seoDescription: string | null;
-  type: 'MANUAL' | 'RULE';
-  rule: any;
-  isActive: boolean;
-  isFeatured: boolean;
-  order: number;
-  startsAt: string | null;
-  endsAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt: string | null;
-  products?: any[];
-}
+export type { CollectionResponseData, CreateCollectionPayload, UpdateCollectionPayload };
 
 export const collectionService = {
-  /**
-   * Get all collections from the backend
-   */
+  // Get all collections
   async getCollections(): Promise<ApiResponse<CollectionResponseData[]>> {
     return await apiClient.get<ApiResponse<CollectionResponseData[]>>(
       '/owner/collections',
     );
   },
 
-  /**
-   * Get a single collection details by ID or Slug
-   */
+  // Get single collection details
   async getCollectionBySlugOrId(
     idOrSlug: string,
   ): Promise<ApiResponse<CollectionResponseData>> {
@@ -59,11 +26,9 @@ export const collectionService = {
     );
   },
 
-  /**
-   * Create a new collection in the backend
-   */
+  // Create new collection
   async createCollection(
-    payload: CreateCollectionPayload,
+    payload: CreateCollectionPayload | FormData,
   ): Promise<ApiResponse<CollectionResponseData>> {
     return await apiClient.post<ApiResponse<CollectionResponseData>>(
       '/owner/collections',
@@ -71,12 +36,10 @@ export const collectionService = {
     );
   },
 
-  /**
-   * Update an existing collection in the backend
-   */
+  // Update existing collection
   async updateCollection(
     idOrSlug: string,
-    payload: Partial<CreateCollectionPayload>,
+    payload: UpdateCollectionPayload | FormData,
   ): Promise<ApiResponse<CollectionResponseData>> {
     return await apiClient.patch<ApiResponse<CollectionResponseData>>(
       `/owner/collections/${idOrSlug}`,
@@ -84,9 +47,7 @@ export const collectionService = {
     );
   },
 
-  /**
-   * Delete a collection in the backend
-   */
+  // Delete a collection
   async deleteCollection(
     idOrSlug: string,
   ): Promise<ApiResponse<null>> {

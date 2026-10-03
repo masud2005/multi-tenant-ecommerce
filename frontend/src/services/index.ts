@@ -1,4 +1,6 @@
+// Unified service layer barrel export
 export * from './api-client';
+export * from './auth';
 export * from './product-service';
 export * from './order-service';
 export * from './customer-service';
@@ -10,4 +12,3 @@ export * from './category-service';
 export * from './brand-service';
 export * from './collection-service';
 export * from './inventory-service';
-export * from './auth/getUserInfo';

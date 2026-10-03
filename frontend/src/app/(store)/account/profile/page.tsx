@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useStore } from '@/contexts/StoreContext';
 import { AccountHeader } from '@/components/account/AccountHeader';
@@ -15,9 +15,20 @@ export default function AccountProfilePage() {
     name: user?.name ?? '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
-    birthday: '1994-03-18',
-    gender: 'Female',
+    birthday: '',
+    gender: '',
   });
+
+  useEffect(() => {
+    if (user) {
+      setForm((prev) => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+        phone: user.phone || prev.phone,
+      }));
+    }
+  }, [user]);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const set = (patch: Partial<typeof form>) => {

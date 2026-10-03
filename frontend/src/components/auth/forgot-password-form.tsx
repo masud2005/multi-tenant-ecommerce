@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
+import { authService } from '@/services/auth';
 
 export function ForgotPasswordForm() {
   const router = useRouter();
@@ -21,29 +22,11 @@ export function ForgotPasswordForm() {
     setLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
-      const res = await fetch(`${apiUrl}/auth/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errMsg = Array.isArray(data.message)
-          ? data.message.join(', ')
-          : data.message || 'Unable to send password reset code. Please try again.';
-        setError(errMsg);
-        return;
-      }
-
-      // ইমেইলে ওটিপি পাঠানো সফল হলে সরাসরি ভেরিফাই পেজে নিয়ে যাওয়া হবে
+      await authService.forgotPassword({ email });
+      // Redirect to verification OTP page with reset type
       router.push(`/verify?type=reset&to=${encodeURIComponent(email)}`);
-    } catch (err) {
-      setError('Unable to connect to server. Please check backend connection.');
+    } catch (err: any) {
+      setError(err?.message || 'Unable to send password reset code. Please try again.');
     } finally {
       setLoading(false);
     }

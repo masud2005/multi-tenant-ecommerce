@@ -87,7 +87,7 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => {
                 logout();
-                router.push('/');
+                window.location.href = '/login';
               }}
               className="flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm text-ink-soft hover:bg-subtle hover:text-danger lg:mt-4 cursor-pointer transition-colors"
             >

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { notificationTemplates, notificationLogs } from '@/data/admin';
 import { useAdmin } from '@/contexts/AdminContext';
+import { authService } from '@/services/auth';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
@@ -141,9 +142,11 @@ export default function AdminNotificationsPage() {
             <div className="flex justify-end gap-2">
               <Button
                 variant="ghost"
-                onClick={() =>
-                  toast.success('Test sent to shahana@tanti.com.bd')
-                }
+                onClick={() => {
+                  const currentUser = authService.getStoredUser();
+                  const targetEmail = currentUser?.email || 'owner@store.com';
+                  toast.success(`Test sent to ${targetEmail}`);
+                }}
               >
                 Send test
               </Button>

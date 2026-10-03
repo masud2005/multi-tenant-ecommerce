@@ -1,79 +1,40 @@
-import { apiClient, ApiResponse } from './api-client';
+// Brand management service communicating with owner brand endpoints
+import { apiClient } from './api-client';
+import type {
+  ApiResponse,
+  BrandResponseData,
+  CreateBrandPayload,
+  UpdateBrandPayload,
+} from '@/types';
 
-export interface CreateBrandPayload {
-  name: string;
-  slug?: string;
-  description?: string;
-  logo?: string;
-  isActive?: boolean;
-}
-
-export interface BrandResponseData {
-  id: string;
-  tenantId: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  logo: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt?: string | null;
-  _count?: {
-    products: number;
-  };
-  products?: any[];
-}
+export type { BrandResponseData, CreateBrandPayload, UpdateBrandPayload };
 
 export const brandService = {
-  /**
-   * Get all brands from the backend
-   */
+  // Get all brands
   async getBrands(): Promise<ApiResponse<BrandResponseData[]>> {
     return await apiClient.get<ApiResponse<BrandResponseData[]>>('/owner/brands');
   },
 
-  /**
-   * Get a single brand details by ID or Slug
-   */
-  async getBrandBySlugOrId(
-    idOrSlug: string,
-  ): Promise<ApiResponse<BrandResponseData>> {
+  // Get single brand details
+  async getBrandBySlugOrId(idOrSlug: string): Promise<ApiResponse<BrandResponseData>> {
     return await apiClient.get<ApiResponse<BrandResponseData>>(`/owner/brands/${idOrSlug}`);
   },
 
-  /**
-   * Create a new brand in the backend
-   */
-  async createBrand(
-    payload: CreateBrandPayload,
-  ): Promise<ApiResponse<BrandResponseData>> {
-    return await apiClient.post<ApiResponse<BrandResponseData>>(
-      '/owner/brands',
-      payload,
-    );
+  // Create brand (multipart form data or JSON)
+  async createBrand(payload: CreateBrandPayload | FormData): Promise<ApiResponse<BrandResponseData>> {
+    return await apiClient.post<ApiResponse<BrandResponseData>>('/owner/brands', payload);
   },
 
-  /**
-   * Update an existing brand in the backend
-   */
+  // Update existing brand
   async updateBrand(
     idOrSlug: string,
-    payload: Partial<CreateBrandPayload>,
+    payload: UpdateBrandPayload | FormData,
   ): Promise<ApiResponse<BrandResponseData>> {
-    return await apiClient.patch<ApiResponse<BrandResponseData>>(
-      `/owner/brands/${idOrSlug}`,
-      payload,
-    );
+    return await apiClient.patch<ApiResponse<BrandResponseData>>(`/owner/brands/${idOrSlug}`, payload);
   },
 
-  /**
-   * Delete a brand in the backend (soft delete)
-   */
-  async deleteBrand(
-    idOrSlug: string,
-  ): Promise<ApiResponse<null>> {
+  // Soft delete brand
+  async deleteBrand(idOrSlug: string): Promise<ApiResponse<null>> {
     return await apiClient.delete<ApiResponse<null>>(`/owner/brands/${idOrSlug}`);
   },
 };
-

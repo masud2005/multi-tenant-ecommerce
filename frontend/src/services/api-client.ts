@@ -1,43 +1,96 @@
-/**
- * Base API Client for Next.js multi-tenant e-commerce backend integration
- */
+// Base HTTP API Client with auth refresh interceptor and FormData support
+import type { ApiResponse } from '@/types';
+import {
+  getAuthToken,
+  getRefreshToken,
+  setAuthSession,
+  clearAuthSession,
+} from './auth/auth.storage';
 
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data: T;
-  message?: string;
-  errors?: Record<string, string[]>;
-}
+export type { ApiResponse };
 
 class ApiClient {
   private baseUrl: string;
+  private isRefreshing = false;
+  private refreshSubscribers: ((token: string) => void)[] = [];
 
   constructor() {
     this.baseUrl =
       process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
   }
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private onTokenRefreshed(newToken: string) {
+    this.refreshSubscribers.forEach((callback) => callback(newToken));
+    this.refreshSubscribers = [];
+  }
+
+  private addRefreshSubscriber(callback: (token: string) => void) {
+    this.refreshSubscribers.push(callback);
+  }
+
+  private async tryRefreshToken(): Promise<string | null> {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return null;
+
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/refresh-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) {
+        clearAuthSession();
+        return null;
+      }
+
+      const json = await response.json();
+      const newAccessToken = json.data?.accessToken;
+      const newRefreshToken = json.data?.refreshToken || refreshToken;
+
+      if (newAccessToken) {
+        setAuthSession({
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+        });
+        return newAccessToken;
+      }
+      return null;
+    } catch {
+      clearAuthSession();
+      return null;
+    }
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}, isRetry = false): Promise<T> {
     const url = endpoint.startsWith('http')
       ? endpoint
       : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
+    const headers: Record<string, string> = {
+      ...((options.headers as Record<string, string>) || {}),
     };
 
-    // Client-side auth and tenant injection if available
+    // Auto-detect multipart form data
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
+    // Set JSON content type only if not FormData and not already specified
+    if (!isFormData && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    // Attach credentials and tenant headers if on client
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+      const token = getAuthToken();
+      if (token && !headers['Authorization']) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
+
       const tenantSlug =
         localStorage.getItem('tenant_slug') ||
         window.location.hostname.split('.')[0];
-      if (tenantSlug) {
-        (headers as Record<string, string>)['x-tenant-slug'] = tenantSlug;
+      if (tenantSlug && tenantSlug !== 'localhost' && !headers['x-tenant-slug']) {
+        headers['x-tenant-slug'] = tenantSlug;
       }
     }
 
@@ -46,6 +99,40 @@ class ApiClient {
         ...options,
         headers,
       });
+
+      // Handle 401 Unauthorized by attempting a token refresh
+      if (
+        response.status === 401 &&
+        !isRetry &&
+        !endpoint.includes('/auth/login') &&
+        !endpoint.includes('/auth/refresh-token')
+      ) {
+        if (!this.isRefreshing) {
+          this.isRefreshing = true;
+          const newToken = await this.tryRefreshToken();
+          this.isRefreshing = false;
+
+          if (newToken) {
+            this.onTokenRefreshed(newToken);
+            headers['Authorization'] = `Bearer ${newToken}`;
+            return this.request<T>(endpoint, { ...options, headers }, true);
+          } else {
+            clearAuthSession();
+          }
+        } else {
+          return new Promise<T>((resolve, reject) => {
+            this.addRefreshSubscriber(async (newToken: string) => {
+              try {
+                headers['Authorization'] = `Bearer ${newToken}`;
+                const retryRes = await this.request<T>(endpoint, { ...options, headers }, true);
+                resolve(retryRes);
+              } catch (err) {
+                reject(err);
+              }
+            });
+          });
+        }
+      }
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
@@ -72,26 +159,29 @@ class ApiClient {
   }
 
   post<T>(endpoint: string, body?: any, headers?: HeadersInit) {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'POST',
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
     });
   }
 
   put<T>(endpoint: string, body?: any, headers?: HeadersInit) {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PUT',
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
     });
   }
 
   patch<T>(endpoint: string, body?: any, headers?: HeadersInit) {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PATCH',
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
     });
   }
 

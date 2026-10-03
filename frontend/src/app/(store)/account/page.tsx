@@ -29,8 +29,10 @@ export default function AccountDashboardPage() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl">Hi, {user?.name.split(' ')[0]}</h1>
-      <p className="mt-1 text-sm text-ink-muted">Member since February 2025 · VIP</p>
+      <h1 className="font-display text-3xl">
+        Hi, {user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Customer'}
+      </h1>
+      <p className="mt-1 text-sm text-ink-muted">Welcome to your account overview</p>
 
       {activeOrder ? (
         <section

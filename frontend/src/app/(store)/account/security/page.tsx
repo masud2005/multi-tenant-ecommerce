@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/Switch';
 import { Badge } from '@/components/ui/Badge';
+import { authService } from '@/services/auth';
+import { useStore } from '@/contexts/StoreContext';
 
 const initialSessions = [
   {
@@ -37,23 +39,37 @@ const initialSessions = [
 ];
 
 export default function AccountSecurityPage() {
+  const { user } = useStore();
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
   const [mfa, setMfa] = useState(false);
   const [sessions, setSessions] = useState(initialSessions);
-  const [google, setGoogle] = useState(true);
+  const [google, setGoogle] = useState(false);
 
-  const change = (e: React.FormEvent) => {
+  const change = async (e: React.FormEvent) => {
     e.preventDefault();
     const er: Record<string, string> = {};
     if (!pw.current) er.current = 'Enter your current password';
-    if (pw.next.length < 8) er.next = 'Use at least 8 characters';
+    if (pw.next.length < 6) er.next = 'Use at least 6 characters';
     if (pw.next !== pw.confirm) er.confirm = 'Passwords don’t match';
     setErrors(er);
     if (Object.keys(er).length) return;
-    setPw({ current: '', next: '', confirm: '' });
-    toast.success('Password changed. Other devices have been signed out.');
-    setSessions((s) => s.filter((x) => x.current));
+
+    setLoading(true);
+    try {
+      await authService.changePassword({
+        oldPassword: pw.current,
+        newPassword: pw.next,
+      });
+      setPw({ current: '', next: '', confirm: '' });
+      toast.success('Password changed successfully');
+      setSessions((s) => s.filter((x) => x.current));
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to change password. Please check your current password.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -89,7 +105,9 @@ export default function AccountSecurityPage() {
             />
           </div>
           <div>
-            <Button type="submit">Update password</Button>
+            <Button type="submit" loading={loading}>
+              Update password
+            </Button>
           </div>
         </form>
       </section>
@@ -118,7 +136,7 @@ export default function AccountSecurityPage() {
           <div>
             <p className="text-sm font-medium">Google</p>
             <p className="text-xs text-ink-muted">
-              {google ? 'Connected as user@example.com' : 'Not connected'}
+              {user?.email ? `Linked with ${user.email}` : 'Not connected'}
             </p>
           </div>
           <Button size="sm" variant="secondary" onClick={() => setGoogle(!google)}>
