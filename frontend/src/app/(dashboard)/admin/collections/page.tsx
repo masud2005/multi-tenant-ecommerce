@@ -1,7 +1,5 @@
 import { Metadata } from 'next';
-import { collections, products } from '@/data/products';
 import { CollectionsManager } from '@/components/dashboard/admin/collections';
-import type { CollectionItem } from '@/types/collection';
 
 export const metadata: Metadata = {
   title: 'Collections | Admin Dashboard',
@@ -12,10 +10,7 @@ export const metadata: Metadata = {
 export default function AdminCollectionsPage() {
   return (
     <div className="w-full">
-      <CollectionsManager
-        initialCollections={collections as CollectionItem[]}
-        products={products}
-      />
+      <CollectionsManager />
     </div>
   );
 }

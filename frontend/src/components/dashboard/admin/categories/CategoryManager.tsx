@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { CategoryTree } from './CategoryTree';
 import { CategoryDetailPanel } from './CategoryDetailPanel';
+import { productService } from '@/services/product-service';
 import { categoryService } from '@/services/category-service';
 import { images } from '@/data/images';
 import type { CategoryItemData } from '@/types/commerce';
@@ -20,19 +21,24 @@ interface CategoryManagerProps {
 export function CategoryManager({ initialCategories = [], products = [] }: CategoryManagerProps) {
   const store = useStore();
   const [categoriesFromDb, setCategoriesFromDb] = useState<CategoryItemData[] | null>(null);
+  const [liveProducts, setLiveProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCategories = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await categoryService.getCategories();
-      if (res?.data && Array.isArray(res.data)) {
+      const [res, prodRes] = await Promise.allSettled([
+        categoryService.getCategories(),
+        productService.getProducts(),
+      ]);
+
+      if (res.status === 'fulfilled' && res.value?.data && Array.isArray(res.value.data)) {
         // Map backend categories (top-level categories with subcategories from children)
-        const topLevel = res.data.filter((c: any) => !c.parentId);
-        const mapped: CategoryItemData[] = (topLevel.length > 0 ? topLevel : res.data).map((c: any) => {
+        const topLevel = res.value.data.filter((c: any) => !c.parentId);
+        const mapped: CategoryItemData[] = (topLevel.length > 0 ? topLevel : res.value.data).map((c: any) => {
           const subs: string[] = Array.isArray(c.children) && c.children.length > 0
             ? c.children.map((ch: any) => ch.name)
-            : res.data
+            : res.value.data
                 .filter((other: any) => other.parentId === c.id)
                 .map((other: any) => other.name);
 
@@ -51,6 +57,10 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
       } else {
         setCategoriesFromDb([]);
       }
+
+      if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
+        setLiveProducts(prodRes.value);
+      }
     } catch (err) {
       console.error('Failed to fetch categories from DB:', err);
       setCategoriesFromDb([]);
@@ -64,14 +74,23 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
   }, [fetchCategories]);
 
   const categoriesList = useMemo(() => {
-    if (categoriesFromDb !== null) {
+    if (categoriesFromDb !== null && categoriesFromDb.length > 0) {
       return categoriesFromDb;
     }
-    return initialCategories;
-  }, [categoriesFromDb, initialCategories]);
+    if (store?.categories && store.categories.length > 0) {
+      return store.categories;
+    }
+    if (initialCategories && initialCategories.length > 0) {
+      return initialCategories;
+    }
+    return categoriesFromDb !== null ? categoriesFromDb : [];
+  }, [categoriesFromDb, store?.categories, initialCategories]);
 
-  const productsList =
-    store?.products && store.products.length > 0 ? store.products : products;
+  const productsList = useMemo(() => {
+    if (liveProducts.length > 0) return liveProducts;
+    if (store?.products && store.products.length > 0) return store.products;
+    return products;
+  }, [liveProducts, store?.products, products]);
 
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const [activeKey, setActiveKey] = useState<string>('');
@@ -115,10 +134,17 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
   }, [activeCategory, activeSubcategory]);
 
   const getProductCount = (categoryKey: string, subcategory?: string) => {
-    return productsList.filter(
-      (p) =>
-        p.category === categoryKey && (!subcategory || p.subcategory === subcategory)
-    ).length;
+    const catNorm = categoryKey.toLowerCase();
+    const matchedCategory = categoriesList.find((c) => c.key === categoryKey);
+    const catNameNorm = matchedCategory?.name.toLowerCase();
+
+    return productsList.filter((p) => {
+      const pCat = (p.category || '').toLowerCase();
+      const matchesCategory = pCat === catNorm || (catNameNorm && pCat === catNameNorm);
+      if (!matchesCategory) return false;
+      if (!subcategory) return true;
+      return (p.subcategory || '').toLowerCase() === subcategory.toLowerCase();
+    }).length;
   };
 
   const handleToggleKey = (key: string) => {
@@ -161,7 +187,7 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
         }
       />
 
-      {isLoading && categoriesList.length === 0 ? (
+      {isLoading && categoriesFromDb === null ? (
         <div className="flex h-64 items-center justify-center rounded-lg border border-line bg-surface">
           <div className="flex items-center gap-2 text-sm text-ink-muted">
             <Loader2 className="h-5 w-5 animate-spin text-clay" />

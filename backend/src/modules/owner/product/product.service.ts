@@ -640,12 +640,21 @@ export class ProductService {
 
   // Get all products with filters, search, and pagination
   async findAll(query?: QueryProductDto, tenantId?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+    let resolvedTenantId = tenantId;
+    if (!resolvedTenantId) {
+      const activeTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      resolvedTenantId = activeTenant?.id;
+    }
+
+    if (!resolvedTenantId) {
+      return ResponseHelper.success([], 'Products retrieved successfully');
     }
 
     const where: any = {
-      tenantId,
+      tenantId: resolvedTenantId,
       deletedAt: null,
     };
 
@@ -786,14 +795,23 @@ export class ProductService {
 
   // Get single product details by ID or Slug
   async findOne(idOrSlug: string, tenantId?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+    let resolvedTenantId = tenantId;
+    if (!resolvedTenantId) {
+      const activeTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      resolvedTenantId = activeTenant?.id;
+    }
+
+    if (!resolvedTenantId) {
+      throw new NotFoundException('Product');
     }
 
     const product = await this.prisma.product.findFirst({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
-        tenantId,
+        tenantId: resolvedTenantId,
         deletedAt: null,
       },
       include: {

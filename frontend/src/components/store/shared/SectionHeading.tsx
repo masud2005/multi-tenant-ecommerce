@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ArrowRightIcon } from 'lucide-react';
 
-interface SectionHeadingProps {
+export interface SectionHeadingProps {
   id?: string;
   title: string;
   subtitle?: string;

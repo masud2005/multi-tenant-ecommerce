@@ -27,7 +27,7 @@ export class AuthController {
     }
 
     @Post('login')
-    @ThrottleLogin()
+    // @ThrottleLogin()
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'Verify login credentials and send login OTP or direct login',

@@ -1,0 +1,82 @@
+model ThemePreset {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  previewImage    String?
+  defaultTokens   Json
+  defaultSections Json
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  themes          TenantTheme[]
+
+  @@map("theme_presets")
+}
+
+model TenantTheme {
+  id             String      @id @default(uuid())
+  tenantId       String
+  presetId       String?
+  name           String
+  status         ThemeStatus @default(DRAFT)
+  isLive         Boolean     @default(false)
+
+  // Design Tokens
+  primaryColor   String      @default("#B5562F")
+  secondaryColor String?     @default("#2E3A67")
+  accentColor    String      @default("#5C6B4E")
+  canvasColor    String      @default("#F7F4EF")
+  surfaceColor   String      @default("#FFFFFF")
+  inkColor       String      @default("#1C1A17")
+  fontHeading    String      @default("Fraunces")
+  fontBody       String      @default("Inter")
+  borderRadius   String      @default("0.5rem")
+  cardStyle      String      @default("portrait-hover")
+  customCss      String?     @db.Text
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  publishedAt    DateTime?
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  preset         ThemePreset?   @relation(fields: [presetId], references: [id], onDelete: SetNull)
+  sections       ThemeSection[]
+  versions       ThemeVersion[]
+
+  @@index([tenantId, isLive])
+  @@map("tenant_themes")
+}
+
+model ThemeSection {
+  id          String   @id @default(uuid())
+  themeId     String
+  sectionType String
+  label       String
+  orderIndex  Int      @default(0)
+  isVisible   Boolean  @default(true)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  theme       TenantTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@index([themeId, orderIndex])
+  @@map("theme_sections")
+}
+
+model ThemeVersion {
+  id          String   @id @default(uuid())
+  themeId     String
+  version     String
+  label       String?
+  snapshot    Json
+  publishedBy String?
+  createdAt   DateTime @default(now())
+
+  theme       TenantTheme @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@index([themeId])
+  @@map("theme_versions")
+}

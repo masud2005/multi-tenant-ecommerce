@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ChevronLeftIcon } from 'lucide-react';
 import { blogPosts } from '@/data/content';
 import { useStore } from '@/contexts/StoreContext';
-import { ProductCard } from '@/components/store/ProductCard';
+import { ProductCard } from '@/components/store/product';
 import { formatDate } from '@/utils/format';
 
 interface JournalPostPageProps {

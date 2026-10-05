@@ -24,6 +24,11 @@ class ApiClient {
     this.refreshSubscribers = [];
   }
 
+  private onTokenRefreshFailed() {
+    this.refreshSubscribers.forEach((callback) => callback(''));
+    this.refreshSubscribers = [];
+  }
+
   private addRefreshSubscriber(callback: (token: string) => void) {
     this.refreshSubscribers.push(callback);
   }
@@ -118,11 +123,15 @@ class ApiClient {
             return this.request<T>(endpoint, { ...options, headers }, true);
           } else {
             clearAuthSession();
+            this.onTokenRefreshFailed();
           }
         } else {
           return new Promise<T>((resolve, reject) => {
             this.addRefreshSubscriber(async (newToken: string) => {
               try {
+                if (!newToken) {
+                  throw new Error('Unauthorized');
+                }
                 headers['Authorization'] = `Bearer ${newToken}`;
                 const retryRes = await this.request<T>(endpoint, { ...options, headers }, true);
                 resolve(retryRes);

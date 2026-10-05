@@ -190,16 +190,30 @@ export class CollectionService {
     }
   }
 
-  // Get all collections for a tenant
+  // Get all collections for a tenant (with fallback for public storefront)
   async findAll(tenantId?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+    let targetTenantId = tenantId;
+    if (!targetTenantId) {
+      const defaultTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      targetTenantId = defaultTenant?.id;
+    }
+
+    if (!targetTenantId) {
+      return ResponseHelper.success([], 'No collections found');
     }
 
     const collections = await this.prisma.collection.findMany({
       where: {
-        tenantId,
+        tenantId: targetTenantId,
         deletedAt: null,
+      },
+      include: {
+        _count: {
+          select: { products: true },
+        },
       },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
@@ -212,14 +226,23 @@ export class CollectionService {
 
   // Get single collection details by ID or Slug
   async findOne(idOrSlug: string, tenantId?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+    let targetTenantId = tenantId;
+    if (!targetTenantId) {
+      const defaultTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      targetTenantId = defaultTenant?.id;
+    }
+
+    if (!targetTenantId) {
+      throw new NotFoundException('Collection');
     }
 
     const collection = await this.prisma.collection.findFirst({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
-        tenantId,
+        tenantId: targetTenantId,
         deletedAt: null,
       },
       include: {
@@ -227,6 +250,9 @@ export class CollectionService {
           include: {
             product: true,
           },
+        },
+        _count: {
+          select: { products: true },
         },
       },
     });

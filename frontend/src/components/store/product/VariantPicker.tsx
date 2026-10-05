@@ -5,7 +5,7 @@ import type { Product } from '@/types/commerce';
 import { available } from '@/utils/pricing';
 import { cn } from '@/utils/cn';
 
-interface VariantPickerProps {
+export interface VariantPickerProps {
   product: Product;
   color: string;
   size: string | null;

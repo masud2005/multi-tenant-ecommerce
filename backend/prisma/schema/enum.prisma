@@ -150,3 +150,9 @@ enum StockMovementReason {
   PHYSICAL_COUNT
   RETURN
 }
+
+enum ThemeStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}

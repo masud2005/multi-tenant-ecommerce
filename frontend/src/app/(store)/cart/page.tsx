@@ -16,8 +16,8 @@ import { useCartLines } from '@/hooks/useCartLines';
 import { districts, shippingMethods } from '@/data/shipping';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ProductCard } from '@/components/store/ProductCard';
-import { SectionHeading } from '@/components/store/SectionHeading';
+import { ProductCard } from '@/components/store/product';
+import { SectionHeading } from '@/components/store/shared';
 import { findCoupon, couponDiscount } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
 

@@ -61,6 +61,7 @@ model Tenant {
   webhooks              WebhookEndpoint[]
   notificationTemplates NotificationTemplate[]
   notificationLogs      NotificationLog[]
+  themes                TenantTheme[]
 
   @@index([deletedAt])
   @@map("tenants")

@@ -99,6 +99,11 @@ export function proxy(request: NextRequest) {
       }
       return response;
     }
+
+    // Redirect staff/owners away from customer dashboard to admin panel
+    if (isStaffOrOwner) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
   }
 
   // Redirect already authenticated users from auth pages
@@ -108,6 +113,9 @@ export function proxy(request: NextRequest) {
       if (nextParam && !nextParam.startsWith('/login') && !nextParam.startsWith('/register')) {
         if (nextParam.startsWith('/admin') && !isStaffOrOwner) {
           return NextResponse.redirect(new URL('/account', request.url));
+        }
+        if (nextParam.startsWith('/account') && isStaffOrOwner) {
+          return NextResponse.redirect(new URL('/admin', request.url));
         }
         return NextResponse.redirect(new URL(nextParam, request.url));
       }

@@ -61,7 +61,7 @@ export default function AdminProductsPage() {
     loadData();
   }, [loadData]);
 
-  // Use live products if loaded, fallback to context products
+  // Prioritize live products from database, fallback to store products
   const products = liveProducts.length > 0 ? liveProducts : storeProducts;
 
   // Process Category List for Filter Dropdown
@@ -70,27 +70,43 @@ export default function AdminProductsPage() {
       const parents = dbCategories.filter((c) => !c.parentId);
       return parents.map((c) => ({ key: c.slug || c.id, name: c.name }));
     }
-    return seedCategories.map((c) => ({ key: c.key, name: c.name }));
+    return [];
   }, [dbCategories]);
 
   const rows = useMemo(
     () =>
       products.filter((p) => {
         const s = productStock(p);
-        return (
-          (tab === 'all' || p.status === tab) &&
-          (cat === 'all' || p.category === cat) &&
-          (stock === 'all' ||
-            (stock === 'out'
-              ? s === 0 && !p.preorder
-              : s > 0 && s <= LOW_STOCK_THRESHOLD * 2)) &&
-          (!q ||
-            `${p.title} ${p.variants?.map((v) => v.sku).join(' ') || ''} ${p.brand}`
-              .toLowerCase()
-              .includes(q.toLowerCase()))
-        );
+        const pCat = (p.category || '').toLowerCase();
+        const catFilter = cat.toLowerCase();
+
+        const matchesCat =
+          catFilter === 'all' ||
+          pCat === catFilter ||
+          categoryFilterOptions.some(
+            (c) =>
+              c.key.toLowerCase() === catFilter &&
+              (pCat === c.key.toLowerCase() || pCat === c.name.toLowerCase())
+          );
+
+        const matchesTab =
+          tab === 'all' || (p.status || '').toLowerCase() === tab.toLowerCase();
+
+        const matchesStock =
+          stock === 'all' ||
+          (stock === 'out'
+            ? s === 0 && !p.preorder
+            : s > 0 && s <= LOW_STOCK_THRESHOLD * 2);
+
+        const matchesSearch =
+          !q ||
+          `${p.title} ${p.variants?.map((v) => v.sku).join(' ') || ''} ${p.brand}`
+            .toLowerCase()
+            .includes(q.toLowerCase());
+
+        return matchesCat && matchesTab && matchesStock && matchesSearch;
       }),
-    [products, tab, cat, stock, q]
+    [products, tab, cat, stock, q, categoryFilterOptions]
   );
 
   const bulk = (status: ProductStatus) => {

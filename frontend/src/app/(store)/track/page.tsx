@@ -7,7 +7,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
-import { OrderProgress } from '@/components/store/OrderProgress';
+import { OrderProgress } from '@/components/store/shared';
 import { orderStatusMeta } from '@/utils/status';
 import { formatDateTime } from '@/utils/format';
 import type { Order } from '@/types/commerce';

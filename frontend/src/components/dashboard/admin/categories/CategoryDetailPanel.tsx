@@ -129,15 +129,22 @@ export function CategoryDetailPanel({
 
   // Filtered products for current view
   const categoryProducts = useMemo(() => {
-    return products.filter((p) => p.category === category.key);
-  }, [products, category.key]);
+    const cKeyNorm = (category.key || '').toLowerCase();
+    const cNameNorm = (category.name || '').toLowerCase();
+    return products.filter((p) => {
+      const pCat = (p.category || '').toLowerCase();
+      return pCat === cKeyNorm || pCat === cNameNorm;
+    });
+  }, [products, category.key, category.name]);
 
   const displayedProducts = useMemo(() => {
     let list = categoryProducts;
     if (activeSubcategory) {
-      list = list.filter((p) => p.subcategory === activeSubcategory);
+      const activeSubNorm = activeSubcategory.toLowerCase();
+      list = list.filter((p) => (p.subcategory || '').toLowerCase() === activeSubNorm);
     } else if (activeFilterSub !== 'all') {
-      list = list.filter((p) => p.subcategory === activeFilterSub);
+      const filterSubNorm = activeFilterSub.toLowerCase();
+      list = list.filter((p) => (p.subcategory || '').toLowerCase() === filterSubNorm);
     }
     if (productSearch.trim()) {
       const q = productSearch.toLowerCase();

@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { Metadata } from 'next';
-import { ShopView } from '@/components/store/ShopView';
+import { ShopView } from '@/components/store/shop';
 
 export async function generateMetadata({
   params,

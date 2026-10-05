@@ -1,12 +1,9 @@
 import React from 'react';
 import { StoreProvider } from '@/contexts/StoreContext';
-import { StoreHeader } from '@/components/store/StoreHeader';
-import { StoreFooter } from '@/components/store/StoreFooter';
-import { MiniCart } from '@/components/store/MiniCart';
-import { SearchOverlay } from '@/components/store/SearchOverlay';
-import { QuickView } from '@/components/store/QuickView';
-import { CompareDrawer } from '@/components/store/CompareDrawer';
-import { CookieBanner } from '@/components/store/CookieBanner';
+import { StoreHeader, StoreFooter, SearchOverlay } from '@/components/store/layout';
+import { MiniCart } from '@/components/store/cart';
+import { QuickView } from '@/components/store/product';
+import { CompareDrawer, CookieBanner } from '@/components/store/shared';
 
 export default function StoreLayout({
   children,

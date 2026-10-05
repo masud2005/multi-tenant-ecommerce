@@ -19,14 +19,15 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { CollectionCard } from './CollectionCard';
 import { CreateCollectionModal } from './CreateCollectionModal';
 import { collectionService } from '@/services/collection-service';
+import { productService } from '@/services/product-service';
 import { images } from '@/data/images';
 import type { CollectionItem } from '@/types/collection';
 import type { Product } from '@/types/product';
 import { cn } from '@/lib/utils';
 
 interface CollectionsManagerProps {
-  initialCollections: CollectionItem[];
-  products: Product[];
+  initialCollections?: CollectionItem[];
+  products?: Product[];
 }
 
 type FilterTab = 'all' | 'automated' | 'manual' | 'featured';
@@ -65,20 +66,32 @@ function getCollectionProductCount(col: CollectionItem, products: Product[]): nu
 }
 
 export function CollectionsManager({
-  initialCollections,
-  products,
+  initialCollections = [],
+  products = [],
 }: CollectionsManagerProps) {
   const [collectionsList, setCollectionsList] =
     useState<CollectionItem[]>(initialCollections);
-  const [loading, setLoading] = useState(false);
+  const [liveProducts, setLiveProducts] = useState<Product[]>(products);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch collections from backend database
+  const effectiveProducts = liveProducts.length > 0 ? liveProducts : products;
+
+  // Fetch collections and products from backend database
   const fetchCollections = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await collectionService.getCollections();
-      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
-        const backendCols: CollectionItem[] = res.data.map((c) => ({
+      const [colRes, prodRes] = await Promise.allSettled([
+        collectionService.getCollections(),
+        productService.getProducts(),
+      ]);
+
+      if (
+        colRes.status === 'fulfilled' &&
+        colRes.value?.data &&
+        Array.isArray(colRes.value.data)
+      ) {
+        const backendCols: CollectionItem[] = colRes.value.data.map((c) => ({
+          id: c.id,
           slug: c.slug,
           name: c.name,
           description: c.description || '',
@@ -87,7 +100,7 @@ export function CollectionsManager({
           ruleDetails: c.rule || undefined,
           rule:
             c.rule && typeof c.rule === 'object'
-              ? `${c.rule.field || 'Tag'} ${c.rule.op || 'contains'} "${c.rule.value || ''}"`
+              ? `${c.rule.field || 'Tag'} ${c.rule.op || c.rule.condition || 'contains'} "${c.rule.value || ''}"`
               : undefined,
           isFeatured: Boolean(c.isFeatured),
           isActive: c.isActive ?? true,
@@ -95,6 +108,10 @@ export function CollectionsManager({
           seoDescription: c.seoDescription || undefined,
         }));
         setCollectionsList(backendCols);
+      }
+
+      if (prodRes.status === 'fulfilled' && Array.isArray(prodRes.value)) {
+        setLiveProducts(prodRes.value);
       }
     } catch (error) {
       console.error('Failed to fetch collections from DB:', error);
@@ -217,12 +234,13 @@ export function CollectionsManager({
     } else if (sortBy === 'products-desc') {
       list.sort(
         (a, b) =>
-          getCollectionProductCount(b, products) - getCollectionProductCount(a, products)
+          getCollectionProductCount(b, effectiveProducts) -
+          getCollectionProductCount(a, effectiveProducts)
       );
     }
 
     return list;
-  }, [collectionsList, activeTab, searchQuery, sortBy, products]);
+  }, [collectionsList, activeTab, searchQuery, sortBy, effectiveProducts]);
 
   return (
     <div className="w-full space-y-6">
@@ -339,8 +357,15 @@ export function CollectionsManager({
         </div>
       </div>
 
-      {/* Collections Grid or Empty State */}
-      {filteredCollections.length === 0 ? (
+      {/* Collections Grid, Loading, or Empty State */}
+      {loading && collectionsList.length === 0 ? (
+        <div className="flex h-64 w-full items-center justify-center rounded-xl border border-line bg-surface">
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin text-clay" />
+            <p className="text-xs text-ink-muted">Loading live collections from database...</p>
+          </div>
+        </div>
+      ) : filteredCollections.length === 0 ? (
         <div className="rounded-xl border border-line bg-surface p-8">
           <EmptyState
             icon={FolderOpen}
@@ -377,7 +402,7 @@ export function CollectionsManager({
       ) : (
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredCollections.map((col) => {
-            const productCount = getCollectionProductCount(col, products);
+            const productCount = getCollectionProductCount(col, effectiveProducts);
             return (
               <CollectionCard
                 key={col.slug}
@@ -398,7 +423,7 @@ export function CollectionsManager({
           setModalOpen(false);
           setEditingCollection(null);
         }}
-        products={products}
+        products={effectiveProducts}
         initialCollection={editingCollection}
         onSaveCollection={handleSaveCollection}
       />

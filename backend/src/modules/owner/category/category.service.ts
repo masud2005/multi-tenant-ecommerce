@@ -302,15 +302,24 @@ export class CategoryService {
     }
   }
 
-  // Get all categories for a tenant
+  // Get all categories for a tenant (with fallback for public storefront)
   async findAll(tenantId?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+    let targetTenantId = tenantId;
+    if (!targetTenantId) {
+      const defaultTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      targetTenantId = defaultTenant?.id;
+    }
+
+    if (!targetTenantId) {
+      return ResponseHelper.success([], 'No categories found');
     }
 
     const categories = await this.prisma.category.findMany({
       where: {
-        tenantId,
+        tenantId: targetTenantId,
         deletedAt: null,
       },
       include: {
@@ -342,14 +351,23 @@ export class CategoryService {
 
   // Get single category details by ID or Slug
   async findOne(idOrSlug: string, tenantId?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+    let targetTenantId = tenantId;
+    if (!targetTenantId) {
+      const defaultTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      targetTenantId = defaultTenant?.id;
+    }
+
+    if (!targetTenantId) {
+      throw new NotFoundException('Category');
     }
 
     const category = await this.prisma.category.findFirst({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
-        tenantId,
+        tenantId: targetTenantId,
         deletedAt: null,
       },
       include: {

@@ -156,24 +156,8 @@ export const productService = {
       }
       return [];
     } catch (err) {
-      console.warn('Backend products fetch failed, falling back to local seed data:', err);
-      // Fallback to local mock data
-      let result = [...seedProducts];
-      if (params?.status && params.status !== ('all' as any)) {
-        result = result.filter((p) => p.status === params.status);
-      }
-      if (params?.category && params.category !== 'all') {
-        result = result.filter((p) => p.category === params.category);
-      }
-      if (params?.search) {
-        const q = params.search.toLowerCase();
-        result = result.filter(
-          (p) =>
-            p.title.toLowerCase().includes(q) ||
-            p.brand.toLowerCase().includes(q),
-        );
-      }
-      return result;
+      console.error('Backend products fetch failed:', err);
+      return [];
     }
   },
 

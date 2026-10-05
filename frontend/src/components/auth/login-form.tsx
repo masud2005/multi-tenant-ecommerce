@@ -49,11 +49,10 @@ function LoginFormContent() {
       let targetUrl = isOwnerOrAdmin ? '/admin' : '/account';
 
       if (next && !next.startsWith('/login') && !next.startsWith('/register')) {
-        // Only allow redirection to admin routes if user has admin privileges
-        if (next.startsWith('/admin')) {
-          targetUrl = isOwnerOrAdmin ? next : '/account';
+        if (isOwnerOrAdmin) {
+          targetUrl = next.startsWith('/account') ? '/admin' : next;
         } else {
-          targetUrl = next;
+          targetUrl = next.startsWith('/admin') ? '/account' : next;
         }
       }
 

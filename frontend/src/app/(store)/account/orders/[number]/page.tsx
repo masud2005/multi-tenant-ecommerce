@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
 import { PaymentMark } from '@/components/ui/PaymentMark';
-import { OrderProgress } from '@/components/store/OrderProgress';
+import { OrderProgress } from '@/components/store/shared';
 import {
   orderStatusMeta,
   paymentMethodLabel,

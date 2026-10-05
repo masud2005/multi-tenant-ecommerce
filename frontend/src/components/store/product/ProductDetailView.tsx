@@ -17,10 +17,10 @@ import {
 import { useStore } from '@/contexts/StoreContext';
 import { sizeGuide } from '@/data/products';
 import { districts, deliveryEstimate, shippingMethods } from '@/data/shipping';
-import { VariantPicker } from '@/components/store/VariantPicker';
-import { ProductCard } from '@/components/store/ProductCard';
-import { ProductReviews } from '@/components/store/ProductReviews';
-import { SectionHeading } from '@/components/store/SectionHeading';
+import { VariantPicker } from './VariantPicker';
+import { ProductCard } from './ProductCard';
+import { ProductReviews } from './ProductReviews';
+import { SectionHeading } from '@/components/store/shared/SectionHeading';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
 import { Rating } from '@/components/ui/Rating';

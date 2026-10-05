@@ -24,20 +24,21 @@ import { CollectionService } from './collection.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Collections')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.OWNER)
 @Controller('owner/collections')
 export class CollectionController {
   constructor(private readonly collectionService: CollectionService) {}
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER)
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -57,21 +58,19 @@ export class CollectionController {
   }
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all collections for owner tenant' })
+  @ApiOperation({ summary: 'Get all collections for owner tenant or public storefront' })
   @ApiResponse({ status: 200, description: 'Collections retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async findAll(@CurrentUser() user?: any) {
     return this.collectionService.findAll(user?.tenantId);
   }
 
   @Get(':idOrSlug')
+  @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get single collection details by ID or Slug' })
   @ApiResponse({ status: 200, description: 'Collection details retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   @ApiResponse({ status: 404, description: 'Collection not found' })
   async findOne(
     @Param('idOrSlug') idOrSlug: string,
@@ -81,6 +80,9 @@ export class CollectionController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER)
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -101,6 +103,9 @@ export class CollectionController {
   }
 
   @Delete(':idOrSlug')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete collection by ID or Slug' })
   @ApiResponse({ status: 200, description: 'Collection deleted successfully' })
@@ -114,4 +119,3 @@ export class CollectionController {
     return this.collectionService.remove(idOrSlug, user?.tenantId);
   }
 }
-

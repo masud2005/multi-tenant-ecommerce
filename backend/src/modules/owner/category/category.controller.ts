@@ -24,20 +24,21 @@ import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Categories')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.OWNER)
 @Controller('owner/categories')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER)
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -57,21 +58,19 @@ export class CategoryController {
   }
 
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all categories for owner tenant' })
+  @ApiOperation({ summary: 'Get all categories for owner tenant or public storefront' })
   @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async findAll(@CurrentUser() user?: any) {
     return this.categoryService.findAll(user?.tenantId);
   }
 
   @Get(':idOrSlug')
+  @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get single category details by ID or Slug' })
   @ApiResponse({ status: 200, description: 'Category details retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   @ApiResponse({ status: 404, description: 'Category not found' })
   async findOne(
     @Param('idOrSlug') idOrSlug: string,
@@ -81,6 +80,9 @@ export class CategoryController {
   }
 
   @Patch(':idOrSlug')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER)
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
@@ -101,6 +103,9 @@ export class CategoryController {
   }
 
   @Delete(':idOrSlug')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a category or subcategory' })
   @ApiResponse({ status: 200, description: 'Category deleted successfully' })

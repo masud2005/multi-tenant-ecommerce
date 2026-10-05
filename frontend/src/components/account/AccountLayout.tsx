@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -17,6 +17,7 @@ import {
   LogOutIcon,
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
+import { authService } from '@/services/auth';
 import { cn } from '@/utils/cn';
 
 const nav = [
@@ -37,6 +38,14 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  useEffect(() => {
+    const role = (user?.role || authService.getUserRole() || '').toUpperCase();
+    const isStaffOrOwner = ['OWNER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'STAFF'].includes(role);
+    if (isStaffOrOwner) {
+      window.location.href = '/admin';
+    }
+  }, [user]);
+
   if (!user) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
@@ -54,6 +63,10 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const isOwnerOrAdmin = ['OWNER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'STAFF'].includes(
+    (user.role || '').toUpperCase()
+  );
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
@@ -61,7 +74,25 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
           <div className="hidden lg:block">
             <p className="font-display text-xl text-ink">{user.name}</p>
             <p className="text-xs text-ink-muted">{user.email}</p>
+            {isOwnerOrAdmin && (
+              <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-clay/10 text-clay uppercase tracking-wider">
+                {user.role}
+              </span>
+            )}
           </div>
+
+          {isOwnerOrAdmin && (
+            <div className="mt-4 hidden lg:block">
+              <Link
+                href="/admin"
+                className="flex items-center gap-2 rounded-md bg-clay px-3 py-2 text-xs font-semibold text-white hover:bg-clay/90 transition-colors shadow-xs"
+              >
+                <ShieldIcon className="h-4 w-4" />
+                <span>Admin Dashboard</span>
+              </Link>
+            </div>
+          )}
+
           <nav
             aria-label="Account"
             className="scrollbar-none -mx-4 flex gap-1 overflow-x-auto px-4 lg:mx-0 lg:mt-6 lg:flex-col lg:px-0"

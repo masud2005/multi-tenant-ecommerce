@@ -48,7 +48,6 @@ export function SearchOverlay() {
     .map((id) => live.find((p) => p.id === id))
     .filter(Boolean)
     .slice(0, 4);
-  const bestsellers = live.filter((p) => p.isBestseller).slice(0, 4);
 
   const go = (term: string) => {
     setSearchOpen(false);

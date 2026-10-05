@@ -6,7 +6,7 @@ import { ArrowRightIcon, WalletIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
-import { OrderProgress } from '@/components/store/OrderProgress';
+import { OrderProgress } from '@/components/store/shared';
 import { orderStatusMeta, returnStatusMeta } from '@/utils/status';
 import { formatBDT, formatDate } from '@/utils/format';
 
