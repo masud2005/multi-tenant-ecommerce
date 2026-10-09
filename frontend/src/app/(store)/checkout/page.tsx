@@ -63,6 +63,14 @@ export default function CheckoutPage() {
   const [savingAddress, setSavingAddress] = useState(false);
   const submitting = useRef(false);
 
+  // Require authentication for checkout
+  useEffect(() => {
+    if (!user && typeof window !== 'undefined') {
+      toast.error('Please log in to proceed to checkout and place your order.');
+      router.replace('/login?next=/checkout');
+    }
+  }, [user, router]);
+
   // Auto-select saved/previous address if available when addresses hydrate
   useEffect(() => {
     if (addresses.length > 0) {
@@ -76,10 +84,10 @@ export default function CheckoutPage() {
   }, [addresses]);
 
   useEffect(() => {
-    if (active.length === 0 && !placing) {
+    if (user && active.length === 0 && !placing) {
       router.replace('/cart');
     }
-  }, [active.length, placing, router]);
+  }, [user, active.length, placing, router]);
 
   const address: Address = useMemo(() => {
     const saved = addresses.find((a) => a.id === addressId);

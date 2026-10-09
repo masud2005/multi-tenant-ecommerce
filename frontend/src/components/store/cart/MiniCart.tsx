@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { formatBDT } from '@/utils/format';
 
 export function MiniCart() {
-  const { miniCartOpen, setMiniCartOpen, updateQty, removeFromCart } = useStore();
+  const { user, miniCartOpen, setMiniCartOpen, updateQty, removeFromCart } = useStore();
   const { active, subtotal, count, hasIssues } = useCartLines();
   const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
   const progress = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
@@ -39,7 +39,7 @@ export function MiniCart() {
               <Button variant="secondary" href="/cart" onClick={close}>
                 View bag
               </Button>
-              <Button href={hasIssues ? '/cart' : '/checkout'} onClick={close}>
+              <Button href={hasIssues ? '/cart' : user ? '/checkout' : '/login?next=/checkout'} onClick={close}>
                 Checkout
               </Button>
             </div>

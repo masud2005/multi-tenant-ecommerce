@@ -10,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -23,11 +24,11 @@ import { QueryCartDto } from './dto/query-cart.dto';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @ApiTags('(Customer) Cart')
 @ApiBearerAuth()
-@UseGuards(OptionalJwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 @Controller('cart')
 export class CartController {
   constructor(private readonly cartService: CartService) {}
@@ -35,7 +36,7 @@ export class CartController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get or initialize shopping cart for customer or guest visitor',
+    summary: 'Get shopping cart for authenticated customer',
   })
   @ApiResponse({
     status: 200,
@@ -46,9 +47,13 @@ export class CartController {
     @Headers('x-session-token') sessionHeader?: string,
     @CurrentUser() user?: any,
   ) {
+    const userId = user?.id || user?.sub;
+    if (!userId) {
+      throw new UnauthorizedException('Please log in to view your cart');
+    }
     return this.cartService.getCart(
       query,
-      user?.id || user?.sub,
+      userId,
       sessionHeader,
     );
   }
@@ -67,9 +72,13 @@ export class CartController {
     @Headers('x-session-token') sessionHeader?: string,
     @CurrentUser() user?: any,
   ) {
+    const userId = user?.id || user?.sub;
+    if (!userId) {
+      throw new UnauthorizedException('Please log in to add items to your cart');
+    }
     return this.cartService.addToCart(
       dto,
-      user?.id || user?.sub,
+      userId,
       sessionHeader,
     );
   }
@@ -89,10 +98,14 @@ export class CartController {
     @Headers('x-session-token') sessionHeader?: string,
     @CurrentUser() user?: any,
   ) {
+    const userId = user?.id || user?.sub;
+    if (!userId) {
+      throw new UnauthorizedException('Please log in to update your cart');
+    }
     return this.cartService.updateCartItemQuantity(
       itemId,
       dto,
-      user?.id || user?.sub,
+      userId,
       sessionHeader,
     );
   }
@@ -111,9 +124,13 @@ export class CartController {
     @Headers('x-session-token') sessionHeader?: string,
     @CurrentUser() user?: any,
   ) {
+    const userId = user?.id || user?.sub;
+    if (!userId) {
+      throw new UnauthorizedException('Please log in to update your cart');
+    }
     return this.cartService.removeFromCart(
       itemId,
-      user?.id || user?.sub,
+      userId,
       sessionHeader,
     );
   }

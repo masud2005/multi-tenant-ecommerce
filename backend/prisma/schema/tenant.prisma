@@ -34,6 +34,7 @@ model Tenant {
 
   // Core Store Relations
   members               TenantMember[]
+  roles                 TenantRole[]
   domains               TenantDomain[]
   categories            Category[]
   brands                Brand[]
@@ -68,24 +69,48 @@ model Tenant {
   @@map("tenants")
 }
 
+model TenantRole {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String   // e.g. 'Store Manager', 'Fulfillment Staff', 'Customer Care', 'Content Editor'
+  description String?
+  isSystem    Boolean  @default(false) // System default roles cannot be deleted
+  permissions Json     // Granular module permission matrix: { "dashboard": ["view"], "orders": ["view", "create"], ... }
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  members TenantMember[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("tenant_roles")
+}
+
 model TenantMember {
-  id           String           @id @default(uuid())
+  id           String    @id @default(uuid())
   tenantId     String
   userId       String
-  role         TenantMemberRole @default(STAFF)
-  customRole   String? // e.g. 'Store Manager', 'Customer Care', 'Content Editor'
-  status       String           @default("active") // 'active' | 'deactivated' | 'invited'
-  twoFactor    Boolean          @default(false)
+  roleId       String?   // Relation to dynamic TenantRole
+  isOwner      Boolean   @default(false) // Direct owner flag with full store access
+  status       String    @default("active") // 'active' | 'invited' | 'deactivated'
+  twoFactor    Boolean   @default(false)
   lastActiveAt DateTime?
-  permissions  Json? // Granular module permission matrix (RBAC)
+
+  // Secure Invitation Management
+  inviteToken     String?   @unique
+  inviteExpiresAt DateTime?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   TenantRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
 
   @@unique([tenantId, userId])
   @@index([tenantId, deletedAt])

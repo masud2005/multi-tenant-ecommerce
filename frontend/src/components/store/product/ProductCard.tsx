@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { EyeIcon, HeartIcon, ScaleIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import type { Product } from '@/types/commerce';
@@ -28,6 +29,7 @@ export function ProductCard({
   };
 
   const {
+    user,
     wishlist,
     toggleWishlist,
     setQuickViewId,
@@ -109,7 +111,19 @@ export function ProductCard({
           </span>
         )}
         <button
-          onClick={() => toggleWishlist(product.id)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!user) {
+              toast.error('Please log in to save items to your wishlist.');
+              if (typeof window !== 'undefined') {
+                const currentPath = window.location.pathname + window.location.search;
+                window.location.href = `/login?next=${encodeURIComponent(currentPath || '/')}`;
+              }
+              return;
+            }
+            toggleWishlist(product.id);
+          }}
           aria-pressed={wished}
           aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
           className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-surface/90 text-ink hover:bg-surface cursor-pointer shadow-xs transition-colors"

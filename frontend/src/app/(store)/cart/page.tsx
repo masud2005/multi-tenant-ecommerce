@@ -349,7 +349,7 @@ export default function CartPage() {
               size="lg"
               fullWidth
               className="mt-6"
-              href={blocked ? undefined : '/checkout'}
+              href={blocked ? undefined : user ? '/checkout' : '/login?next=/checkout'}
               disabled={blocked || active.length === 0}
             >
               {blocked ? 'Remove sold-out items to continue' : 'Checkout'}

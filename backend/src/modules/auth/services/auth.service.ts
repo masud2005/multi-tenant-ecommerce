@@ -216,4 +216,161 @@ export class AuthService {
 
         return ResponseHelper.success(null, 'Logged out successfully');
     }
+
+    // Validate incoming staff invitation token
+    async validateStaffInvite(token: string) {
+        if (!token || typeof token !== 'string') {
+            throw new UnauthorizedException('Invitation token is required');
+        }
+
+        const member = await this.prisma.tenantMember.findFirst({
+            where: { inviteToken: token, deletedAt: null },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true,
+                    },
+                },
+                role: {
+                    select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                        permissions: true,
+                    },
+                },
+                tenant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        logo: true,
+                    },
+                },
+            },
+        });
+
+        if (!member) {
+            throw new UnauthorizedException('Invalid or expired invitation link');
+        }
+
+        if (member.inviteExpiresAt && new Date() > member.inviteExpiresAt) {
+            throw new UnauthorizedException('This invitation has expired. Please ask the store owner for a new invite.');
+        }
+
+        return ResponseHelper.success(
+            {
+                valid: true,
+                email: member.user.email,
+                name: member.user.name,
+                roleName: member.role?.name || 'Staff Member',
+                roleDescription: member.role?.description || null,
+                storeName: member.tenant.name,
+                storeSlug: member.tenant.slug,
+                permissions: member.role?.permissions || {},
+            },
+            'Invitation is valid',
+        );
+    }
+
+    // Accept staff invite, set password, and auto-login
+    async acceptStaffInvite(dto: { token: string; password: string; name?: string }) {
+        const { token, password, name } = dto;
+        if (!token) {
+            throw new UnauthorizedException('Invitation token is required');
+        }
+
+        const member = await this.prisma.tenantMember.findFirst({
+            where: { inviteToken: token, deletedAt: null },
+            include: {
+                user: true,
+                role: true,
+                tenant: true,
+            },
+        });
+
+        if (!member) {
+            throw new UnauthorizedException('Invalid invitation link');
+        }
+
+        if (member.inviteExpiresAt && new Date() > member.inviteExpiresAt) {
+            throw new UnauthorizedException('This invitation has expired. Please ask the store owner for a new invite.');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update user record
+        const updatedUser = await this.prisma.user.update({
+            where: { id: member.userId },
+            data: {
+                password: hashedPassword,
+                name: name?.trim() || member.user.name,
+                status: UserStatus.ACTIVE,
+                lastLoginAt: new Date(),
+            },
+        });
+
+        // Activate membership and clear token
+        await this.prisma.tenantMember.update({
+            where: { id: member.id },
+            data: {
+                status: 'active',
+                inviteToken: null,
+                inviteExpiresAt: null,
+                lastActiveAt: new Date(),
+            },
+        });
+
+        // Determine destination redirect route based on staff permissions
+        const permissions = (member.role?.permissions as Record<string, string[]>) || {};
+        let redirectUrl = '/admin';
+        if (permissions.orders && permissions.orders.includes('view')) {
+            redirectUrl = '/admin/orders';
+        } else if (permissions.products && permissions.products.includes('view')) {
+            redirectUrl = '/admin/products';
+        } else if (permissions.inventory && permissions.inventory.includes('view')) {
+            redirectUrl = '/admin/inventory';
+        } else if (permissions.customers && permissions.customers.includes('view')) {
+            redirectUrl = '/admin/customers';
+        }
+
+        const payload = {
+            sub: updatedUser.id,
+            email: updatedUser.email,
+            name: updatedUser.name || 'Staff',
+            role: updatedUser.role,
+            tenantId: member.tenantId,
+        };
+
+        const { accessToken, refreshToken } = generateTokens(
+            this.jwtService,
+            this.configService,
+            payload,
+        );
+
+        return ResponseHelper.success(
+            {
+                accessToken,
+                refreshToken,
+                user: {
+                    id: updatedUser.id,
+                    name: updatedUser.name,
+                    email: updatedUser.email,
+                    role: updatedUser.role,
+                    tenantId: member.tenantId,
+                    staffRole: member.role?.name,
+                },
+                store: {
+                    id: member.tenant.id,
+                    name: member.tenant.name,
+                    slug: member.tenant.slug,
+                },
+                redirectUrl,
+            },
+            `Welcome to ${member.tenant.name}! Your account is now active.`,
+        );
+    }
 }

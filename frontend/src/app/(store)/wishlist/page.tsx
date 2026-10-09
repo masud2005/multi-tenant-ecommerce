@@ -12,6 +12,7 @@ import { formatBDT } from '@/utils/format';
 
 export default function WishlistPage() {
   const {
+    user,
     wishlist,
     products,
     toggleWishlist,
@@ -24,6 +25,13 @@ export default function WishlistPage() {
     .filter(Boolean);
 
   const moveToBag = (id: string) => {
+    if (!user) {
+      toast.error('Please log in to add items to your cart.');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login?next=/wishlist';
+      }
+      return;
+    }
     const p = products.find((x) => x.id === id)!;
     if (p.sizes.length > 1) {
       setQuickViewId(p.id);
@@ -36,6 +44,19 @@ export default function WishlistPage() {
     toast.success('Moved to bag');
     setMiniCartOpen(true);
   };
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 text-center">
+        <EmptyState
+          icon={HeartIcon}
+          title="Sign in to view your Wishlist"
+          description="Save and manage pieces you love across all your devices."
+          action={<Button href="/login?next=/wishlist">Sign in to your account</Button>}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">

@@ -12,7 +12,7 @@ import { authService } from '@/services/auth';
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') ?? '';
+  const next = searchParams.get('next') ?? searchParams.get('redirect') ?? '';
 
   const [mode, setMode] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
@@ -161,15 +161,6 @@ function LoginFormContent() {
       >
         <span className="font-bold text-[#4285F4] mr-2">G</span> Continue with Google
       </Button>
-
-      <p className="mt-4 text-center text-xs text-ink-muted">
-        <Link
-          href={next || '/checkout'}
-          className="hover:text-ink underline"
-        >
-          Continue as guest
-        </Link>
-      </p>
     </>
   );
 }

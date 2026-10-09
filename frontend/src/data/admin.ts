@@ -1,40 +1,44 @@
 import { images } from './images';
 import type { AdminModule, AdminRole, PermissionAction } from '../types/commerce';
 
-const all: PermissionAction[] = ['view', 'create', 'update', 'delete', 'publish', 'export', 'refund', 'settings'];
+const all: PermissionAction[] = ['view', 'create', 'update', 'delete'];
 const allModules: AdminModule[] = [
-  'dashboard', 'orders', 'products', 'inventory', 'customers', 'reviews', 'discounts', 'marketing', 'shipping', 'payments',
-  'returns', 'analytics', 'reports', 'content', 'theme', 'staff', 'media', 'notifications', 'integrations', 'domains', 'settings', 'audit', 'billing'
+  'dashboard', 'orders', 'returns', 'payments', 'products', 'categories', 'collections', 'brands', 'inventory',
+  'customers', 'reviews', 'discounts', 'marketing', 'shipping', 'theme', 'content', 'media', 'analytics',
+  'reports', 'staff', 'notifications', 'settings', 'audit', 'billing', 'integrations', 'domains'
 ];
 
 export const rolePermissions: Record<AdminRole, Partial<Record<AdminModule, PermissionAction[]>>> = {
   owner: Object.fromEntries(allModules.map((m) => [m, all])),
   manager: {
     dashboard: ['view'],
-    orders: ['view', 'create', 'update', 'delete', 'export', 'refund'],
-    products: ['view', 'create', 'update', 'delete', 'publish', 'export'],
-    inventory: ['view', 'create', 'update', 'export'],
-    customers: ['view', 'create', 'update', 'export'],
-    reviews: ['view', 'update', 'publish', 'delete'],
-    discounts: ['view', 'create', 'update', 'delete', 'publish'],
-    marketing: ['view', 'create', 'update', 'publish'],
+    orders: ['view', 'create', 'update', 'delete'],
+    returns: ['view', 'create', 'update'],
+    payments: ['view'],
+    products: ['view', 'create', 'update', 'delete'],
+    categories: ['view', 'create', 'update', 'delete'],
+    collections: ['view', 'create', 'update', 'delete'],
+    brands: ['view', 'create', 'update', 'delete'],
+    inventory: ['view', 'create', 'update'],
+    customers: ['view', 'create', 'update'],
+    reviews: ['view', 'update', 'delete'],
+    discounts: ['view', 'create', 'update', 'delete'],
+    marketing: ['view', 'create', 'update'],
     shipping: ['view', 'update'],
-    payments: ['view', 'refund'],
-    returns: ['view', 'update', 'refund'],
-    analytics: ['view', 'export'],
-    reports: ['view', 'export'],
-    content: ['view', 'create', 'update', 'publish', 'delete'],
     theme: ['view', 'update'],
+    content: ['view', 'create', 'update', 'delete'],
     media: ['view', 'create', 'update', 'delete'],
+    analytics: ['view'],
+    reports: ['view'],
     notifications: ['view'],
     audit: ['view']
   },
   fulfillment: {
     dashboard: ['view'],
     orders: ['view', 'update'],
-    inventory: ['view', 'update'],
     returns: ['view', 'update'],
-    shipping: ['view'],
+    inventory: ['view', 'update'],
+    shipping: ['view', 'update'],
     customers: ['view']
   }
 };
@@ -46,19 +50,30 @@ export const roleMeta: Record<AdminRole, { name: string; person: string; email: 
 };
 
 export const permissionModules: { key: AdminModule; label: string }[] = [
+  { key: 'dashboard', label: 'Dashboard' },
   { key: 'orders', label: 'Orders' },
-  { key: 'products', label: 'Products & catalog' },
+  { key: 'returns', label: 'Returns & exchanges' },
+  { key: 'payments', label: 'Payments' },
+  { key: 'products', label: 'Products' },
+  { key: 'categories', label: 'Categories' },
+  { key: 'collections', label: 'Collections' },
+  { key: 'brands', label: 'Brands' },
   { key: 'inventory', label: 'Inventory' },
   { key: 'customers', label: 'Customers' },
-  { key: 'returns', label: 'Returns & refunds' },
-  { key: 'payments', label: 'Payments' },
+  { key: 'reviews', label: 'Reviews' },
   { key: 'discounts', label: 'Discounts' },
   { key: 'marketing', label: 'Marketing' },
-  { key: 'content', label: 'Content & CMS' },
+  { key: 'shipping', label: 'Shipping' },
   { key: 'theme', label: 'Theme' },
-  { key: 'analytics', label: 'Analytics & reports' },
+  { key: 'content', label: 'Pages, blog & menus' },
+  { key: 'media', label: 'Media' },
+  { key: 'analytics', label: 'Analytics' },
+  { key: 'reports', label: 'Reports' },
   { key: 'staff', label: 'Staff & roles' },
-  { key: 'settings', label: 'Settings' }
+  { key: 'notifications', label: 'Notifications' },
+  { key: 'settings', label: 'Settings' },
+  { key: 'audit', label: 'Audit logs' },
+  { key: 'billing', label: 'Plan & billing' }
 ];
 
 export const permissionActions: PermissionAction[] = all;

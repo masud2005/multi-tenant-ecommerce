@@ -12,7 +12,7 @@ import { available, variantPrice } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
 
 export function QuickView() {
-  const { quickViewId, setQuickViewId, products, addToCart, setMiniCartOpen } =
+  const { user, quickViewId, setQuickViewId, products, addToCart, setMiniCartOpen } =
     useStore();
   const product = products.find((p) => p.id === quickViewId);
   const [color, setColor] = useState('');
@@ -106,6 +106,15 @@ export function QuickView() {
       return;
     }
     setSizeError(false);
+    if (!user) {
+      toast.error('Please log in to add items to your cart.');
+      setQuickViewId(null);
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname + window.location.search;
+        window.location.href = `/login?next=${encodeURIComponent(currentPath || '/')}`;
+      }
+      return;
+    }
     addToCart(product.id, targetVariant.id);
     setQuickViewId(null);
     toast.success(`${product.title} added to bag`);

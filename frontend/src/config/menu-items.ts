@@ -34,9 +34,6 @@ export const adminNavItems: NavItem[] = [
     icon: 'ShoppingCart',
     category: 'Sales',
     badge: 5,
-    children: [
-      { title: 'Draft orders', href: '/admin/orders/drafts' },
-    ],
   },
   {
     title: 'Returns & exchanges',

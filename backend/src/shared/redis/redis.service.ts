@@ -12,26 +12,44 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     const host = this.configService.get<string>('redis.host', 'localhost');
     const port = this.configService.get<number>('redis.port', 6380);
-    // const password = this.configService.get<string>('redis.password');
 
-    this.redisClient = new Redis({
-      host,
-      port,
-      // password: password || undefined,
-      // tls: {},
-    });
+    try {
+      this.redisClient = new Redis({
+        host,
+        port,
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+        lazyConnect: true,
+        retryStrategy(times) {
+          if (times > 3) return null;
+          return Math.min(times * 300, 2000);
+        },
+      });
 
-    this.redisClient.on('connect', () => {
-      this.logger.log(`Connected to Redis at ${host}:${port}`);
-    });
+      this.redisClient.on('connect', () => {
+        this.logger.log(`Connected to Redis at ${host}:${port}`);
+      });
 
-    this.redisClient.on('error', (err) => {
-      this.logger.error(`Redis connection error: ${err.message}`, err.stack);
-    });
+      this.redisClient.on('error', (err) => {
+        this.logger.warn(`Redis notice (${host}:${port}): ${err.message}`);
+      });
+
+      this.redisClient.connect().catch((err) => {
+        this.logger.warn(`Redis offline at ${host}:${port}: continuing without cache (${err.message})`);
+      });
+    } catch (err: any) {
+      this.logger.warn(`Redis init warning: ${err.message}`);
+    }
   }
 
-  onModuleDestroy() {
-    this.redisClient.quit();
+  async onModuleDestroy() {
+    try {
+      if (this.redisClient && this.redisClient.status === 'ready') {
+        await this.redisClient.quit();
+      }
+    } catch {
+      // Ignore disconnect errors
+    }
   }
 
   get client(): Redis {
@@ -39,26 +57,51 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
-    if (ttlSeconds) {
-      await this.redisClient.set(key, value, 'EX', ttlSeconds);
-    } else {
-      await this.redisClient.set(key, value);
+    try {
+      if (!this.redisClient || this.redisClient.status !== 'ready') return;
+      if (ttlSeconds) {
+        await this.redisClient.set(key, value, 'EX', ttlSeconds);
+      } else {
+        await this.redisClient.set(key, value);
+      }
+    } catch {
+      // Graceful fallback when Redis is offline
     }
   }
 
   async get(key: string): Promise<string | null> {
-    return this.redisClient.get(key);
+    try {
+      if (!this.redisClient || this.redisClient.status !== 'ready') return null;
+      return await this.redisClient.get(key);
+    } catch {
+      return null;
+    }
   }
 
   async del(key: string): Promise<void> {
-    await this.redisClient.del(key);
+    try {
+      if (!this.redisClient || this.redisClient.status !== 'ready') return;
+      await this.redisClient.del(key);
+    } catch {
+      // Graceful fallback
+    }
   }
 
   async incr(key: string): Promise<number> {
-    return this.redisClient.incr(key);
+    try {
+      if (!this.redisClient || this.redisClient.status !== 'ready') return 0;
+      return await this.redisClient.incr(key);
+    } catch {
+      return 0;
+    }
   }
 
   async expire(key: string, seconds: number): Promise<number> {
-    return this.redisClient.expire(key, seconds);
+    try {
+      if (!this.redisClient || this.redisClient.status !== 'ready') return 0;
+      return await this.redisClient.expire(key, seconds);
+    } catch {
+      return 0;
+    }
   }
 }

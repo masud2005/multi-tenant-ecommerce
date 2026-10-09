@@ -56,6 +56,15 @@ export function useStoreWishlist(user: User | null) {
     (productId: string) => {
       if (!productId) return;
 
+      if (!user?.id) {
+        toast.error('Please log in to save items to your wishlist.');
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname + window.location.search;
+          window.location.href = `/login?next=${encodeURIComponent(currentPath || '/')}`;
+        }
+        return;
+      }
+
       // 1. Optimistic UI update
       setWishlist((prev) =>
         prev.includes(productId)
@@ -63,19 +72,17 @@ export function useStoreWishlist(user: User | null) {
           : [...prev, productId]
       );
 
-      // 2. If authenticated, persist to backend database for this user
-      if (user?.id) {
-        wishlistService.toggleWishlist(productId).catch((err) => {
-          console.error('Failed to sync wishlist with server:', err);
-          toast.error('Failed to update wishlist');
-          // Rollback on failure
-          setWishlist((prev) =>
-            prev.includes(productId)
-              ? prev.filter((x) => x !== productId)
-              : [...prev, productId]
-          );
-        });
-      }
+      // 2. Persist to backend database for this user
+      wishlistService.toggleWishlist(productId).catch((err) => {
+        console.error('Failed to sync wishlist with server:', err);
+        toast.error('Failed to update wishlist');
+        // Rollback on failure
+        setWishlist((prev) =>
+          prev.includes(productId)
+            ? prev.filter((x) => x !== productId)
+            : [...prev, productId]
+        );
+      });
     },
     [user?.id]
   );

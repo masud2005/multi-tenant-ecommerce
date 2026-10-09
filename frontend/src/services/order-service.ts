@@ -99,56 +99,7 @@ export interface OwnerOrdersResponseData {
   };
 }
 
-// Payload for creating a manual / draft order from owner dashboard
-export interface CreateDraftOrderItemPayload {
-  productId?: string;
-  variantId?: string;
-  title: string;
-  image?: string;
-  color?: string;
-  size?: string;
-  sku?: string;
-  price: number;
-  qty: number;
-}
 
-export interface CreateDraftOrderPayload {
-  customerId?: string;
-  customerName: string;
-  email?: string;
-  phone: string;
-  shippingAddress?: {
-    name: string;
-    phone: string;
-    line1: string;
-    area: string;
-    district: string;
-  };
-  items: CreateDraftOrderItemPayload[];
-  shippingFee?: number;
-  discount?: number;
-  couponCode?: string;
-  paymentMethod?: string;
-  mode?: 'invoice' | 'paid' | 'draft';
-  customerNote?: string;
-  staffNote?: string;
-  tenantId?: string;
-}
-
-// Response structure for draft orders list
-export interface DraftOrdersResponseData {
-  drafts: Order[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  counts: {
-    all: number;
-    open: number;
-    completed: number;
-    cancelled: number;
-  };
-}
 
 // Helper to transform backend order response to frontend Order interface
 export function mapBackendOrderToFrontend(item: any): Order {
@@ -369,49 +320,7 @@ export const orderService = {
     return await apiClient.post<ApiResponse<any>>(endpoint, payload);
   },
 
-  // 8. Create manual or draft order (Owner)
-  async createDraftOrder(payload: CreateDraftOrderPayload): Promise<ApiResponse<Order>> {
-    const res = await apiClient.post<ApiResponse<any>>('/owner/orders/drafts', payload);
-    if (res?.data) {
-      return {
-        ...res,
-        data: mapBackendOrderToFrontend(res.data),
-      };
-    }
-    return res;
-  },
 
-  // 9. Fetch all draft and manual orders (Owner)
-  async getDraftOrders(params: OwnerOrderQueryParams = {}): Promise<ApiResponse<DraftOrdersResponseData>> {
-    const query = new URLSearchParams();
-    if (params.search?.trim()) query.set('search', params.search.trim());
-    if (params.status && params.status !== 'all') query.set('status', params.status.toUpperCase());
-    if (params.paymentStatus && params.paymentStatus !== 'all') query.set('paymentStatus', params.paymentStatus.toUpperCase());
-    if (params.page) query.set('page', String(params.page));
-    if (params.limit) query.set('limit', String(params.limit));
-    if (params.tenantId) query.set('tenantId', params.tenantId);
-
-    const qs = query.toString();
-    const endpoint = `/owner/orders/drafts${qs ? `?${qs}` : ''}`;
-    const res = await apiClient.get<ApiResponse<any>>(endpoint);
-
-    if (res?.data) {
-      const rawDrafts = Array.isArray(res.data.drafts) ? res.data.drafts : [];
-      return {
-        ...res,
-        data: {
-          drafts: rawDrafts.map(mapBackendOrderToFrontend),
-          total: Number(res.data.total) || rawDrafts.length,
-          page: Number(res.data.page) || 1,
-          limit: Number(res.data.limit) || 50,
-          totalPages: Number(res.data.totalPages) || 1,
-          counts: res.data.counts || { all: 0, open: 0, completed: 0, cancelled: 0 },
-        },
-      };
-    }
-
-    return res;
-  },
 
   // ----------------------------------------------------
   // Legacy / Fallback helpers with mock seed data support

@@ -48,45 +48,57 @@ export function useStoreCart(user?: User | null) {
     };
   }, [user?.id]);
 
-  const addToCart = useCallback((productId: string, variantId: string, qty = 1) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.variantId === variantId && !i.savedForLater);
-      if (existing) {
-        return prev.map((i) => (i === existing ? { ...i, qty: i.qty + qty } : i));
+  const addToCart = useCallback(
+    (productId: string, variantId: string, qty = 1) => {
+      if (!user?.id) {
+        toast.error('Please log in to add items to your cart.');
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname + window.location.search;
+          window.location.href = `/login?next=${encodeURIComponent(currentPath || '/')}`;
+        }
+        return;
       }
-      return [...prev, { key: `${variantId}-${Date.now()}`, productId, variantId, qty }];
-    });
 
-    // Persist in backend database Cart and CartItem table
-    cartService
-      .addToCart({ productId, variantId, qty })
-      .catch((err: any) => {
-        console.error('Failed to persist cart in backend:', err);
-        const errorMsg =
-          err?.response?.data?.message ||
-          err?.message ||
-          'Could not add item to bag. Please check stock.';
-        toast.error(errorMsg);
-
-        // Re-sync cart from database to revert optimistic addition if failed
-        cartService
-          .getCart()
-          .then((res) => {
-            if (res?.data?.items) {
-              setCart(
-                res.data.items.map((item) => ({
-                  key: `${item.variantId}-${item.id}`,
-                  productId: item.productId,
-                  variantId: item.variantId,
-                  qty: item.qty,
-                  savedForLater: item.savedForLater,
-                }))
-              );
-            }
-          })
-          .catch(() => {});
+      setCart((prev) => {
+        const existing = prev.find((i) => i.variantId === variantId && !i.savedForLater);
+        if (existing) {
+          return prev.map((i) => (i === existing ? { ...i, qty: i.qty + qty } : i));
+        }
+        return [...prev, { key: `${variantId}-${Date.now()}`, productId, variantId, qty }];
       });
-  }, []);
+
+      // Persist in backend database Cart and CartItem table
+      cartService
+        .addToCart({ productId, variantId, qty })
+        .catch((err: any) => {
+          console.error('Failed to persist cart in backend:', err);
+          const errorMsg =
+            err?.response?.data?.message ||
+            err?.message ||
+            'Could not add item to bag. Please check stock.';
+          toast.error(errorMsg);
+
+          // Re-sync cart from database to revert optimistic addition if failed
+          cartService
+            .getCart()
+            .then((res) => {
+              if (res?.data?.items) {
+                setCart(
+                  res.data.items.map((item) => ({
+                    key: `${item.variantId}-${item.id}`,
+                    productId: item.productId,
+                    variantId: item.variantId,
+                    qty: item.qty,
+                    savedForLater: item.savedForLater,
+                  }))
+                );
+              }
+            })
+            .catch(() => {});
+        });
+    },
+    [user?.id]
+  );
 
   const updateQty = useCallback((key: string, qty: number) => {
     const validQty = Math.max(1, qty);

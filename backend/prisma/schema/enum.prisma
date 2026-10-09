@@ -29,13 +29,6 @@ enum TenantPlan {
   ENTERPRISE
 }
 
-enum TenantMemberRole {
-  OWNER
-  ADMIN
-  MANAGER
-  STAFF
-}
-
 enum CollectionType {
   MANUAL
   RULE
