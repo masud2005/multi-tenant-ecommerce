@@ -16,7 +16,27 @@ export class WishlistService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * কাস্টমার প্রোফাইল আইডি খুঁজে বের করা (User ID অথবা Customer ID দিয়ে)
+   * Helper to dynamically resolve target tenant
+   */
+  private async resolveTenantId(tenantId?: string): Promise<string> {
+    if (tenantId && tenantId.length > 10) {
+      const exists = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+      });
+      if (exists) return exists.id;
+    }
+    const defaultTenant = await this.prisma.tenant.findFirst({
+      where: { deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!defaultTenant) {
+      throw new NotFoundException('Tenant not found');
+    }
+    return defaultTenant.id;
+  }
+
+  /**
+   * কাস্টমার প্রোফাইল আইডি খুঁজে বের করা বা স্বয়ংক্রিয়ভাবে তৈরি করা
    */
   private async resolveCustomerId(
     userIdOrCustomerId: string,
@@ -46,7 +66,38 @@ export class WishlistService {
       select: { id: true },
     });
 
-    return profileByUserId?.id || null;
+    if (profileByUserId) return profileByUserId.id;
+
+    // ৩. যদি CustomerProfile না থাকে, তবে User টেবিল থেকে তথ্য নিয়ে প্রোফাইল তৈরি করা
+    const user = await this.prisma.user.findUnique({
+      where: { id: userIdOrCustomerId },
+    });
+
+    if (user) {
+      const userEmail = user.email || `${user.id}@customer.store`;
+      const profileName = user.name || (user.email ? user.email.split('@')[0] : 'Customer');
+      const newProfile = await this.prisma.customerProfile.upsert({
+        where: {
+          tenantId_email: {
+            tenantId,
+            email: userEmail,
+          },
+        },
+        update: {
+          userId: user.id,
+          name: profileName,
+        },
+        create: {
+          tenantId,
+          userId: user.id,
+          email: userEmail,
+          name: profileName,
+        },
+      });
+      return newProfile.id;
+    }
+
+    return null;
   }
 
   /**
@@ -56,8 +107,7 @@ export class WishlistService {
     userIdOrCustomerId: string,
     query?: QueryWishlistDto,
   ) {
-    const targetTenantId =
-      query?.tenantId || 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2';
+    const targetTenantId = await this.resolveTenantId(query?.tenantId);
     const page = Number(query?.page) || 1;
     const limit = Number(query?.limit) || 20;
     const skip = (page - 1) * limit;
@@ -199,8 +249,7 @@ export class WishlistService {
     userIdOrCustomerId: string,
     dto: AddToWishlistDto,
   ) {
-    const targetTenantId =
-      dto.tenantId || 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2';
+    const targetTenantId = await this.resolveTenantId(dto.tenantId);
 
     const customerId = await this.resolveCustomerId(
       userIdOrCustomerId,
@@ -208,7 +257,7 @@ export class WishlistService {
     );
 
     if (!customerId) {
-      throw new NotFoundException('Customer profile not found for this user');
+      throw new NotFoundException('Customer profile could not be resolved for this user');
     }
 
     // প্রোডাক্টটি ডাটাবেজে সক্রিয় কি না চেক করা
@@ -269,8 +318,7 @@ export class WishlistService {
     productId: string,
     tenantId?: string,
   ) {
-    const targetTenantId =
-      tenantId || 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2';
+    const targetTenantId = await this.resolveTenantId(tenantId);
 
     const customerId = await this.resolveCustomerId(
       userIdOrCustomerId,
@@ -299,8 +347,7 @@ export class WishlistService {
     userIdOrCustomerId: string,
     dto: SyncWishlistDto,
   ) {
-    const targetTenantId =
-      dto.tenantId || 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2';
+    const targetTenantId = await this.resolveTenantId(dto.tenantId);
 
     const customerId = await this.resolveCustomerId(
       userIdOrCustomerId,

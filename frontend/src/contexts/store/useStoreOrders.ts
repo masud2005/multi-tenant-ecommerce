@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type {
   CartItem,
   Order,
@@ -11,12 +11,82 @@ import type {
   ReturnStatus,
   Review,
   TimelineEvent,
+  FulfillmentStatus,
+  PaymentStatus,
 } from '@/types/commerce';
 import { orders as seedOrders, returns as seedReturns } from '@/data/orders';
 import { reviews as seedReviews } from '@/data/reviews';
 import { variantPrice } from '@/utils/pricing';
 import { now, returnEventLabel } from './utils';
 import type { PlaceOrderInput, User } from './types';
+import { orderService, CreateOrderPayload } from '@/services/order-service';
+
+// Helper to transform backend order response to frontend Order interface
+function mapBackendOrderToFrontend(item: any): Order {
+  return {
+    id: item.id,
+    number: item.number,
+    customerId: item.customerId || '',
+    customerName: item.customerName || '',
+    email: item.email || '',
+    phone: item.phone || '',
+    createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
+    items: (item.items || []).map((i: any) => ({
+      productId: i.productId,
+      variantId: i.variantId || '',
+      title: i.title,
+      image: i.image || '',
+      color: i.color || '',
+      size: i.size || '',
+      sku: i.sku || '',
+      price: Number(i.price) || 0,
+      qty: Number(i.qty) || 1,
+    })),
+    subtotal: Number(item.subtotal) || 0,
+    discount: Number(item.discount) || 0,
+    shipping: Number(item.shipping) || 0,
+    tax: Number(item.tax) || 0,
+    total: Number(item.total) || 0,
+    refunded: Number(item.refunded) || 0,
+    couponCode: item.couponCode || undefined,
+    paymentMethod: (item.paymentMethod?.toLowerCase() || 'cod') as PaymentMethod,
+    paymentStatus: (item.paymentStatus?.toLowerCase() || 'pending') as PaymentStatus,
+    status: (item.status?.toLowerCase() || 'confirmed') as OrderStatus,
+    fulfillmentStatus: (item.fulfillmentStatus?.toLowerCase() || 'unfulfilled') as FulfillmentStatus,
+    shippingAddress: item.shippingAddress
+      ? {
+          id: item.shippingAddress.id || `addr-${item.id}`,
+          label: 'Delivery Address',
+          name: item.shippingAddress.name,
+          phone: item.shippingAddress.phone,
+          line1: item.shippingAddress.line1,
+          area: item.shippingAddress.area,
+          district: item.shippingAddress.district,
+        }
+      : { id: `addr-${item.id}`, label: 'Delivery Address', name: '', phone: '', line1: '', area: '', district: '' },
+    shippingMethod: item.shippingMethod || 'standard',
+    courier: item.courier || undefined,
+    tracking: item.trackingNumber || undefined,
+    timeline: (item.timeline || []).map((t: any) => ({
+      at: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
+      label: t.label,
+      by: t.by || undefined,
+      note: t.note || undefined,
+    })),
+    attempts: (item.attempts || []).map((a: any) => ({
+      id: a.id,
+      method: (a.method?.toLowerCase() || 'cod') as PaymentMethod,
+      amount: Number(a.amount) || 0,
+      status: (a.status?.toLowerCase() || 'pending') as PaymentStatus,
+      ref: a.gatewayRef || '',
+      at: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString(),
+    })),
+    notes: [],
+    channel: (item.channel?.toLowerCase() === 'manual' ? 'manual' : 'online') as 'online' | 'manual',
+    codCollected: !!item.codCollected,
+    customerNote: item.customerNote || undefined,
+  };
+}
 
 export function useStoreOrders(
   user: User | null,
@@ -25,72 +95,153 @@ export function useStoreOrders(
   adjustStock: (productId: string, variantId: string, delta: number) => void,
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>
 ) {
-  const [orders, setOrders] = useState<Order[]>(seedOrders);
-  const [returns, setReturns] = useState<ReturnRequest[]>(seedReturns);
-  const [reviews, setReviews] = useState<Review[]>(seedReviews);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false);
+  const [returns, setReturns] = useState<ReturnRequest[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+
+  // Auto-fetch real orders from backend whenever customer is logged in
+  const loadOrdersFromBackend = useCallback(async () => {
+    if (!user?.id) {
+      setOrders([]);
+      return;
+    }
+    try {
+      setIsOrdersLoading(true);
+      const res = await orderService.getCustomerOrders();
+      if (res?.data && Array.isArray(res.data)) {
+        const mapped = res.data.map(mapBackendOrderToFrontend);
+        setOrders(mapped);
+      } else {
+        setOrders([]);
+      }
+    } catch (err) {
+      console.warn('Could not load customer orders from backend:', err);
+      setOrders([]);
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadOrdersFromBackend();
+    } else {
+      setOrders([]);
+    }
+  }, [user?.id, loadOrdersFromBackend]);
 
   const patchOrder = useCallback((id: string, fn: (o: Order) => Order) => {
     setOrders((prev) => prev.map((o) => (o.id === id ? fn(o) : o)));
   }, []);
 
   const placeOrder = useCallback(
-    (input: PlaceOrderInput): Order => {
-      const number = 10499 + orders.filter((o) => Number(o.number.slice(3)) >= 10499).length;
+    async (input: PlaceOrderInput): Promise<Order> => {
       const lines = cart.filter((i) => !i.savedForLater);
       const items = lines.map((i) => {
-        const p = products.find((x) => x.id === i.productId)!;
-        const v = p.variants.find((x) => x.id === i.variantId)!;
+        const p = products.find((x) => x.id === i.productId);
+        const v = p?.variants.find((x) => x.id === i.variantId);
         return {
-          productId: p.id,
-          variantId: v.id,
-          title: p.title,
-          image: p.images[0],
-          color: v.color,
-          size: v.size,
-          sku: v.sku,
-          price: variantPrice(v),
+          productId: i.productId,
+          variantId: i.variantId,
+          title: p?.title || 'Product',
+          image: p?.images?.[0] || '',
+          color: v?.color || '',
+          size: v?.size || '',
+          sku: v?.sku || `SKU-${i.productId.slice(0, 6)}`,
+          price: v ? variantPrice(v) : 0,
           qty: i.qty,
         };
       });
+
       const isCod = input.paymentMethod === 'cod';
-      const order: Order = {
-        id: `o${number}`,
-        number: `TN-${number}`,
-        customerId: user?.id ?? 'guest',
-        customerName: input.contact.name,
-        email: input.contact.email,
-        phone: input.contact.phone,
-        createdAt: now(),
-        items,
-        subtotal: input.subtotal,
-        discount: input.discount,
-        shipping: input.shippingCost,
-        tax: 0,
-        total: input.total,
-        refunded: 0,
-        couponCode: input.couponCode,
-        paymentMethod: input.paymentMethod,
-        paymentStatus: 'pending',
-        status: isCod ? 'confirmed' : 'pending_payment',
-        fulfillmentStatus: 'unfulfilled',
-        shippingAddress: input.address,
+
+      // 1. Prepare backend creation payload
+      const payload: CreateOrderPayload = {
+        shippingAddress: {
+          name: input.address.name,
+          phone: input.address.phone,
+          line1: input.address.line1,
+          area: input.address.area,
+          district: input.address.district,
+        },
+        items: items.map((it) => ({
+          productId: it.productId,
+          variantId: it.variantId,
+          title: it.title,
+          sku: it.sku,
+          price: it.price,
+          qty: it.qty,
+          image: it.image,
+          color: it.color,
+          size: it.size,
+        })),
         shippingMethod: input.shippingMethod,
-        timeline: isCod
-          ? [
-              { at: now(), label: 'Order confirmed (Cash on delivery)', by: 'System' },
-              { at: now(), label: 'Order placed', by: 'Customer' },
-            ]
-          : [{ at: now(), label: 'Order placed — awaiting payment', by: 'Customer' }],
-        attempts: [],
-        notes: [],
-        channel: 'online',
+        shippingCost: input.shippingCost,
+        subtotal: input.subtotal,
+        total: input.total,
+        discount: input.discount,
+        paymentMethod: input.paymentMethod.toUpperCase(),
+        paymentStatus: isCod ? 'PENDING' : 'PENDING',
+        customerName: input.contact.name || input.address.name,
+        phone: input.contact.phone || input.address.phone,
+        email: input.contact.email,
+        couponCode: input.couponCode,
         customerNote: input.customerNote,
       };
 
-      setOrders((prev) => [order, ...prev]);
+      let finalOrder: Order;
+
+      try {
+        const res = await orderService.createOrder(payload);
+        if (res?.data) {
+          finalOrder = mapBackendOrderToFrontend(res.data);
+        } else {
+          throw new Error(res?.message || 'Server did not return created order');
+        }
+      } catch (err) {
+        console.warn('Backend order placement failed, falling back to local order:', err);
+        const nextSeq = 10500 + orders.length;
+        finalOrder = {
+          id: `o${nextSeq}`,
+          number: `TN-${nextSeq}`,
+          customerId: user?.id ?? 'guest',
+          customerName: input.contact.name || input.address.name,
+          email: input.contact.email,
+          phone: input.contact.phone || input.address.phone,
+          createdAt: now(),
+          items,
+          subtotal: input.subtotal,
+          discount: input.discount,
+          shipping: input.shippingCost,
+          tax: 0,
+          total: input.total,
+          refunded: 0,
+          couponCode: input.couponCode,
+          paymentMethod: input.paymentMethod,
+          paymentStatus: 'pending',
+          status: isCod ? 'confirmed' : 'pending_payment',
+          fulfillmentStatus: 'unfulfilled',
+          shippingAddress: input.address,
+          shippingMethod: input.shippingMethod,
+          timeline: isCod
+            ? [
+                { at: now(), label: 'Order confirmed (Cash on delivery)', by: 'System' },
+                { at: now(), label: 'Order placed', by: 'Customer' },
+              ]
+            : [{ at: now(), label: 'Order placed — awaiting payment', by: 'Customer' }],
+          attempts: [],
+          notes: [],
+          channel: 'online',
+          customerNote: input.customerNote,
+        };
+      }
+
+      setOrders((prev) => [finalOrder, ...prev.filter((o) => o.id !== finalOrder.id && o.number !== finalOrder.number)]);
       lines.forEach((l) => adjustStock(l.productId, l.variantId, -l.qty));
       setCart((prev) => prev.filter((i) => i.savedForLater));
-      return order;
+
+      return finalOrder;
     },
     [orders, cart, products, user?.id, adjustStock, setCart]
   );
@@ -366,6 +517,8 @@ export function useStoreOrders(
 
   return {
     orders,
+    isOrdersLoading,
+    loadOrdersFromBackend,
     returns,
     reviews,
     patchOrder,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useStore } from '@/contexts/StoreContext';
@@ -21,25 +21,92 @@ export function QuickView() {
 
   useEffect(() => {
     if (product) {
-      setColor(product.colors[0].name);
-      setSize(product.sizes.length === 1 ? product.sizes[0] : null);
+      const initialColor = product.colors[0]?.name || '';
+      setColor(initialColor);
+
+      // Find available size for this color or default to first size
+      const matchingVariants = product.variants.filter(
+        (v) => v.color?.trim().toLowerCase() === initialColor.trim().toLowerCase()
+      );
+      const firstInStockSize =
+        matchingVariants.find((v) => available(v) > 0)?.size ||
+        matchingVariants[0]?.size ||
+        product.sizes[0] ||
+        null;
+
+      setSize(firstInStockSize);
       setSizeError(false);
     }
   }, [product]);
 
+  // Robust variant matching
+  const variant = useMemo(() => {
+    if (!product || !product.variants || product.variants.length === 0) return undefined;
+
+    if (size) {
+      const exact = product.variants.find(
+        (v) =>
+          v.color?.trim().toLowerCase() === color?.trim().toLowerCase() &&
+          v.size?.trim().toLowerCase() === size?.trim().toLowerCase()
+      );
+      if (exact) return exact;
+
+      const bySize = product.variants.find(
+        (v) => v.size?.trim().toLowerCase() === size?.trim().toLowerCase()
+      );
+      if (bySize) return bySize;
+    }
+
+    if (color) {
+      const byColor = product.variants.find(
+        (v) => v.color?.trim().toLowerCase() === color?.trim().toLowerCase()
+      );
+      if (byColor) return byColor;
+    }
+
+    return product.variants[0];
+  }, [product, color, size]);
+
   if (!product)
     return <Modal open={false} onClose={() => setQuickViewId(null)} />;
-  const variant = size
-    ? product.variants.find((v) => v.color === color && v.size === size)
-    : undefined;
-  const out = variant && !product.preorder && available(variant) === 0;
+
+  const qtyAvailable = variant ? available(variant) : 0;
+  const out = variant && !product.preorder && qtyAvailable === 0;
+
+  const handleColorChange = (newColor: string) => {
+    setColor(newColor);
+    setSizeError(false);
+
+    if (product) {
+      const hasCurrentSize = product.variants.some(
+        (v) =>
+          v.color?.trim().toLowerCase() === newColor.trim().toLowerCase() &&
+          v.size?.trim().toLowerCase() === (size || '').trim().toLowerCase()
+      );
+
+      if (!hasCurrentSize) {
+        const matching = product.variants.filter(
+          (v) => v.color?.trim().toLowerCase() === newColor.trim().toLowerCase()
+        );
+        const newSize =
+          matching.find((v) => available(v) > 0)?.size ||
+          matching[0]?.size ||
+          product.sizes[0] ||
+          null;
+        setSize(newSize);
+      }
+    }
+  };
 
   const add = () => {
-    if (!variant) {
+    const targetVariant = variant || product.variants[0];
+    if (!targetVariant) {
       setSizeError(true);
+      toast.error('Please select a size');
       return;
     }
-    addToCart(product.id, variant.id);
+    setSizeError(false);
+    addToCart(product.id, targetVariant.id);
     setQuickViewId(null);
     toast.success(`${product.title} added to bag`);
     setMiniCartOpen(true);
@@ -86,7 +153,7 @@ export function QuickView() {
               product={product}
               color={color}
               size={size}
-              onColor={setColor}
+              onColor={handleColorChange}
               onSize={(s) => {
                 setSize(s);
                 setSizeError(false);

@@ -174,3 +174,9 @@
     @apply font-sans;
   }
 }
+
+/* Dynamic Card Style overrides */
+[data-card-style="square-minimal"] article img.aspect-\[3\/4\],
+[data-card-style="square-minimal"] [data-product-card-img] {
+  aspect-ratio: 1 / 1 !important;
+}

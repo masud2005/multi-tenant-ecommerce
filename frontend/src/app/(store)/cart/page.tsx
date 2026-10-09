@@ -45,12 +45,6 @@ export default function CartPage() {
     return '';
   });
   const [codeError, setCodeError] = useState('');
-  const [note, setNote] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('tanti.note') ?? '';
-    }
-    return '';
-  });
 
   const coupon = applied ? findCoupon(applied) : undefined;
   const discount = couponDiscount(coupon, subtotal);
@@ -231,25 +225,6 @@ export default function CartPage() {
             ))}
           </ul>
 
-          <div className="mt-6">
-            <label htmlFor="cart-note" className="text-sm font-medium">
-              Order note <span className="font-normal text-ink-muted">(optional)</span>
-            </label>
-            <textarea
-              id="cart-note"
-              rows={2}
-              value={note}
-              onChange={(e) => {
-                setNote(e.target.value);
-                if (typeof window !== 'undefined') {
-                  sessionStorage.setItem('tanti.note', e.target.value);
-                }
-              }}
-              placeholder="Gift wrapping, delivery instructions…"
-              className="mt-1.5 w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm focus:border-clay focus:outline-none"
-            />
-          </div>
-
           {saved.length > 0 && (
             <section className="mt-12" aria-labelledby="saved-h">
               <h2 id="saved-h" className="flex items-center gap-2 text-sm font-medium">
@@ -380,7 +355,7 @@ export default function CartPage() {
               {blocked ? 'Remove sold-out items to continue' : 'Checkout'}
             </Button>
             <p className="mt-3 text-center text-xs text-ink-muted">
-              bKash · Nagad · Cards · Cash on delivery
+              Cash on delivery available nationwide
             </p>
           </div>
         </aside>

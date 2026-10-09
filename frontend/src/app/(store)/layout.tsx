@@ -19,7 +19,9 @@ export default function StoreLayout({
         >
           Skip to content
         </a>
-        <StoreHeader />
+        <React.Suspense fallback={<header className="h-16 border-b border-line bg-surface" />}>
+          <StoreHeader />
+        </React.Suspense>
         <main id="main" className="flex-1">
           {children}
         </main>

@@ -108,7 +108,7 @@ export function ShopHeader({
       {category && (
         <div className="scrollbar-none mt-5 flex gap-2 overflow-x-auto">
           <Link
-            href={`/category/${category.key}`}
+            href={`/shop?category=${category.key}`}
             className={cn(
               'shrink-0 rounded-full border px-3.5 py-1.5 text-sm cursor-pointer transition-colors',
               !sub
@@ -121,7 +121,7 @@ export function ShopHeader({
           {category.subcategories.map((s) => (
             <Link
               key={s}
-              href={`/category/${category.key}?sub=${encodeURIComponent(s)}`}
+              href={`/shop?category=${category.key}&sub=${encodeURIComponent(s)}`}
               className={cn(
                 'shrink-0 rounded-full border px-3.5 py-1.5 text-sm cursor-pointer transition-colors',
                 sub === s

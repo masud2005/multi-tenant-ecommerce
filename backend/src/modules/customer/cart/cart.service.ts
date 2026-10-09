@@ -33,12 +33,13 @@ export class CartService {
       });
     }
 
-    // ২. গেস্ট ইউজারের সেশন টোকেন দিয়ে কার্ট খোঁজা
-    if (!cart && sessionToken) {
+    // ২. গেস্ট ইউজারের সেশন টোকেন দিয়ে কার্ট খোঁজা (শুধুমাত্র আনঅথেনটিকেটেড অবস্থায়)
+    if (!cart && !customerId && sessionToken) {
       cart = await this.prisma.cart.findFirst({
         where: {
           tenantId,
           sessionToken,
+          customerId: null,
         },
       });
     }

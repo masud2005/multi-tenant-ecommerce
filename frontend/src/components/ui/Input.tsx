@@ -29,7 +29,7 @@ export function Input({ label, hint, error, prefix, className, id, ...rest }: In
           aria-invalid={!!error}
           aria-describedby={error ? `${inputId}-err` : hint ? `${inputId}-hint` : undefined}
           className={cn(
-            'h-10 w-full rounded-md border bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/70 transition-[border-color,box-shadow] duration-150 focus:outline-none focus:ring-2 focus:ring-clay/25',
+            'h-10 w-full rounded-md border bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/50 placeholder:font-normal transition-[border-color,box-shadow] duration-150 focus:outline-none focus:ring-2 focus:ring-clay/25',
             error ? 'border-danger focus:border-danger' : 'border-line-strong focus:border-clay',
             prefix && 'pl-8'
           )}

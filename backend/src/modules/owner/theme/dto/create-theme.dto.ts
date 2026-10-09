@@ -7,11 +7,6 @@ export class CreateThemeDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: 'b0e01fd7-1b03-4c91-9a72-73a7281f6214', required: false, description: 'Base preset ID to clone settings from' })
-  @IsString()
-  @IsOptional()
-  presetId?: string;
-
   @ApiProperty({ example: '#B5562F', required: false })
   @IsString()
   @IsOptional()

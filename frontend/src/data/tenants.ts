@@ -33,13 +33,18 @@ export const mockTenants: Record<string, Tenant> = {
       customDomain: true
     },
     contact: {
-      email: 'support@tanti.com.bd',
-      phone: '+880 1700-000000',
-      address: 'House 42, Road 11, Banani, Dhaka, Bangladesh'
+      email: 'care@tanti.com.bd',
+      phone: '09612-826842',
+      whatsapp: '+880 1700-000000',
+      address: 'House 14, Road 27 (old), Dhanmondi, Dhaka 1209',
+      workingHours: 'Sat–Thu, 10 AM – 9 PM',
+      responseTime: 'Replies within 2 to 4 working hours',
+      supportTeam: 'Tanti Care team',
     },
     socials: {
       facebook: 'https://facebook.com/tanti',
-      instagram: 'https://instagram.com/tanti'
+      instagram: 'https://instagram.com/tanti',
+      twitter: 'https://twitter.com/tanti',
     }
   },
   'orvio-demo': {

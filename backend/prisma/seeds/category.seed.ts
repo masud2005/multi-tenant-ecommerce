@@ -16,7 +16,7 @@ export async function seedCategories(prisma: PrismaClient) {
       name: 'Women',
       slug: 'women',
       description: 'Kurtas, sarees & co-ords',
-      image: 'https://www.lerevecraze.com/wp-content/uploads/2026/06/e5a2f499-2050-407c-a6c3-06d374aee231.jpg',
+      image: 'https://raw.githubusercontent.com/masud2005/fashion-shop/HEAD/public/5d00eda5-b697-4b50-8e72-8b09f015125b.jpg',
       order: 1,
       subcategories: [
         { name: 'Kurtas', slug: 'kurtas', description: 'Handcrafted cotton and silk kurtas' },
@@ -30,7 +30,7 @@ export async function seedCategories(prisma: PrismaClient) {
       name: 'Men',
       slug: 'men',
       description: 'Panjabis, shirts & koti',
-      image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80',
+      image: 'https://raw.githubusercontent.com/masud2005/fashion-shop/HEAD/public/f760a839-4e32-4ee4-a5c4-8b2c0eeb4745.jpg',
       order: 2,
       subcategories: [
         { name: 'Panjabis', slug: 'panjabis', description: 'Festive and casual panjabis' },
@@ -42,11 +42,14 @@ export async function seedCategories(prisma: PrismaClient) {
       key: 'kids',
       name: 'Kids',
       slug: 'kids',
-      description: 'Festive & everyday',
+      description: 'Festive & everyday clothing for little ones',
       image: 'https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&w=800&q=80',
       order: 3,
       subcategories: [
         { name: 'Festive', slug: 'festive', description: 'Special celebration outfits for kids' },
+        { name: 'Frocks', slug: 'frocks', description: 'Comfortable & stylish frocks for girls' },
+        { name: 'Panjabis', slug: 'panjabis', description: 'Traditional panjabi sets for boys' },
+        { name: 'Sets', slug: 'sets', description: 'Everyday play sets and matching outfits' },
       ],
     },
     {

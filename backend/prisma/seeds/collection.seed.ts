@@ -15,7 +15,7 @@ export async function seedCollections(prisma: PrismaClient) {
       name: 'Eid Collection 2026',
       slug: 'eid-2026',
       description: 'Festive pieces in clay, sage and ivory — made for long days with family.',
-      image: 'https://www.lerevecraze.com/wp-content/uploads/2026/06/6f15a954-61e5-4b2b-9c6f-361c7f4a10b9.jpg',
+      image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1200&q=80',
       type: CollectionType.MANUAL,
       isFeatured: true,
       order: 1,

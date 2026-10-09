@@ -34,13 +34,45 @@ export async function seedAdmin(prisma: PrismaClient) {
     // Seed default tenant: tanti
     const defaultTenant = await prisma.tenant.upsert({
         where: { slug: 'tanti' },
-        update: {},
+        update: {
+            contact: {
+                email: 'care@tanti.com.bd',
+                phone: '09612-826842',
+                whatsapp: '+880 1700-000000',
+                address: 'House 14, Road 27 (old), Dhanmondi, Dhaka 1209',
+                workingHours: 'Sat–Thu, 10 AM – 9 PM',
+                responseTime: 'Replies within 2 to 4 working hours',
+                supportTeam: 'Tanti Care team',
+            },
+            socials: {
+                facebook: 'https://facebook.com/tanti',
+                instagram: 'https://instagram.com/tanti',
+                twitter: 'https://twitter.com/tanti',
+            },
+        },
         create: {
             name: 'Tanti Fashion',
             slug: 'tanti',
+            tagline: 'Handloom & Contemporary Bangladeshi Fashion',
             currency: 'BDT',
+            currencySymbol: '৳',
+            currencyPosition: 'prefix',
             status: TenantStatus.ACTIVE,
             plan: TenantPlan.GROWTH,
+            contact: {
+                email: 'care@tanti.com.bd',
+                phone: '09612-826842',
+                whatsapp: '+880 1700-000000',
+                address: 'House 14, Road 27 (old), Dhanmondi, Dhaka 1209',
+                workingHours: 'Sat–Thu, 10 AM – 9 PM',
+                responseTime: 'Replies within 2 to 4 working hours',
+                supportTeam: 'Tanti Care team',
+            },
+            socials: {
+                facebook: 'https://facebook.com/tanti',
+                instagram: 'https://instagram.com/tanti',
+                twitter: 'https://twitter.com/tanti',
+            },
         },
     });
 

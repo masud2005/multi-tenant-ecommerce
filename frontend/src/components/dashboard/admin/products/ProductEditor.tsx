@@ -33,6 +33,7 @@ import { formatBDT } from '@/utils/format';
 import type { Product, Variant, CategoryKey, CreateProductPayload } from '@/types';
 import {
   productService,
+  mapBackendProductToFrontend,
   categoryService,
   brandService,
   collectionService,
@@ -103,6 +104,7 @@ export function ProductEditor({ id }: { id?: string }) {
   const [dbBrands, setDbBrands] = useState<BrandResponseData[]>([]);
   const [dbCollections, setDbCollections] = useState<CollectionResponseData[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch Categories, Brands, and Collections from backend
   useEffect(() => {
@@ -137,16 +139,16 @@ export function ProductEditor({ id }: { id?: string }) {
     };
   }, []);
 
-  // Fetch product by ID from backend if not found locally
+  // Fetch product by ID from backend
   useEffect(() => {
-    if (id && !existing) {
+    if (id) {
       productService.getProductById(id).then((found) => {
         if (found) {
           setP(found);
         }
       });
     }
-  }, [id, existing]);
+  }, [id]);
 
   const [p, setP] = useState<Product>(() => {
     if (existing) return existing;
@@ -402,28 +404,41 @@ export function ProductEditor({ id }: { id?: string }) {
         variants: variantsData,
       };
 
-      if (existing) {
-        // Update Local Store (or Update API when created)
-        const updatedProduct: Product = {
-          ...p,
-          status: finalStatus,
-          slug: p.slug || slugify(p.title),
-        };
+      if (id || existing || (p.id && !p.id.startsWith('p1') && !p.id.startsWith('blank'))) {
+        // Backend Update Product API (PATCH /owner/products/:idOrSlug)
+        const targetId = id || existing?.id || p.id;
+        const res = await productService.updateProduct(targetId, payload);
+        const updatedData = res?.data;
+
+        const updatedProduct: Product = updatedData
+          ? mapBackendProductToFrontend(updatedData)
+          : {
+              ...p,
+              status: finalStatus,
+              slug: p.slug || slugify(p.title),
+            };
+
         saveProduct(updatedProduct);
         setP(updatedProduct);
         setDirty(false);
-        toast.success(finalStatus === 'published' ? 'Product published' : 'Product saved');
+        toast.success(
+          finalStatus === 'published'
+            ? 'Product updated and published successfully!'
+            : 'Product updated successfully!'
+        );
       } else {
-        // Backend Create Product API
+        // Backend Create Product API (POST /owner/products)
         const response = await productService.createProduct(payload);
         const createdData = response?.data;
 
-        const newSavedProduct: Product = {
-          ...p,
-          id: createdData?.id || `p${Date.now()}`,
-          slug: createdData?.slug || p.slug || slugify(p.title),
-          status: finalStatus,
-        };
+        const newSavedProduct: Product = createdData
+          ? mapBackendProductToFrontend(createdData)
+          : {
+              ...p,
+              id: `p${Date.now()}`,
+              slug: p.slug || slugify(p.title),
+              status: finalStatus,
+            };
 
         saveProduct(newSavedProduct);
         setP(newSavedProduct);
@@ -440,6 +455,28 @@ export function ProductEditor({ id }: { id?: string }) {
       toast.error(err?.message || 'Failed to save product. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Delete Handler
+  const handleDelete = async () => {
+    const targetId = id || existing?.id || p.id;
+    if (!targetId) return;
+
+    if (!window.confirm(`Are you sure you want to delete "${p.title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await productService.deleteProduct(targetId);
+      toast.success('Product deleted successfully');
+      router.push('/admin/products');
+    } catch (err: any) {
+      console.error('Failed to delete product:', err);
+      toast.error(err?.message || 'Failed to delete product');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -470,8 +507,23 @@ export function ProductEditor({ id }: { id?: string }) {
           )
         }
         actions={
-          existing && (
+          (existing || id) && (
             <>
+              <GuardedButton
+                module="products"
+                action="delete"
+                variant="danger"
+                size="sm"
+                disabled={isDeleting || isSubmitting}
+                onClick={handleDelete}
+              >
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Delete
+              </GuardedButton>
               <GuardedButton
                 module="products"
                 action="create"
@@ -505,7 +557,7 @@ export function ProductEditor({ id }: { id?: string }) {
           )
         }
       />
-      <fieldset disabled={readOnly || isSubmitting} className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <fieldset disabled={readOnly || isSubmitting || isDeleting} className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <Panel>
             <div className="space-y-4">

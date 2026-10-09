@@ -10,6 +10,7 @@ import {
   Warehouse,
   Users,
   Star,
+  MessageSquare,
   Percent,
   Megaphone,
   Truck,
@@ -51,11 +52,10 @@ export const adminNav: { group: string; items: AdminNavItem[] }[] = [
         icon: ShoppingCart,
         module: 'orders',
         children: [
-          { to: '/admin/orders/drafts', label: 'Draft orders', action: 'create' },
-          { to: '/admin/orders/abandoned', label: 'Abandoned checkouts' }
+          { to: '/admin/orders/drafts', label: 'Draft orders', action: 'create' }
         ]
       },
-      { to: '/admin/returns', label: 'Returns & refunds', icon: RotateCcw, module: 'returns' },
+      { to: '/admin/returns', label: 'Returns & exchanges', icon: RotateCcw, module: 'returns' },
       { to: '/admin/payments', label: 'Payments', icon: CreditCard, module: 'payments' }
     ]
   },
@@ -79,7 +79,8 @@ export const adminNav: { group: string; items: AdminNavItem[] }[] = [
     group: 'Customers',
     items: [
       { to: '/admin/customers', label: 'Customers', icon: Users, module: 'customers' },
-      { to: '/admin/reviews', label: 'Reviews', icon: Star, module: 'reviews' }
+      { to: '/admin/reviews', label: 'Reviews', icon: Star, module: 'reviews' },
+      { to: '/admin/messages', label: 'Inquiries & Messages', icon: MessageSquare, module: 'customers' }
     ]
   },
   {

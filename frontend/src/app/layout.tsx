@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 
 import { Toaster } from "sonner";
 import { TenantProvider } from "@/contexts/TenantContext";
+import { StoreThemeInjector } from "@/components/store/theme/StoreThemeInjector";
 
 export default function RootLayout({
   children,
@@ -36,6 +37,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-canvas text-ink font-sans text-base antialiased">
         <TenantProvider>
+          <StoreThemeInjector />
           {children}
           <Toaster position="bottom-center" />
         </TenantProvider>

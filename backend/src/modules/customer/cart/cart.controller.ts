@@ -10,8 +10,10 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -21,8 +23,11 @@ import { QueryCartDto } from './dto/query-cart.dto';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
 
 @ApiTags('(Customer) Cart')
+@ApiBearerAuth()
+@UseGuards(OptionalJwtAuthGuard)
 @Controller('cart')
 export class CartController {
   constructor(private readonly cartService: CartService) {}

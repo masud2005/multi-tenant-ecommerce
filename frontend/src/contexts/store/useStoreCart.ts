@@ -4,17 +4,49 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { CartItem } from '@/types/commerce';
 import { cartService } from '@/services';
-import { loadCart } from './utils';
+import type { User } from './types';
 
-export function useStoreCart() {
-  const [cart, setCart] = useState<CartItem[]>(() => loadCart());
+export function useStoreCart(user?: User | null) {
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Sync cart changes to local storage
+  // Sync cart from backend when authenticated customer logs in or logs out
   useEffect(() => {
-    try {
-      localStorage.setItem('tanti.cart', JSON.stringify(cart));
-    } catch {}
-  }, [cart]);
+    let isMounted = true;
+    if (user?.id) {
+      cartService
+        .getCart()
+        .then((res) => {
+          if (!isMounted) return;
+          if (res?.data?.items && Array.isArray(res.data.items)) {
+            setCart(
+              res.data.items.map((item) => ({
+                key: `${item.variantId}-${item.id}`,
+                productId: item.productId,
+                variantId: item.variantId,
+                qty: item.qty,
+                savedForLater: item.savedForLater,
+              }))
+            );
+          } else {
+            setCart([]);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setCart([]);
+        });
+    } else {
+      setCart([]);
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('tanti.cart');
+        }
+      } catch {}
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   const addToCart = useCallback((productId: string, variantId: string, qty = 1) => {
     setCart((prev) => {

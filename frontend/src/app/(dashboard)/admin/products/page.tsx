@@ -1,9 +1,22 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Download, Plus, Search, Tag, Upload, RefreshCw, Loader2 } from 'lucide-react';
+import {
+  Download,
+  Plus,
+  Search,
+  Tag,
+  Upload,
+  RefreshCw,
+  Loader2,
+  MoreVertical,
+  Pencil,
+  ExternalLink,
+  Copy,
+  Trash2,
+} from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { categories as seedCategories } from '@/data/products';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
@@ -20,6 +33,122 @@ import { productService, categoryService, CategoryResponseData } from '@/service
 
 type Tab = 'all' | ProductStatus;
 const statusTone = { published: 'success', draft: 'neutral', archived: 'warning' } as const;
+
+function ProductRowActionMenu({
+  product,
+  onRefresh,
+}: {
+  product: Product;
+  onRefresh: () => void;
+}) {
+  const router = useRouter();
+  const { saveProduct } = useStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleDelete = async () => {
+    setIsOpen(false);
+    if (!window.confirm(`Are you sure you want to delete "${product.title}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await productService.deleteProduct(product.id);
+      toast.success(`"${product.title}" deleted successfully`);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete product');
+    }
+  };
+
+  const handleDuplicate = () => {
+    setIsOpen(false);
+    const copy = {
+      ...product,
+      id: `p${Date.now()}`,
+      title: `${product.title} (copy)`,
+      slug: `${product.slug}-copy`,
+      status: 'draft' as const,
+    };
+    saveProduct(copy);
+    router.push(`/admin/products/${copy.id}`);
+    toast.success('Duplicated as draft');
+  };
+
+  return (
+    <div className="relative inline-block text-left" ref={menuRef} onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-label="Product actions"
+        className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-ink-muted transition-all duration-150 hover:border-line hover:bg-subtle hover:text-ink hover:shadow-xs focus:outline-none cursor-pointer"
+        title="More actions"
+      >
+        <MoreVertical className="h-4 w-4" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1 z-40 w-44 rounded-xl border border-line bg-surface p-1 shadow-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 text-left">
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              router.push(`/admin/products/${product.id}`);
+            }}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-subtle cursor-pointer"
+          >
+            <Pencil className="h-3.5 w-3.5 text-ink-muted" />
+            <span>Edit Product</span>
+          </button>
+
+          <a
+            href={`/products/${product.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setIsOpen(false)}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-subtle cursor-pointer"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-ink-muted" />
+            <span>Preview in Store</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-subtle cursor-pointer"
+          >
+            <Copy className="h-3.5 w-3.5 text-ink-muted" />
+            <span>Duplicate as Draft</span>
+          </button>
+
+          <div className="my-1 border-t border-line/60" />
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-danger transition-colors hover:bg-danger/10 cursor-pointer"
+          >
+            <Trash2 className="h-3.5 w-3.5 text-danger" />
+            <span>Delete Product</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminProductsPage() {
   const { products: storeProducts, saveProduct } = useStore();
@@ -109,13 +238,21 @@ export default function AdminProductsPage() {
     [products, tab, cat, stock, q, categoryFilterOptions]
   );
 
-  const bulk = (status: ProductStatus) => {
-    selected.forEach((id) => {
-      const p = products.find((x) => x.id === id);
-      if (p) saveProduct({ ...p, status });
-    });
-    toast.success(`${selected.length} products set to ${status}`);
-    setSelected([]);
+  const bulk = async (status: ProductStatus) => {
+    try {
+      const backendStatus = status === 'published' ? 'PUBLISHED' : status === 'archived' ? 'ARCHIVED' : 'DRAFT';
+      await Promise.all(
+        selected.map((id) =>
+          productService.updateProduct(id, { status: backendStatus as any })
+        )
+      );
+      toast.success(`${selected.length} products updated to ${status}`);
+      setSelected([]);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update selected products');
+      loadData();
+    }
   };
 
   const columns: Column<Product>[] = [
@@ -206,6 +343,12 @@ export default function AdminProductsPage() {
       align: 'right',
       render: (p) => <span className="tabular-nums text-ink-muted">{p.sold ?? 0}</span>,
       hideOnMobile: true,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'right',
+      render: (p) => <ProductRowActionMenu product={p} onRefresh={loadData} />,
     },
   ];
 
@@ -353,13 +496,16 @@ export default function AdminProductsPage() {
                   alt={p.title}
                   className="h-12 w-10 rounded object-cover"
                 />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-ink">{p.title}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-ink truncate">{p.title}</p>
                   <p className="text-xs text-ink-muted">
                     {productStock(p)} in stock · {formatBDT(productPrice(p))}
                   </p>
                 </div>
-                <Badge tone={statusTone[p.status] || 'neutral'}>{p.status}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge tone={statusTone[p.status] || 'neutral'}>{p.status}</Badge>
+                  <ProductRowActionMenu product={p} onRefresh={loadData} />
+                </div>
               </div>
             )}
           />
@@ -371,12 +517,22 @@ export default function AdminProductsPage() {
         <button onClick={() => bulk('draft')}>Set as draft</button>
         <button onClick={() => bulk('archived')}>Archive</button>
         <button
-          onClick={() => {
-            toast.success('Price update applied: −10% to selected');
-            setSelected([]);
+          onClick={async () => {
+            if (window.confirm(`Are you sure you want to delete ${selected.length} selected products?`)) {
+              try {
+                await Promise.all(selected.map((id) => productService.deleteProduct(id)));
+                toast.success(`${selected.length} products deleted successfully`);
+                setSelected([]);
+                loadData();
+              } catch (err: any) {
+                toast.error(err?.message || 'Failed to delete some products');
+                loadData();
+              }
+            }
           }}
+          className="text-danger hover:text-danger/80"
         >
-          Adjust prices
+          Delete ({selected.length})
         </button>
       </BulkBar>
     </div>

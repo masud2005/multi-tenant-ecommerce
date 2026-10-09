@@ -75,9 +75,12 @@ export function ProductTable({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={p.images[0]}
+                src={p.images[0] || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80'}
                 alt=""
-                className="h-12 w-10 rounded object-cover shrink-0"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80';
+                }}
+                className="h-12 w-10 rounded object-cover shrink-0 bg-subtle"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-ink truncate">{p.title}</p>
@@ -147,9 +150,12 @@ export function ProductTable({
                     <span className="flex items-center gap-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={p.images[0]}
+                        src={p.images[0] || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80'}
                         alt=""
-                        className="h-11 w-9 rounded object-cover shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80';
+                        }}
+                        className="h-11 w-9 rounded object-cover shrink-0 bg-subtle"
                       />
                       <span className="min-w-0">
                         <span className="block font-medium text-ink truncate">{p.title}</span>

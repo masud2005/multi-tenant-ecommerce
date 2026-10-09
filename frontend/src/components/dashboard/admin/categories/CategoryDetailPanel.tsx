@@ -557,7 +557,7 @@ export function CategoryDetailPanel({
       {/* Category Details Panel */}
       <Panel
         title={category.name}
-        description={`/category/${category.key} · ${productCount} ${
+        description={`/shop?category=${category.key} · ${productCount} ${
           productCount === 1 ? 'product' : 'products'
         }`}
         actions={

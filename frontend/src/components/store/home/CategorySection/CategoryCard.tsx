@@ -14,7 +14,8 @@ const DEFAULT_IMAGE =
 
 export function CategoryCard({ slug, id, name, image, blurb }: CategoryCardProps) {
   const [imgSrc, setImgSrc] = useState(image || DEFAULT_IMAGE);
-  const href = `/category/${slug || id}`;
+  const targetCategory = slug || id || '';
+  const href = `/shop?category=${encodeURIComponent(targetCategory)}`;
 
   useEffect(() => {
     if (image) {

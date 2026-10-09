@@ -71,3 +71,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+// Full reboot trigger for updated Prisma client schema

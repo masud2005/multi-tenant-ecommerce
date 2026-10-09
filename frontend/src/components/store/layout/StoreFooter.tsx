@@ -11,11 +11,11 @@ const columns = [
   {
     title: 'Shop',
     links: [
-      ['/category/women', 'Women'],
-      ['/category/men', 'Men'],
-      ['/category/kids', 'Kids'],
-      ['/category/footwear', 'Footwear'],
-      ['/category/accessories', 'Accessories'],
+      ['/shop?category=women', 'Women'],
+      ['/shop?category=men', 'Men'],
+      ['/shop?category=kids', 'Kids'],
+      ['/shop?category=footwear', 'Footwear'],
+      ['/shop?category=accessories', 'Accessories'],
     ],
   },
   {
@@ -119,7 +119,7 @@ export function StoreFooter() {
             ))}
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-canvas/60">
-            <span>© 2026 {tenant.name} · {tenant.contact.address}</span>
+            <span>© 2026 {tenant.name} · {tenant.contact?.address}</span>
             <Link href="/policies/privacy" className="hover:text-canvas">
               Privacy
             </Link>

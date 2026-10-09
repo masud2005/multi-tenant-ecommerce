@@ -1,12 +1,14 @@
 'use client';
 
-import React, { use, useState } from 'react';
+import React, { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LockIcon, Loader2Icon, ShieldCheckIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { paymentMethods } from '@/data/shipping';
 import { formatBDT } from '@/utils/format';
 import Link from 'next/link';
+import { orderService, mapBackendOrderToFrontend } from '@/services/order-service';
+import type { Order } from '@/types/commerce';
 
 type Step = 'account' | 'otp' | 'card' | 'verifying';
 
@@ -18,7 +20,31 @@ export default function PaymentGatewayPage({ params }: PaymentPageProps) {
   const { orderId } = use(params);
   const router = useRouter();
   const { orders, completePayment } = useStore();
-  const order = orders.find((o) => o.id === orderId);
+  
+  // Find order from local store state by ID or order number
+  const matchedOrder = orders.find((o) => o.id === orderId || o.number === orderId);
+  const [dbOrder, setDbOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(!matchedOrder);
+
+  // If not found in memory, query backend API directly
+  useEffect(() => {
+    if (!matchedOrder && orderId) {
+      setIsLoading(true);
+      orderService
+        .getOrderDetail(orderId)
+        .then((res) => {
+          if (res?.data) {
+            setDbOrder(mapBackendOrderToFrontend(res.data));
+          }
+        })
+        .catch((err) => {
+          console.warn('Could not fetch order from backend:', err);
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [matchedOrder, orderId]);
+
+  const order = matchedOrder || dbOrder;
 
   const isWallet =
     order?.paymentMethod === 'bkash' || order?.paymentMethod === 'nagad';
@@ -32,6 +58,28 @@ export default function PaymentGatewayPage({ params }: PaymentPageProps) {
     name: order?.customerName ?? '',
   });
   const [error, setError] = useState('');
+
+  // Sync wallet and card details when order loads asynchronously
+  useEffect(() => {
+    if (order) {
+      if (!wallet && order.phone) setWallet(order.phone.replace('-', ''));
+      if (!card.name && order.customerName) {
+        setCard((prev) => ({ ...prev, name: order.customerName }));
+      }
+      setStep(order.paymentMethod === 'bkash' || order.paymentMethod === 'nagad' ? 'account' : 'card');
+    }
+  }, [order]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#EEF0F3]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2Icon className="h-8 w-8 animate-spin text-clay" />
+          <p className="text-sm text-ink-muted">Loading secure payment...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -50,15 +98,16 @@ export default function PaymentGatewayPage({ params }: PaymentPageProps) {
   };
 
   const finish = async (result: 'success' | 'fail' | 'cancel') => {
+    const target = order.number || order.id;
     if (result === 'cancel') {
       completePayment(order.id, 'cancel');
-      router.replace(`/order/${order.id}`);
+      router.replace(`/order-confirmation/${target}`);
       return;
     }
     setStep('verifying');
     await new Promise((r) => setTimeout(r, 1400));
     completePayment(order.id, result);
-    router.replace(`/order/${order.id}`);
+    router.replace(`/order-confirmation/${target}`);
   };
 
   const gatewayName =

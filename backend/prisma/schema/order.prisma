@@ -46,6 +46,8 @@ model Order {
   timeline        OrderTimeline[]
   notes           OrderNote[]
   returns         ReturnRequest[]
+    discountRedemptions DiscountRedemption[]
+
 
   @@unique([tenantId, number])
   @@index([tenantId, status])

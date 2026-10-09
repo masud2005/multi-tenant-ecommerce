@@ -207,7 +207,7 @@ export default function AdminNewCategoryPage() {
                 <div>
                   <Input
                     label="URL handle (Slug)"
-                    prefix="/category/"
+                    prefix="/shop?category="
                     placeholder="traditional-wear"
                     value={slug}
                     onChange={(e) => {
@@ -358,7 +358,7 @@ export default function AdminNewCategoryPage() {
                 <div className="rounded-md border border-line bg-canvas p-4 space-y-1">
                   <p className="text-xs text-ink-muted flex items-center gap-1 font-mono">
                     <Globe className="h-3.5 w-3.5" />
-                    https://tanti.com.bd/category/{slug || 'new-category'}
+                    https://tanti.com.bd/shop?category={slug || 'new-category'}
                   </p>
                   <p className="text-base font-semibold text-clay line-clamp-1">
                     {seoTitle || `${name || 'Category Name'} | Tanti`}

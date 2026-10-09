@@ -1,0 +1,17 @@
+model SearchQueryLog {
+  id             String   @id @default(uuid())
+  tenantId       String
+  term           String
+  count          Int      @default(1)
+  results        Int      @default(0)
+  clicks         Int      @default(0)
+  lastSearchedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, term])
+  @@index([tenantId, count(sort: Desc)])
+  @@map("search_query_logs")
+}

@@ -29,7 +29,11 @@ export interface TenantModules {
 export interface TenantContact {
   email: string;
   phone: string;
+  whatsapp?: string;
   address: string;
+  workingHours?: string;
+  responseTime?: string;
+  supportTeam?: string;
 }
 
 export interface Tenant {
@@ -51,5 +55,7 @@ export interface Tenant {
     facebook?: string;
     instagram?: string;
     twitter?: string;
+    youtube?: string;
+    tiktok?: string;
   };
 }

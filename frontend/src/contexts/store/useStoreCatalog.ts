@@ -19,7 +19,7 @@ import {
 } from '@/services';
 import { load } from './utils';
 
-export function useStoreCatalog(onCartInitialized?: (cartItems: any[]) => void) {
+export function useStoreCatalog() {
   const [isStoreLoading, setIsStoreLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>(() =>
     load('tanti.products', seedProducts)
@@ -50,16 +50,15 @@ export function useStoreCatalog(onCartInitialized?: (cartItems: any[]) => void) 
     } catch {}
   }, [collections]);
 
-  // Fetch real categories, products, collections, and cart together on mount
+  // Fetch real categories, products, and collections on mount
   useEffect(() => {
     let isMounted = true;
     async function initializeStore() {
       try {
-        const [catRes, prodRes, colRes, cartRes] = await Promise.allSettled([
+        const [catRes, prodRes, colRes] = await Promise.allSettled([
           categoryService.getCategories(),
           productService.getProducts(),
           collectionService.getCollections(),
-          cartService.getCart(),
         ]);
 
         if (!isMounted) return;
@@ -121,16 +120,6 @@ export function useStoreCatalog(onCartInitialized?: (cartItems: any[]) => void) 
             setCollections(mappedCols);
           }
         }
-
-        // 4. Process Cart (if callback provided)
-        if (
-          cartRes.status === 'fulfilled' &&
-          cartRes.value?.data &&
-          Array.isArray(cartRes.value.data.items) &&
-          onCartInitialized
-        ) {
-          onCartInitialized(cartRes.value.data.items);
-        }
       } catch (err) {
         console.error('Failed to initialize store data:', err);
       } finally {
@@ -144,7 +133,7 @@ export function useStoreCatalog(onCartInitialized?: (cartItems: any[]) => void) 
     return () => {
       isMounted = false;
     };
-  }, [onCartInitialized]);
+  }, []);
 
   const saveProduct = useCallback((p: Product) => {
     setProducts((prev) =>

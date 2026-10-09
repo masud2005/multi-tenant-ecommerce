@@ -28,42 +28,51 @@ export function VariantPicker({
 
   return (
     <div className="space-y-5">
-      <fieldset>
-        <legend className="text-sm">
-          <span className="text-ink-muted">Colour:</span>{' '}
-          <span className="font-medium text-ink">{color}</span>
-        </legend>
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          {product.colors.map((c) => (
-            <button
-              key={c.name}
-              type="button"
-              onClick={() => onColor(c.name)}
-              aria-pressed={c.name === color}
-              aria-label={c.name}
-              title={c.name}
-              className={cn(
-                'h-9 w-9 rounded-full border-2 p-0.5 transition-colors duration-150 cursor-pointer',
-                c.name === color
-                  ? 'border-ink'
-                  : 'border-transparent hover:border-line-strong'
-              )}
-            >
-              <span
-                className="block h-full w-full rounded-full border border-ink/10"
-                style={{ backgroundColor: c.hex }}
-              />
-            </button>
-          ))}
-        </div>
-      </fieldset>
+      {/* Color Selector */}
+      {product.colors && product.colors.length > 0 && (
+        <fieldset>
+          <legend className="text-sm">
+            <span className="text-ink-muted">Colour:</span>{' '}
+            <span className="font-medium text-ink">{color || product.colors[0]?.name}</span>
+          </legend>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {product.colors.map((c) => {
+              const isSelected =
+                c.name.trim().toLowerCase() === (color || '').trim().toLowerCase();
+              return (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => onColor(c.name)}
+                  aria-pressed={isSelected}
+                  aria-label={c.name}
+                  title={c.name}
+                  className={cn(
+                    'h-9 w-9 rounded-full border-2 p-0.5 transition-colors duration-150 cursor-pointer',
+                    isSelected
+                      ? 'border-ink ring-1 ring-ink/30'
+                      : 'border-transparent hover:border-line-strong'
+                  )}
+                >
+                  <span
+                    className="block h-full w-full rounded-full border border-ink/10"
+                    style={{ backgroundColor: c.hex }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
+      {/* Size Selector */}
       {!singleSize && (
         <fieldset>
           <div className="flex items-center justify-between">
-            <legend className={cn('text-sm', sizeError && 'text-danger')}>
-              <span className={sizeError ? '' : 'text-ink-muted'}>Size:</span>{' '}
-              <span className="font-medium text-ink">
-                {size ?? (sizeError ? 'Please select a size' : 'Select')}
+            <legend className={cn('text-sm', sizeError && !size && 'text-danger font-medium')}>
+              <span className={sizeError && !size ? 'text-danger' : 'text-ink-muted'}>Size:</span>{' '}
+              <span className={cn('font-medium', sizeError && !size ? 'text-danger' : 'text-ink')}>
+                {size ?? (sizeError ? 'Please select a size' : 'Select a size')}
               </span>
             </legend>
             {onSizeGuide && (
@@ -78,33 +87,44 @@ export function VariantPicker({
           </div>
           <div className="mt-2.5 grid grid-cols-5 gap-2">
             {product.sizes.map((s) => {
-              const v = product.variants.find(
-                (x) => x.color === color && x.size === s
-              );
+              // Find variant for this size in the current color (case-insensitive)
+              const v =
+                product.variants.find(
+                  (x) =>
+                    x.color?.trim().toLowerCase() === (color || '').trim().toLowerCase() &&
+                    x.size?.trim().toLowerCase() === s?.trim().toLowerCase()
+                ) ||
+                product.variants.find(
+                  (x) => x.size?.trim().toLowerCase() === s?.trim().toLowerCase()
+                );
+
               const qty = v ? available(v) : 0;
               const out = !product.preorder && (qty === 0 || !v?.enabled);
-              const low = !out && !product.preorder && qty <= 3;
+              const low = !out && !product.preorder && qty > 0 && qty <= 3;
+              const isSelected =
+                Boolean(size) && size?.trim().toLowerCase() === s?.trim().toLowerCase();
+
               return (
                 <button
                   key={s}
                   type="button"
                   onClick={() => onSize(s)}
-                  aria-pressed={size === s}
+                  aria-pressed={isSelected}
                   aria-label={`${s}${
                     out ? ', sold out' : low ? `, only ${qty} left` : ''
                   }`}
                   className={cn(
                     'relative h-11 rounded-md border text-sm transition-colors duration-150 cursor-pointer font-medium',
-                    size === s
-                      ? 'border-ink bg-ink text-canvas'
+                    isSelected
+                      ? 'border-ink bg-ink text-canvas shadow-xs font-semibold'
                       : 'border-line-strong bg-surface hover:border-ink text-ink',
                     out &&
-                      size !== s &&
-                      'text-ink-muted line-through decoration-ink-muted/60'
+                      !isSelected &&
+                      'text-ink-muted line-through decoration-ink-muted/60 bg-subtle/50'
                   )}
                 >
                   {s}
-                  {low && size !== s && (
+                  {low && !isSelected && (
                     <span
                       className="absolute -top-1 right-1 h-1.5 w-1.5 rounded-full bg-warning"
                       aria-hidden

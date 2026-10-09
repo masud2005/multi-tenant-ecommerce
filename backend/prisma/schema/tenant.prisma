@@ -62,6 +62,7 @@ model Tenant {
   notificationTemplates NotificationTemplate[]
   notificationLogs      NotificationLog[]
   themes                TenantTheme[]
+  searchLogs            SearchQueryLog[]
 
   @@index([deletedAt])
   @@map("tenants")

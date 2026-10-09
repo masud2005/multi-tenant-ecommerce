@@ -79,7 +79,10 @@ export function InventoryTable({
                         <img
                           src={coverImg}
                           alt={item.product.title}
-                          className="h-10 w-8 rounded object-cover border border-line"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=100&auto=format&fit=crop&q=60';
+                          }}
+                          className="h-10 w-8 rounded object-cover border border-line bg-subtle"
                         />
                         <span>
                           <span className="block font-medium text-ink">

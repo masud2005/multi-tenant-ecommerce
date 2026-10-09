@@ -4,70 +4,47 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { wishlistService } from '@/services';
 import { getAuthToken } from '@/services/auth/auth.storage';
-import { loadWishlist } from './utils';
 import type { User } from './types';
 
 export function useStoreWishlist(user: User | null) {
-  const [wishlist, setWishlist] = useState<string[]>(() => loadWishlist());
+  const [wishlist, setWishlist] = useState<string[]>([]);
   const syncedUserIdRef = useRef<string | null>(null);
 
-  // Sync wishlist to local storage (for guest users or offline cache)
-  useEffect(() => {
-    try {
-      localStorage.setItem('tanti.wishlist', JSON.stringify(wishlist));
-    } catch {}
-  }, [wishlist]);
-
-  // Handle guest-to-user wishlist sync & server hydration on login
+  // Sync wishlist from backend database whenever logged-in user changes
   useEffect(() => {
     let isMounted = true;
     const token = getAuthToken();
 
     if (user?.id && token) {
-      // Prevent redundant sync calls for the same login session
       if (syncedUserIdRef.current === user.id) return;
       syncedUserIdRef.current = user.id;
 
-      // 1. Check if there are items saved in localStorage during guest browsing
-      const localGuestItems = loadWishlist();
-
-      if (localGuestItems.length > 0) {
-        // Sync & merge guest wishlist with database
-        wishlistService
-          .syncWishlist(localGuestItems)
-          .then((res) => {
-            if (!isMounted) return;
-            if (res?.data && Array.isArray(res.data)) {
-              const mergedIds = res.data
-                .map((item) => item.product?.id)
-                .filter(Boolean) as string[];
-              setWishlist(mergedIds);
-            }
-          })
-          .catch((err) => {
-            console.error('Failed to sync guest wishlist with server:', err);
-          });
-      } else {
-        // No guest items, simply load the customer's server wishlist
-        wishlistService
-          .getWishlist()
-          .then((res) => {
-            if (!isMounted) return;
-            if (res?.data && Array.isArray(res.data)) {
-              const dbWishlistIds = res.data
-                .map((item) => item.product?.id)
-                .filter(Boolean) as string[];
-              if (dbWishlistIds.length > 0) {
-                setWishlist(dbWishlistIds);
-              }
-            }
-          })
-          .catch((err) => {
-            console.error('Failed to load wishlist from server:', err);
-          });
-      }
+      // Always load the specific authenticated customer's own wishlist from database
+      wishlistService
+        .getWishlist()
+        .then((res) => {
+          if (!isMounted) return;
+          if (res?.data && Array.isArray(res.data)) {
+            const dbWishlistIds = res.data
+              .map((item) => item.product?.id)
+              .filter(Boolean) as string[];
+            setWishlist(dbWishlistIds);
+          } else {
+            setWishlist([]);
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load wishlist from server:', err);
+          if (isMounted) setWishlist([]);
+        });
     } else {
       syncedUserIdRef.current = null;
+      setWishlist([]);
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('tanti.wishlist');
+        }
+      } catch {}
     }
 
     return () => {
@@ -77,6 +54,8 @@ export function useStoreWishlist(user: User | null) {
 
   const toggleWishlist = useCallback(
     (productId: string) => {
+      if (!productId) return;
+
       // 1. Optimistic UI update
       setWishlist((prev) =>
         prev.includes(productId)
@@ -84,7 +63,7 @@ export function useStoreWishlist(user: User | null) {
           : [...prev, productId]
       );
 
-      // 2. If authenticated, persist to backend database
+      // 2. If authenticated, persist to backend database for this user
       if (user?.id) {
         wishlistService.toggleWishlist(productId).catch((err) => {
           console.error('Failed to sync wishlist with server:', err);
@@ -107,3 +86,4 @@ export function useStoreWishlist(user: User | null) {
     toggleWishlist,
   };
 }
+

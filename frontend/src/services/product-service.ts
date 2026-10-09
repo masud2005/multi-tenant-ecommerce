@@ -179,28 +179,44 @@ export const productService = {
   },
 
   /**
-   * Save or update product
+   * Update an existing product by ID or Slug in the backend
+   */
+  async updateProduct(
+    idOrSlug: string,
+    payload: Partial<CreateProductPayload>,
+  ): Promise<ApiResponse<ProductResponseData>> {
+    return await apiClient.patch<ApiResponse<ProductResponseData>>(
+      `/owner/products/${idOrSlug}`,
+      payload,
+    );
+  },
+
+  /**
+   * Save or update product helper
    */
   async saveProduct(product: Product): Promise<Product> {
     try {
       if (product.id) {
-        return await apiClient.put<Product>(`/owner/products/${product.id}`, product);
+        const res = await apiClient.patch<any>(`/owner/products/${product.id}`, product);
+        return res?.data ? mapBackendProductToFrontend(res.data) : product;
       }
-      return await apiClient.post<Product>('/owner/products', product);
+      const res = await apiClient.post<any>('/owner/products', product);
+      return res?.data ? mapBackendProductToFrontend(res.data) : product;
     } catch {
       return product;
     }
   },
 
   /**
-   * Delete product
+   * Delete product by ID or Slug
    */
-  async deleteProduct(id: string): Promise<boolean> {
+  async deleteProduct(idOrSlug: string): Promise<boolean> {
     try {
-      await apiClient.delete(`/owner/products/${id}`);
+      await apiClient.delete(`/owner/products/${idOrSlug}`);
       return true;
-    } catch {
-      return true;
+    } catch (err) {
+      console.error(`Failed to delete product ${idOrSlug}:`, err);
+      throw err;
     }
   },
 

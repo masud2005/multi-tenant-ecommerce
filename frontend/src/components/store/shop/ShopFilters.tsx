@@ -35,14 +35,19 @@ export const emptyFilters: FilterState = {
   minRating: 0,
 };
 
+export interface SizeFacetItem {
+  size: string;
+  count: number;
+}
+
 export interface ShopFiltersProps {
   value: FilterState;
   onChange: (f: FilterState) => void;
   facets: {
     categories: { key: string; label: string; count: number }[];
     brands: { key: string; count: number }[];
-    sizes: string[];
-    colors: { name: string; hex: string }[];
+    sizes: (string | SizeFacetItem)[];
+    colors: { name: string; hex: string; count?: number }[];
     inStockCount?: number;
     onSaleCount?: number;
   };
@@ -50,7 +55,7 @@ export interface ShopFiltersProps {
 }
 
 function toggle(list: string[], v: string) {
-  return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
+  return list.includes(v) ? list.filter((x) => x !== v) : [v, ...list];
 }
 
 export function ShopFilters({

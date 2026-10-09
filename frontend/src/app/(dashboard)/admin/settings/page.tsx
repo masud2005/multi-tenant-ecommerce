@@ -1,35 +1,101 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import {
+  Store,
+  Phone,
+  Mail,
+  MapPin,
+  Clock,
+  MessageSquare,
+  Globe,
+  Save,
+  CheckCircle2,
+  Share2,
+  Sparkles,
+  CreditCard,
+  ShoppingCart,
+  Percent,
+  RotateCcw,
+  Users,
+  ShieldCheck,
+  Server,
+  Building,
+  RefreshCw,
+} from 'lucide-react';
 import { paymentMethods } from '@/data/shipping';
 import { useAdmin } from '@/contexts/AdminContext';
+import { useTenant } from '@/contexts/TenantContext';
+import { storeService } from '@/services/store-service';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
+import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { PaymentMark } from '@/components/ui/PaymentMark';
-import { cn } from '@/utils/cn';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const sections = [
-  'General',
-  'Checkout',
-  'Payments',
-  'Taxes',
-  'Returns',
-  'Customer accounts',
-  'Privacy',
-  'Availability',
+  { id: 'Store Profile', label: 'Store Profile', icon: Store },
+  { id: 'Contact & Support', label: 'Contact & Support', icon: Phone },
+  { id: 'Checkout', label: 'Checkout & Orders', icon: ShoppingCart },
+  { id: 'Payments', label: 'Payment Gateways', icon: CreditCard },
+  { id: 'Taxes', label: 'Taxes & VAT', icon: Percent },
+  { id: 'Returns', label: 'Returns Policy', icon: RotateCcw },
+  { id: 'Customer accounts', label: 'Customer Accounts', icon: Users },
+  { id: 'Privacy', label: 'Privacy & Cookies', icon: ShieldCheck },
+  { id: 'Availability', label: 'Store Status', icon: Server },
 ] as const;
-type Section = (typeof sections)[number];
+
+type SectionId = (typeof sections)[number]['id'];
 
 export default function AdminSettingsPage() {
   const { can } = useAdmin();
-  const [section, setSection] = useState<Section>('General');
+  const { tenant, refetchTenant } = useTenant();
+  const [section, setSection] = useState<SectionId>('Store Profile');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 1. Store Identity Form State
+  const [storeForm, setStoreForm] = useState({
+    name: 'Tanti Fashion',
+    tagline: 'Handloom & Contemporary Bangladeshi Fashion',
+    logo: '/images/tanti-logo.svg',
+    favicon: '/favicon.ico',
+    currency: 'BDT',
+    currencySymbol: '৳',
+    currencyPosition: 'prefix' as 'prefix' | 'suffix',
+    timezone: '(GMT+06:00) Dhaka',
+    language: 'English',
+    orderNumberFormat: 'TN-{number}',
+    announcement: 'Use EID500 for ৳500 off orders over ৳3,000.',
+    announcementEnabled: true,
+  });
+
+  // 2. Public Contact Details Form State
+  const [contactForm, setContactForm] = useState({
+    email: 'care@tanti.com.bd',
+    phone: '09612-826842',
+    whatsapp: '+880 1700-000000',
+    address: 'House 14, Road 27 (old), Dhanmondi, Dhaka 1209',
+    workingHours: 'Sat–Thu, 10 AM – 9 PM',
+    responseTime: 'Replies within 2 to 4 working hours',
+    supportTeam: 'Tanti Care team',
+  });
+
+  // 3. Social Media Form State
+  const [socialsForm, setSocialsForm] = useState({
+    facebook: 'https://facebook.com/tanti',
+    instagram: 'https://instagram.com/tanti',
+  });
+
+  // 4. Payment Methods State
   const [pm, setPm] = useState<Record<string, boolean>>({
     bkash: true,
     nagad: true,
@@ -37,6 +103,8 @@ export default function AdminSettingsPage() {
     stripe: true,
     cod: true,
   });
+
+  // 5. Flags State
   const [flags, setFlags] = useState({
     guest: true,
     phoneOtp: true,
@@ -50,100 +118,491 @@ export default function AdminSettingsPage() {
     photos: true,
     exchanges: true,
     finalSale: true,
+    vatRate: '7.5',
+    binNumber: '004512876-0101',
+    returnWindow: '7',
   });
+
   const setFlag = (k: keyof typeof flags) => (v: boolean) =>
-    setFlags({ ...flags, [k]: v });
+    setFlags((prev) => ({ ...prev, [k]: v }));
+
+  // Load existing settings on mount
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        setIsLoading(true);
+        const res = await storeService.getOwnerSettings();
+        if (res && res.data) {
+          const d = res.data;
+          setStoreForm((prev) => ({
+            ...prev,
+            name: d.name || prev.name,
+            tagline: d.tagline || prev.tagline,
+            logo: d.logo || prev.logo,
+            favicon: d.favicon || prev.favicon,
+            currency: d.currency || prev.currency,
+            currencySymbol: d.currencySymbol || prev.currencySymbol,
+            currencyPosition: d.currencyPosition || prev.currencyPosition,
+            orderNumberFormat:
+              d.settings?.orderNumberFormat || prev.orderNumberFormat,
+            announcement: d.announcement || prev.announcement,
+            announcementEnabled:
+              d.announcementEnabled !== undefined
+                ? d.announcementEnabled
+                : prev.announcementEnabled,
+          }));
+
+          if (d.contact) {
+            setContactForm((prev) => ({
+              ...prev,
+              email: d.contact.email || prev.email,
+              phone: d.contact.phone || prev.phone,
+              whatsapp: d.contact.whatsapp || prev.whatsapp,
+              address: d.contact.address || prev.address,
+              workingHours: d.contact.workingHours || prev.workingHours,
+              responseTime: d.contact.responseTime || prev.responseTime,
+              supportTeam:
+                d.contact.supportTeam || `${d.name || 'Store'} Care team`,
+            }));
+          }
+
+          if (d.socials) {
+            setSocialsForm((prev) => ({
+              ...prev,
+              facebook: d.socials.facebook || prev.facebook,
+              instagram: d.socials.instagram || prev.instagram,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load store settings:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadSettings();
+  }, []);
+
+  // Save changes handler with rich feedback
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+
+      const payload: any = {
+        name: storeForm.name,
+        tagline: storeForm.tagline,
+        currency: storeForm.currency,
+        currencySymbol: storeForm.currencySymbol,
+        currencyPosition: storeForm.currencyPosition,
+        announcement: storeForm.announcement,
+        announcementEnabled: storeForm.announcementEnabled,
+        contact: {
+          email: contactForm.email,
+          phone: contactForm.phone,
+          whatsapp: contactForm.whatsapp,
+          address: contactForm.address,
+          workingHours: contactForm.workingHours,
+          responseTime: contactForm.responseTime,
+          supportTeam: contactForm.supportTeam,
+        },
+        socials: socialsForm,
+        settings: {
+          orderNumberFormat: storeForm.orderNumberFormat,
+          flags,
+          pm,
+        },
+      };
+
+      await storeService.updateOwnerSettings(payload);
+      await refetchTenant();
+      toast.success(`${section} settings saved & published successfully!`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <ModuleGate module="settings">
-      <div className="w-full space-y-6">
-        <PageHeader title="Settings" description="Store-wide configuration." />
-        <div className="grid gap-6 md:grid-cols-[200px_1fr]">
+      <div className="w-full space-y-6 pb-12">
+        {/* Top Header */}
+        <PageHeader
+          title="Store Settings & Configuration"
+          description="Manage store branding, public customer care channels, and business rules."
+          actions={
+            <div className="flex items-center gap-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => refetchTenant()}
+                className="cursor-pointer"
+              >
+                <RefreshCw className="h-4 w-4 mr-1.5" /> Refresh
+              </Button>
+              <GuardedButton
+                module="settings"
+                action="settings"
+                size="sm"
+                loading={isSaving}
+                onClick={handleSave}
+                className="cursor-pointer bg-ink text-canvas hover:bg-ink/90 font-medium px-4"
+              >
+                <Save className="h-4 w-4 mr-1.5" /> Save Changes
+              </GuardedButton>
+            </div>
+          }
+        />
+
+        {/* Status Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-subtle/40 px-5 py-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-success animate-pulse" />
+            <span className="font-medium text-ink">Active Storefront:</span>
+            <span className="font-semibold text-clay">{tenant.name}</span>
+            <span className="text-ink-muted">({tenant.slug}.yourdomain.com)</span>
+          </div>
+          <div className="flex items-center gap-4 text-ink-muted">
+            <span>Currency: <b>{storeForm.currency} ({storeForm.currencySymbol})</b></span>
+            <span>Plan: <b className="uppercase text-ink">{tenant.plan}</b></span>
+            <Badge tone="success" dot>Live Sync Ready</Badge>
+          </div>
+        </div>
+
+        {/* Main 2-Column Layout */}
+        <div className="grid gap-6 md:grid-cols-[220px_1fr]">
+          {/* Left Navigation Sidebar */}
           <nav
             aria-label="Settings sections"
-            className="flex gap-1 overflow-x-auto md:flex-col"
+            className="flex gap-1.5 overflow-x-auto md:flex-col"
           >
-            {sections.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSection(s)}
-                aria-current={section === s}
-                className={cn(
-                  'whitespace-nowrap rounded-md px-3 py-2 text-left text-sm cursor-pointer transition-colors',
-                  section === s
-                    ? 'bg-surface font-medium text-ink shadow-sm ring-1 ring-line'
-                    : 'text-ink-soft hover:text-ink'
-                )}
-              >
-                {s}
-              </button>
-            ))}
+            {sections.map((s) => {
+              const Icon = s.icon;
+              const isActive = section === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSection(s.id)}
+                  aria-current={isActive}
+                  className={cn(
+                    'flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3.5 py-2.5 text-left text-sm font-medium transition-all cursor-pointer',
+                    isActive
+                      ? 'bg-ink text-canvas shadow-sm'
+                      : 'text-ink-soft hover:bg-subtle hover:text-ink'
+                  )}
+                >
+                  <Icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-canvas' : 'text-ink-muted')} />
+                  <span>{s.label}</span>
+                </button>
+              );
+            })}
           </nav>
+
+          {/* Right Main Form Content */}
           <fieldset
             disabled={!can('settings', 'settings')}
             className="space-y-6"
           >
-            {section === 'General' && (
-              <Panel title="Store details">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input label="Store name" defaultValue="Tanti" />
-                  <Input label="Contact email" defaultValue="hello@tanti.com.bd" />
-                  <Input label="Phone" defaultValue="09612-345678" />
-                  <Input
-                    label="Business address"
-                    defaultValue="House 12, Road 27, Dhanmondi, Dhaka 1209"
-                  />
-                  <Select
-                    label="Currency"
-                    options={['BDT — Bangladeshi Taka (৳)']}
-                  />
-                  <Select label="Timezone" options={['(GMT+06:00) Dhaka']} />
-                  <Select
-                    label="Language"
-                    options={['English', 'বাংলা (coming soon)']}
-                  />
-                  <Input
-                    label="Order number format"
-                    defaultValue="TN-{number}"
-                    hint="Next order: TN-10498"
-                  />
-                </div>
-              </Panel>
+            {/* 1. STORE PROFILE TAB */}
+            {section === 'Store Profile' && (
+              <div className="space-y-6">
+                {/* Brand Identity Card */}
+                <Panel
+                  title="Brand Identity & Store Naming"
+                  description="General information about your business shown to customers."
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <Input
+                        label="Store brand name *"
+                        value={storeForm.name}
+                        onChange={(e) =>
+                          setStoreForm({ ...storeForm, name: e.target.value })
+                        }
+                        placeholder="e.g. Tanti Fashion"
+                        hint="This is the main public brand name displayed across your website"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Input
+                        label="Brand Tagline / Slogan"
+                        value={storeForm.tagline}
+                        onChange={(e) =>
+                          setStoreForm({ ...storeForm, tagline: e.target.value })
+                        }
+                        placeholder="e.g. Handloom & Contemporary Bangladeshi Fashion"
+                        hint="A brief sentence describing your craft and uniqueness"
+                      />
+                    </div>
+                  </div>
+                </Panel>
+
+                {/* Regional & Currency Card */}
+                <Panel
+                  title="Localization, Currency & Orders"
+                  description="Regional formats, pricing currency, and order code configuration."
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Input
+                      label="Currency code"
+                      value={storeForm.currency}
+                      onChange={(e) =>
+                        setStoreForm({ ...storeForm, currency: e.target.value.toUpperCase() })
+                      }
+                      placeholder="BDT"
+                    />
+                    <Input
+                      label="Currency symbol"
+                      value={storeForm.currencySymbol}
+                      onChange={(e) =>
+                        setStoreForm({ ...storeForm, currencySymbol: e.target.value })
+                      }
+                      placeholder="৳"
+                    />
+                    <Select
+                      label="Currency symbol position"
+                      value={storeForm.currencyPosition === 'prefix' ? 'Before price (e.g. ৳1,500)' : 'After price (e.g. 1,500 ৳)'}
+                      onChange={(e) =>
+                        setStoreForm({
+                          ...storeForm,
+                          currencyPosition: e.target.value.includes('Before') ? 'prefix' : 'suffix',
+                        })
+                      }
+                      options={['Before price (e.g. ৳1,500)', 'After price (e.g. 1,500 ৳)']}
+                    />
+                    <Input
+                      label="Order number format"
+                      value={storeForm.orderNumberFormat}
+                      onChange={(e) =>
+                        setStoreForm({
+                          ...storeForm,
+                          orderNumberFormat: e.target.value,
+                        })
+                      }
+                      placeholder="TN-{number}"
+                      hint="Next order number will look like: TN-10498"
+                    />
+                  </div>
+                </Panel>
+
+                {/* Announcement Banner */}
+                <Panel
+                  title="Top Announcement Bar"
+                  description="Highlight promotions, discount codes, or shipping notices across all pages."
+                >
+                  <div className="space-y-4">
+                    <Switch
+                      checked={storeForm.announcementEnabled}
+                      onChange={(v) =>
+                        setStoreForm({ ...storeForm, announcementEnabled: v })
+                      }
+                      label="Show top announcement bar on storefront"
+                    />
+                    <Input
+                      label="Banner text"
+                      value={storeForm.announcement}
+                      onChange={(e) =>
+                        setStoreForm({ ...storeForm, announcement: e.target.value })
+                      }
+                      placeholder="e.g. Use EID500 for ৳500 off orders over ৳3,000."
+                    />
+                  </div>
+                </Panel>
+              </div>
             )}
+
+            {/* 2. PUBLIC CONTACT & SUPPORT TAB */}
+            {section === 'Contact & Support' && (
+              <div className="space-y-6">
+                {/* Live Preview Card */}
+                <div className="rounded-xl border border-clay/30 bg-clay/5 p-5">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-clay">
+                    <Sparkles className="h-4 w-4" /> Live Storefront Contact Preview
+                  </div>
+                  <p className="mt-1 text-xs text-ink-muted">
+                    This is how customers see your contact details on the Contact Us page & footer:
+                  </p>
+                  <div className="mt-4 grid gap-3 rounded-lg border border-line bg-surface p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="flex items-start gap-2.5">
+                      <Phone className="mt-0.5 h-4 w-4 text-ink-muted shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-ink-muted">Hotline</p>
+                        <p className="font-semibold text-ink">{contactForm.phone || 'Not set'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <MessageSquare className="mt-0.5 h-4 w-4 text-success shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-ink-muted">WhatsApp</p>
+                        <p className="font-semibold text-success">{contactForm.whatsapp || 'Not set'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <Mail className="mt-0.5 h-4 w-4 text-ink-muted shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-ink-muted">Support Email</p>
+                        <p className="font-semibold text-ink truncate">{contactForm.email || 'Not set'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <Clock className="mt-0.5 h-4 w-4 text-ink-muted shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-ink-muted">Hours</p>
+                        <p className="font-semibold text-ink">{contactForm.workingHours || 'Not set'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Primary Support Channels Card */}
+                <Panel
+                  title="Direct Customer Support Channels"
+                  description="Phone, WhatsApp, and email used by customers to get in touch with you."
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Input
+                      label="Customer Support Email *"
+                      type="email"
+                      value={contactForm.email}
+                      onChange={(e) =>
+                        setContactForm({ ...contactForm, email: e.target.value })
+                      }
+                      placeholder="care@yourbrand.com"
+                      hint="Receives customer inquiries from the Contact Us form"
+                    />
+                    <Input
+                      label="Customer Care Hotline / Phone *"
+                      value={contactForm.phone}
+                      onChange={(e) =>
+                        setContactForm({ ...contactForm, phone: e.target.value })
+                      }
+                      placeholder="09612-826842 or 017xxxxxxxx"
+                      hint="Displayed prominently for direct customer calling"
+                    />
+                    <Input
+                      label="WhatsApp Support Number (Optional)"
+                      value={contactForm.whatsapp}
+                      onChange={(e) =>
+                        setContactForm({ ...contactForm, whatsapp: e.target.value })
+                      }
+                      placeholder="+880 1700-000000"
+                      hint="Creates a direct WhatsApp chat link on the Contact Us page"
+                    />
+                    <Input
+                      label="Support Team Name"
+                      value={contactForm.supportTeam}
+                      onChange={(e) =>
+                        setContactForm({ ...contactForm, supportTeam: e.target.value })
+                      }
+                      placeholder="e.g. Tanti Care team"
+                    />
+                  </div>
+                </Panel>
+
+                {/* Physical Location & Schedule Card */}
+                <Panel
+                  title="Physical Store Address & Operating Hours"
+                  description="Your store location and customer support availability hours."
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <Input
+                        label="Flagship Store / Office Address *"
+                        value={contactForm.address}
+                        onChange={(e) =>
+                          setContactForm({ ...contactForm, address: e.target.value })
+                        }
+                        placeholder="House 14, Road 27 (old), Dhanmondi, Dhaka 1209"
+                        hint="Full physical address shown on the Contact page & footer copyright bar"
+                      />
+                    </div>
+                    <Input
+                      label="Business & Working Hours *"
+                      value={contactForm.workingHours}
+                      onChange={(e) =>
+                        setContactForm({ ...contactForm, workingHours: e.target.value })
+                      }
+                      placeholder="Sat–Thu, 10 AM – 9 PM"
+                      hint="Days and hours when your store/support is open"
+                    />
+                    <Input
+                      label="Support Response Time Note *"
+                      value={contactForm.responseTime}
+                      onChange={(e) =>
+                        setContactForm({ ...contactForm, responseTime: e.target.value })
+                      }
+                      placeholder="Replies within 2 to 4 working hours"
+                      hint="Customer expectation notice on Contact page"
+                    />
+                  </div>
+                </Panel>
+
+                {/* Social Media Links Card */}
+                <Panel
+                  title="Social Media Profiles"
+                  description="Connect your brand's official Facebook and Instagram pages."
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Input
+                      label="Facebook Page URL"
+                      value={socialsForm.facebook}
+                      onChange={(e) =>
+                        setSocialsForm({ ...socialsForm, facebook: e.target.value })
+                      }
+                      placeholder="https://facebook.com/yourbrand"
+                      hint="Direct link to your official Facebook page"
+                    />
+                    <Input
+                      label="Instagram Profile URL"
+                      value={socialsForm.instagram}
+                      onChange={(e) =>
+                        setSocialsForm({ ...socialsForm, instagram: e.target.value })
+                      }
+                      placeholder="https://instagram.com/yourbrand"
+                      hint="Direct link to your official Instagram profile"
+                    />
+                  </div>
+                </Panel>
+              </div>
+            )}
+
+            {/* 3. CHECKOUT TAB */}
             {section === 'Checkout' && (
-              <Panel title="Checkout">
+              <Panel title="Checkout & Order Processing Rules">
                 <div className="space-y-4">
                   <Switch
                     checked={flags.guest}
                     onChange={setFlag('guest')}
-                    label="Allow guest checkout"
+                    label="Allow guest checkout without requiring account creation"
                   />
                   <Switch
                     checked={flags.phoneOtp}
                     onChange={setFlag('phoneOtp')}
-                    label="Verify phone by OTP for cash on delivery orders"
+                    label="Verify customer phone by OTP for Cash on Delivery orders"
                   />
                   <Switch
                     checked={flags.notes}
                     onChange={setFlag('notes')}
-                    label="Show order notes field"
+                    label="Show order special notes field during checkout"
                   />
                   <Input
                     label="Unpaid order hold time (minutes)"
                     defaultValue="30"
-                    hint="Reserved stock is released after this"
+                    hint="Reserved inventory is automatically released back to stock after this time"
                   />
                 </div>
               </Panel>
             )}
+
+            {/* 4. PAYMENTS TAB */}
             {section === 'Payments' && (
-              <Panel title="Payment methods" flush>
+              <Panel title="Configured Payment Methods" flush>
                 <ul className="divide-y divide-line">
                   {paymentMethods.map((m) => (
                     <li
                       key={m.id}
-                      className="flex items-center gap-3 px-5 py-3.5 hover:bg-subtle/30"
+                      className="flex items-center gap-3 px-5 py-4 hover:bg-subtle/30"
                     >
                       <PaymentMark method={m.id} />
                       <div className="flex-1">
@@ -161,117 +620,155 @@ export default function AdminSettingsPage() {
                     </li>
                   ))}
                 </ul>
-                <p className="border-t border-line px-5 py-3 text-xs text-ink-muted">
-                  Gateway credentials are managed in Integrations and encrypted at
-                  rest. Changing them requires re-authentication.
+                <p className="border-t border-line px-5 py-3.5 text-xs text-ink-muted bg-subtle/20">
+                  Gateway API credentials and merchant secrets are encrypted at rest in your tenant keystore.
                 </p>
               </Panel>
             )}
+
+            {/* 5. TAXES TAB */}
             {section === 'Taxes' && (
-              <Panel title="VAT">
+              <Panel title="VAT & Government Tax Settings">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <Input label="VAT rate (%)" defaultValue="7.5" />
-                  <Input label="BIN" defaultValue="004512876-0101" />
+                  <Input
+                    label="Standard VAT rate (%)"
+                    value={flags.vatRate}
+                    onChange={(e) => setFlags({ ...flags, vatRate: e.target.value })}
+                  />
+                  <Input
+                    label="Business Identification Number (BIN)"
+                    value={flags.binNumber}
+                    onChange={(e) => setFlags({ ...flags, binNumber: e.target.value })}
+                  />
                 </div>
-                <div className="mt-4 space-y-2">
+                <div className="mt-5 space-y-3">
                   <Checkbox
                     checked={flags.vatIncl}
                     onChange={setFlag('vatIncl')}
-                    label="Prices include VAT"
+                    label="Product prices already include VAT"
                   />
                   <Checkbox
                     checked={flags.vatShip}
                     onChange={setFlag('vatShip')}
-                    label="Charge VAT on delivery fees"
+                    label="Charge VAT on courier delivery fees"
                   />
                 </div>
               </Panel>
             )}
+
+            {/* 6. RETURNS TAB */}
             {section === 'Returns' && (
-              <Panel title="Return policy">
+              <Panel title="Store Return & Exchange Policy">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Return window (days after delivery)"
-                    defaultValue="7"
+                    value={flags.returnWindow}
+                    onChange={(e) => setFlags({ ...flags, returnWindow: e.target.value })}
                   />
                   <Select
-                    label="Refund methods"
+                    label="Refund payout methods"
                     options={[
                       'Original payment or store credit',
                       'Store credit only',
                     ]}
                   />
                 </div>
-                <div className="mt-4 space-y-2">
+                <div className="mt-5 space-y-3">
                   <Checkbox
                     checked={flags.photos}
                     onChange={setFlag('photos')}
-                    label="Require photos for ‘damaged’ or ‘wrong item’ reasons"
+                    label="Require photos for ‘damaged’ or ‘wrong item’ return reasons"
                   />
                   <Checkbox
                     checked={flags.exchanges}
                     onChange={setFlag('exchanges')}
-                    label="Allow size exchanges"
+                    label="Allow free size exchanges inside Dhaka"
                   />
                   <Checkbox
                     checked={flags.finalSale}
                     onChange={setFlag('finalSale')}
-                    label="Final sale: sarees & jewellery (damaged only)"
+                    label="Final sale restriction: Sarees & Jewellery (damaged only)"
                   />
                 </div>
               </Panel>
             )}
+
+            {/* 7. CUSTOMER ACCOUNTS TAB */}
             {section === 'Customer accounts' && (
-              <Panel title="Customer accounts">
+              <Panel title="Customer Account Security & Authentication">
                 <div className="space-y-4">
                   <Switch
                     checked={flags.social}
                     onChange={setFlag('social')}
-                    label="Sign in with Google & Facebook"
+                    label="Enable One-Click Sign in with Google & Facebook"
                   />
                   <Switch
                     checked={flags.mfa}
                     onChange={setFlag('mfa')}
-                    label="Offer two-factor authentication to customers"
+                    label="Offer optional Two-Factor Authentication (2FA) for customers"
                   />
                 </div>
               </Panel>
             )}
+
+            {/* 8. PRIVACY TAB */}
             {section === 'Privacy' && (
-              <Panel title="Cookies & privacy">
+              <Panel title="Cookie Consent & Privacy Policy">
                 <Switch
                   checked={flags.cookie}
                   onChange={setFlag('cookie')}
-                  label="Show cookie consent banner"
+                  label="Display GDPR & Cookie Consent banner to first-time visitors"
                 />
                 <p className="mt-3 text-xs text-ink-muted">
-                  Analytics and marketing pixels only load after consent.
+                  Analytics tracking and third-party advertising pixels will only execute after visitor consent.
                 </p>
               </Panel>
             )}
+
+            {/* 9. AVAILABILITY TAB */}
             {section === 'Availability' && (
-              <Panel title="Store availability">
+              <Panel title="Storefront Availability & Maintenance Mode">
                 <Switch
                   checked={flags.maintenance}
                   onChange={setFlag('maintenance')}
-                  label="Maintenance mode — show a ‘back soon’ page to visitors"
+                  label="Enable Maintenance mode — show a ‘Back Soon’ countdown to visitors"
                 />
                 {flags.maintenance && (
-                  <p className="mt-3 rounded-md bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
-                    Your storefront is hidden. Staff can still preview it while
-                    signed in.
-                  </p>
+                  <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-700 dark:text-amber-300">
+                    <p className="font-semibold">Storefront is currently offline for public visitors.</p>
+                    <p className="mt-1 text-xs">Logged-in staff and admins can still preview and test the store normally.</p>
+                  </div>
                 )}
               </Panel>
             )}
-            <div className="flex justify-end">
-              <GuardedButton
-                module="settings"
-                action="settings"
-                onClick={() => toast.success(`${section} settings saved`)}
-              >
-                Save
-              </GuardedButton>
+
+            {/* Bottom Floating Save Action Bar */}
+            <div className="sticky bottom-4 z-10 flex items-center justify-between gap-4 rounded-xl border border-line bg-surface/95 p-4 shadow-lg backdrop-blur-md">
+              <div className="flex items-center gap-2 text-xs text-ink-muted">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <span>Ready to update <b>{section}</b> configuration</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  onClick={() => refetchTenant()}
+                  className="cursor-pointer"
+                >
+                  Discard Changes
+                </Button>
+                <GuardedButton
+                  module="settings"
+                  action="settings"
+                  size="sm"
+                  loading={isSaving}
+                  onClick={handleSave}
+                  className="cursor-pointer bg-ink text-canvas hover:bg-ink/90 font-medium px-5"
+                >
+                  <Save className="h-4 w-4 mr-1.5" /> Save & Update Settings
+                </GuardedButton>
+              </div>
             </div>
           </fieldset>
         </div>

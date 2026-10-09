@@ -11,8 +11,18 @@ import { orderStatusMeta, returnStatusMeta } from '@/utils/status';
 import { formatBDT, formatDate } from '@/utils/format';
 
 export default function AccountDashboardPage() {
-  const { user, orders, returns, wishlist, products, storeCredit, addresses } = useStore();
-  const mine = orders.filter((o) => o.customerId === user?.id);
+  const { user, orders, returns, wishlist, products, storeCredit, addresses, refreshOrders } = useStore();
+  
+  React.useEffect(() => {
+    if (refreshOrders) refreshOrders();
+  }, [refreshOrders]);
+
+  const mine = orders.filter((o) => {
+    if (!user) return false;
+    const matchId = o.customerId === user.id;
+    const matchEmail = Boolean(user.email && o.email && o.email.toLowerCase() === user.email.toLowerCase());
+    return matchId || matchEmail;
+  });
   const activeOrder = mine.find((o) =>
     ['confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery'].includes(o.status)
   );

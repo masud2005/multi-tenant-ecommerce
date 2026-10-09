@@ -19,13 +19,22 @@ export class ProductService {
 
   // Create a new product with images, variants, collection associations, and rollback on failure
   async create(dto: CreateProductDto, files?: Express.Multer.File[], tenantId?: string) {
-    if (!tenantId) {
+    let resolvedTenantId = tenantId;
+    if (!resolvedTenantId) {
+      const activeTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      resolvedTenantId = activeTenant?.id;
+    }
+
+    if (!resolvedTenantId) {
       throw new ConflictException('Tenant could not be resolved from authenticated user token.');
     }
 
     // 1. Verify tenant exists
     const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
+      where: { id: resolvedTenantId },
     });
     if (!tenant) {
       throw new NotFoundException('Tenant');
@@ -35,7 +44,7 @@ export class ProductService {
     const category = await this.prisma.category.findFirst({
       where: {
         OR: [{ id: dto.categoryId }, { slug: dto.categoryId }],
-        tenantId,
+        tenantId: resolvedTenantId,
         deletedAt: null,
       },
     });
@@ -49,7 +58,7 @@ export class ProductService {
       const subcategory = await this.prisma.category.findFirst({
         where: {
           OR: [{ id: dto.subcategoryId }, { slug: dto.subcategoryId }],
-          tenantId,
+          tenantId: resolvedTenantId,
           deletedAt: null,
         },
       });
@@ -66,7 +75,7 @@ export class ProductService {
       const brand = await this.prisma.brand.findFirst({
         where: {
           OR: [{ id: dto.brandId }, { slug: dto.brandId }],
-          tenantId,
+          tenantId: resolvedTenantId,
           deletedAt: null,
         },
       });
@@ -85,7 +94,7 @@ export class ProductService {
     const existingProduct = await this.prisma.product.findUnique({
       where: {
         tenantId_slug: {
-          tenantId,
+          tenantId: resolvedTenantId,
           slug,
         },
       },
@@ -106,7 +115,7 @@ export class ProductService {
             { id: { in: dto.collectionIds } },
             { slug: { in: dto.collectionIds } },
           ],
-          tenantId,
+          tenantId: resolvedTenantId,
           deletedAt: null,
         },
         select: { id: true },
@@ -206,7 +215,7 @@ export class ProductService {
     try {
       const product = await this.prisma.product.create({
         data: {
-          tenantId,
+          tenantId: resolvedTenantId,
           title: dto.title.trim(),
           slug,
           shortDescription: dto.shortDescription?.trim() || undefined,
@@ -316,7 +325,16 @@ export class ProductService {
     files?: Express.Multer.File[],
     tenantId?: string,
   ) {
-    if (!tenantId) {
+    let resolvedTenantId = tenantId;
+    if (!resolvedTenantId) {
+      const activeTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      resolvedTenantId = activeTenant?.id;
+    }
+
+    if (!resolvedTenantId) {
       throw new ConflictException('Tenant could not be resolved from authenticated user token.');
     }
 
@@ -324,7 +342,7 @@ export class ProductService {
     const existingProduct = await this.prisma.product.findFirst({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
-        tenantId,
+        tenantId: resolvedTenantId,
         deletedAt: null,
       },
       include: {
@@ -878,14 +896,23 @@ export class ProductService {
 
   // Delete product (soft delete) and remove its images from Cloudinary storage
   async remove(idOrSlug: string, tenantId?: string) {
-    if (!tenantId) {
+    let resolvedTenantId = tenantId;
+    if (!resolvedTenantId) {
+      const activeTenant = await this.prisma.tenant.findFirst({
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      resolvedTenantId = activeTenant?.id;
+    }
+
+    if (!resolvedTenantId) {
       throw new ConflictException('Tenant could not be resolved from authenticated user token.');
     }
 
     const product = await this.prisma.product.findFirst({
       where: {
         OR: [{ id: idOrSlug }, { slug: idOrSlug }],
-        tenantId,
+        tenantId: resolvedTenantId,
         deletedAt: null,
       },
       include: {

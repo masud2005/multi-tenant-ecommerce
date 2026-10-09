@@ -36,11 +36,10 @@ export const adminNavItems: NavItem[] = [
     badge: 5,
     children: [
       { title: 'Draft orders', href: '/admin/orders/drafts' },
-      { title: 'Abandoned checkouts', href: '/admin/orders/abandoned' },
     ],
   },
   {
-    title: 'Returns & refunds',
+    title: 'Returns & exchanges',
     href: '/admin/returns',
     icon: 'RotateCcw',
     category: 'Sales',
@@ -219,7 +218,7 @@ export const managerNavItems: NavItem[] = [
     badge: 5,
   },
   {
-    title: 'Returns & refunds',
+    title: 'Returns & exchanges',
     href: '/manager/returns',
     icon: 'RotateCcw',
     category: 'Sales',

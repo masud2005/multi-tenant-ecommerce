@@ -8,11 +8,14 @@ import { Button } from '@/components/ui/button';
 import { formatDate } from '@/utils/format';
 import type { Review, ReviewStatus } from '@/types/review';
 
-const toneMap: Record<ReviewStatus, Tone> = {
+const toneMap: Record<string, Tone> = {
   published: 'success',
+  PUBLISHED: 'success',
   pending: 'warning',
   hidden: 'neutral',
+  HIDDEN: 'neutral',
   rejected: 'danger',
+  REJECTED: 'danger',
 };
 
 interface ReviewItemProps {
@@ -54,7 +57,7 @@ export function ReviewItem({ review, onUpdateStatus, onPostReply }: ReviewItemPr
         )}
 
         <span className="ml-auto text-xs text-ink-muted">
-          {formatDate(review.date)}
+          {formatDate(review.date || review.createdAt || new Date().toISOString())}
         </span>
       </div>
 

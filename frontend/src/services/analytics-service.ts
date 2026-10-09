@@ -1,60 +1,160 @@
 import { apiClient } from './api-client';
-import { salesSeries, kpis, funnel, salesByPayment, salesByRegion, salesByChannel, topSearches } from '@/data/analytics';
+import { authService } from './auth/auth.service';
+import {
+  salesSeries,
+  kpis,
+  funnel,
+  salesByPayment,
+  salesByRegion,
+  salesByChannel,
+  topSearches,
+} from '@/data/analytics';
+
+import { getAuthRole } from './auth/auth.storage';
+
+export interface DistrictSalesItem {
+  name: string;
+  value: number;
+}
+
+export interface SearchQueryItem {
+  term: string;
+  count: number;
+  results: number;
+  clicks: number;
+}
+
+export interface AnalyticsOverviewResponse {
+  salesByRegion: DistrictSalesItem[];
+  salesSeries: { date: string; sales: number; prev: number; orders: number }[];
+  salesByPayment: { name: string; value: number }[];
+  salesByChannel: { name: string; value: number }[];
+  kpis: {
+    grossSales: number;
+    netSales: number;
+    orders: number;
+    aov: number;
+    productsSold: number;
+    refunds: number;
+    discounts: number;
+    shippingRevenue: number;
+    tax: number;
+    conversionRate: number;
+    cartAbandonment: number;
+    returningRate: number;
+  };
+}
 
 export const analyticsService = {
-  async getSalesSeries() {
+  // Check if current session belongs to an admin/owner
+  isAdminUser(): boolean {
+    if (typeof window === 'undefined') return false;
     try {
-      return await apiClient.get('/analytics/sales-series');
+      const role = getAuthRole();
+      if (role && ['OWNER', 'ADMIN', 'MANAGER', 'STAFF', 'SUPER_ADMIN'].includes(role.toUpperCase())) {
+        return true;
+      }
     } catch {
-      return salesSeries;
+      // ignore
     }
+    return false;
   },
 
-  async getKpis() {
+  // Fetch real database aggregated sales by district
+  async getSalesByDistrict(range: string = '30 days'): Promise<DistrictSalesItem[]> {
     try {
-      return await apiClient.get('/analytics/kpis');
-    } catch {
-      return kpis;
-    }
-  },
-
-  async getFunnel() {
-    try {
-      return await apiClient.get('/analytics/funnel');
-    } catch {
-      return funnel;
-    }
-  },
-
-  async getSalesByPayment() {
-    try {
-      return await apiClient.get('/analytics/sales-by-payment');
-    } catch {
-      return salesByPayment;
-    }
-  },
-
-  async getSalesByRegion() {
-    try {
-      return await apiClient.get('/analytics/sales-by-region');
+      const res: any = await apiClient.get(
+        `/owner/analytics/sales-by-district?range=${encodeURIComponent(range)}`
+      );
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        return res.data;
+      }
+      return salesByRegion;
     } catch {
       return salesByRegion;
     }
   },
 
-  async getSalesByChannel() {
+  // Fetch real top search queries from PostgreSQL
+  async getTopSearches(): Promise<SearchQueryItem[]> {
     try {
-      return await apiClient.get('/analytics/sales-by-channel');
+      const res: any = await apiClient.get('/owner/analytics/top-searches');
+      if (res && res.data && Array.isArray(res.data)) {
+        return res.data;
+      }
+      return [];
     } catch {
-      return salesByChannel;
+      return [];
     }
   },
 
-  async getTopSearches() {
+  // Log intentional customer search query from storefront (Enter key, suggestion click)
+  async logCustomerSearch(term: string, results: number = 0) {
+    if (this.isAdminUser()) return; // Exclude admin from customer metrics
+
+    const cleanTerm = term ? term.trim().toLowerCase() : '';
+    if (!cleanTerm || cleanTerm.length < 2) return;
+
     try {
-      return await apiClient.get('/analytics/top-searches');
+      return await apiClient.post('/customer/search/log', {
+        term: cleanTerm,
+        results,
+      });
     } catch {
-      return topSearches;
+      // Non-blocking fire-and-forget
     }
+  },
+
+  // Log product click originating from a search term query
+  async logProductClick(term: string) {
+    if (this.isAdminUser()) return; // Exclude admin from customer metrics
+
+    const cleanTerm = term ? term.trim().toLowerCase() : '';
+    if (!cleanTerm || cleanTerm.length < 2) return;
+
+    try {
+      return await apiClient.post('/customer/search/click', {
+        term: cleanTerm,
+      });
+    } catch {
+      // Non-blocking fire-and-forget
+    }
+  },
+
+  // Fetch full overview from PostgreSQL
+  async getAnalyticsOverview(
+    range: string = '30 days'
+  ): Promise<AnalyticsOverviewResponse | null> {
+    try {
+      const res: any = await apiClient.get(
+        `/owner/analytics/overview?range=${encodeURIComponent(range)}`
+      );
+      if (res && res.data) {
+        return res.data;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  async getSalesSeries() {
+    return salesSeries;
+  },
+
+  async getKpis() {
+    return kpis;
+  },
+
+  async getFunnel() {
+    return funnel;
+  },
+
+  async getSalesByPayment() {
+    return salesByPayment;
+  },
+
+  async getSalesByChannel() {
+    return salesByChannel;
   },
 };

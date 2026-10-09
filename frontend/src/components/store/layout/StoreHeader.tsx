@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   HeartIcon,
@@ -22,6 +22,8 @@ import { cn } from '@/utils/cn';
 
 export function StoreHeader() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get('category');
   const { tenant } = useTenant();
   const {
     cart,
@@ -75,7 +77,7 @@ export function StoreHeader() {
               href="/shop"
               className={cn(
                 'text-sm font-medium transition-colors hover:text-clay',
-                pathname === '/shop' ? 'text-clay' : 'text-ink'
+                pathname === '/shop' && !currentCategory ? 'text-clay' : 'text-ink'
               )}
             >
               All Products
@@ -88,10 +90,10 @@ export function StoreHeader() {
                 onMouseLeave={() => setOpenMenu(null)}
               >
                 <Link
-                  href={`/category/${cat.key}`}
+                  href={`/shop?category=${cat.key}`}
                   className={cn(
                     'text-sm font-medium transition-colors hover:text-clay py-2 inline-block',
-                    pathname.startsWith(`/category/${cat.key}`)
+                    pathname === '/shop' && currentCategory === cat.key
                       ? 'text-clay'
                       : 'text-ink'
                   )}
@@ -112,7 +114,7 @@ export function StoreHeader() {
                       {cat.subcategories.map((sub) => (
                         <Link
                           key={sub}
-                          href={`/category/${cat.key}?sub=${encodeURIComponent(
+                          href={`/shop?category=${cat.key}&sub=${encodeURIComponent(
                             sub
                           )}`}
                           className="block rounded px-3 py-2 text-xs font-medium text-ink-soft hover:bg-subtle hover:text-ink transition-colors"
@@ -285,7 +287,7 @@ export function StoreHeader() {
             {categories.map((cat) => (
               <div key={cat.key} className="space-y-1">
                 <Link
-                  href={`/category/${cat.key}`}
+                  href={`/shop?category=${cat.key}`}
                   onClick={() => setMobileOpen(false)}
                   className="flex items-center justify-between text-sm font-medium text-ink hover:text-clay py-1"
                 >

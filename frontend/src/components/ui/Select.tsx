@@ -10,15 +10,18 @@ export interface SelectOption {
 export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
+  placeholder?: string;
   options: SelectOption[] | string[];
 }
 
-export function Select({ label, error, options, className, id, ...rest }: SelectProps) {
+export function Select({ label, error, placeholder, options, className, id, ...rest }: SelectProps) {
   const autoId = useId();
   const selectId = id ?? autoId;
   const normalizedOptions = options.map((opt) =>
     typeof opt === 'string' ? { value: opt, label: opt } : opt
   );
+
+  const isPlaceholderSelected = !rest.value;
 
   return (
     <div className={className}>
@@ -32,13 +35,19 @@ export function Select({ label, error, options, className, id, ...rest }: Select
           id={selectId}
           aria-invalid={!!error}
           className={cn(
-            'h-10 w-full appearance-none rounded-md border bg-surface pl-3 pr-9 text-sm text-ink transition-[border-color,box-shadow] duration-150 focus:outline-none focus:ring-2 focus:ring-clay/25 cursor-pointer',
+            'h-10 w-full appearance-none rounded-md border bg-surface pl-3 pr-9 text-sm transition-[border-color,box-shadow] duration-150 focus:outline-none focus:ring-2 focus:ring-clay/25 cursor-pointer',
+            isPlaceholderSelected ? 'text-ink-muted/70' : 'text-ink',
             error ? 'border-danger' : 'border-line-strong focus:border-clay'
           )}
           {...rest}
         >
+          {placeholder && (
+            <option value="" disabled className="text-ink-muted">
+              {placeholder}
+            </option>
+          )}
           {normalizedOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <option key={opt.value} value={opt.value} className="text-ink">
               {opt.label}
             </option>
           ))}

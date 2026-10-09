@@ -2,12 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { EyeIcon, HeartIcon, ScaleIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import type { Product } from '@/types/commerce';
 import { discountPercent, productPrice, variantStockState } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { analyticsService } from '@/services/analytics-service';
 
 export function ProductCard({
   product,
@@ -16,6 +18,15 @@ export function ProductCard({
   product: Product;
   layout?: 'grid' | 'list';
 }) {
+  const searchParams = useSearchParams();
+  const searchQ = searchParams?.get('q');
+
+  const handleProductClick = () => {
+    if (searchQ && searchQ.trim()) {
+      analyticsService.logProductClick(searchQ.trim());
+    }
+  };
+
   const {
     wishlist,
     toggleWishlist,
@@ -49,17 +60,43 @@ export function ProductCard({
       )}
     >
       <div className="relative overflow-hidden rounded-md bg-subtle">
-        <Link href={`/products/${product.slug}`} aria-label={product.title}>
+        <Link
+          href={`/products/${product.slug}`}
+          onClick={handleProductClick}
+          aria-label={product.title}
+          className="block relative"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={product.images[0]}
+            src={product.images[0] || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80'}
             alt={product.title}
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80';
+            }}
+            data-product-card-img
             className={cn(
-              'aspect-[3/4] w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.03]',
-              stock === 'out' && 'opacity-70'
+              'aspect-[3/4] w-full object-cover transition-all duration-300 ease-out group-hover:scale-[1.03]',
+              stock === 'out' && 'opacity-70',
+              product.images[1] && 'group-hover:opacity-0'
             )}
           />
+          {product.images[1] && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={product.images[1]}
+              alt={`${product.title} alternative view`}
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80';
+              }}
+              data-product-card-img
+              className={cn(
+                'absolute inset-0 aspect-[3/4] w-full h-full object-cover opacity-0 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:scale-[1.03]',
+                stock === 'out' && 'opacity-70'
+              )}
+            />
+          )}
         </Link>
         {flag && (
           <span
@@ -109,7 +146,11 @@ export function ProductCard({
       <div className={cn(layout === 'grid' ? 'mt-3' : 'py-1')}>
         <p className="text-xs text-ink-muted">{product.brand}</p>
         <h3 className="mt-0.5 text-sm font-medium leading-snug">
-          <Link href={`/products/${product.slug}`} className="hover:underline text-ink">
+          <Link
+            href={`/products/${product.slug}`}
+            onClick={handleProductClick}
+            className="hover:underline text-ink"
+          >
             {product.title}
           </Link>
         </h3>

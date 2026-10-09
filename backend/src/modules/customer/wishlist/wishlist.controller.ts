@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -21,9 +22,11 @@ import { AddToWishlistDto } from './dto/add-to-wishlist.dto';
 import { QueryWishlistDto } from './dto/query-wishlist.dto';
 import { SyncWishlistDto } from './dto/sync-wishlist.dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @ApiTags('(Customer) Wishlist')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('wishlist')
 export class WishlistController {
   constructor(private readonly wishlistService: WishlistService) {}
@@ -45,7 +48,8 @@ export class WishlistController {
     if (!userId) {
       throw new UnauthorizedException('Authentication required to view wishlist');
     }
-    return this.wishlistService.getWishlist(userId, query);
+    const tenantId = user?.tenantId || query?.tenantId;
+    return this.wishlistService.getWishlist(userId, { ...query, tenantId });
   }
 
   @Post('toggle')
@@ -65,7 +69,8 @@ export class WishlistController {
     if (!userId) {
       throw new UnauthorizedException('Authentication required to manage wishlist');
     }
-    return this.wishlistService.toggleWishlist(userId, dto);
+    const tenantId = user?.tenantId || dto?.tenantId;
+    return this.wishlistService.toggleWishlist(userId, { ...dto, tenantId });
   }
 
   @Post('sync')
@@ -85,7 +90,8 @@ export class WishlistController {
     if (!userId) {
       throw new UnauthorizedException('Authentication required to sync wishlist');
     }
-    return this.wishlistService.syncWishlist(userId, dto);
+    const tenantId = user?.tenantId || dto?.tenantId;
+    return this.wishlistService.syncWishlist(userId, { ...dto, tenantId });
   }
 
   @Delete(':productId')
@@ -99,13 +105,14 @@ export class WishlistController {
   })
   async removeFromWishlist(
     @Param('productId') productId: string,
-    @Query('tenantId') tenantId?: string,
+    @Query('tenantId') queryTenantId?: string,
     @CurrentUser() user?: any,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
       throw new UnauthorizedException('Authentication required to update wishlist');
     }
+    const tenantId = user?.tenantId || queryTenantId;
     return this.wishlistService.removeFromWishlist(userId, productId, tenantId);
   }
 }

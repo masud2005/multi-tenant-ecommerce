@@ -97,7 +97,7 @@ export const campaigns = [
 ];
 
 export const automations = [
-  { id: 'au1', name: 'Abandoned cart recovery', trigger: 'Cart idle 1 hour', channel: 'Email → SMS after 24h', enabled: true, recovered: 184, revenue: 498000 },
+  { id: 'au1', name: 'Welcome new customer', trigger: 'First account sign up', channel: 'Email', enabled: true, recovered: 240, revenue: 520000 },
   { id: 'au2', name: 'Back in stock alert', trigger: 'Variant restocked', channel: 'Email + Push', enabled: true, recovered: 96, revenue: 221000 },
   { id: 'au3', name: 'Price drop alert', trigger: 'Wishlisted item on sale', channel: 'Email', enabled: true, recovered: 71, revenue: 143000 },
   { id: 'au4', name: 'Post-purchase review request', trigger: '5 days after delivery', channel: 'Email', enabled: true, recovered: 0, revenue: 0 },
@@ -280,12 +280,6 @@ export const stockMovements: StockMovementItem[] = [
   { id: 'sm6', at: '2026-09-23T10:00:00', sku: 'TN-P12-DUS-ONE', product: 'Hand-dyed Silk Dupatta', change: -1, stockAfter: 4, reason: 'Physical count', by: 'Mitu Akter', ref: 'CNT-19', note: 'Physical cycle count mismatch correction' }
 ];
 
-export const abandonedCheckouts = [
-  { id: 'ac1', customer: 'Sadia Islam', contact: 'sadia.islam@gmail.com', value: 8500, items: 1, stage: 'Payment', at: '2026-09-26T07:40:00', recovery: 'Email sent' },
-  { id: 'ac2', customer: 'Guest', contact: '01822-445566', value: 4380, items: 2, stage: 'Shipping', at: '2026-09-25T22:10:00', recovery: 'SMS scheduled' },
-  { id: 'ac3', customer: 'Imran Chowdhury', contact: 'imran.c@hotmail.com', value: 6200, items: 1, stage: 'Payment', at: '2026-09-25T19:02:00', recovery: 'Recovered' },
-  { id: 'ac4', customer: 'Guest', contact: '01955-100200', value: 2690, items: 1, stage: 'Contact', at: '2026-09-25T14:18:00', recovery: 'Not contactable' }
-];
 
 export const themeVersions = [
   { id: 'tv4', label: 'Eid 2026 homepage', at: '2026-09-01T10:00:00', by: 'Shahana Parvin', live: true },

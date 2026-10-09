@@ -1,28 +1,51 @@
 model Discount {
-  id          String         @id @default(uuid())
-  tenantId    String
-  code        String
-  title       String
-  type        DiscountType
-  method      DiscountMethod @default(CODE)
-  status      DiscountStatus @default(ACTIVE)
-  value       Decimal        @db.Decimal(12, 2)
-  minSubtotal Decimal?       @db.Decimal(12, 2)
-  usageLimit  Int?
-  usedCount   Int            @default(0)
-  revenue     Decimal        @default(0) @db.Decimal(12, 2)
-  startsAt    DateTime
-  endsAt      DateTime?
+  id                  String         @id @default(uuid())
+  tenantId            String
+  code                String
+  title               String
+  type                DiscountType
+  method              DiscountMethod @default(CODE)
+  status              DiscountStatus @default(ACTIVE)
+  value               Decimal        @db.Decimal(12, 2)
+  minSubtotal         Decimal?       @db.Decimal(12, 2)
+  maxDiscountAmount   Decimal?       @db.Decimal(12, 2) // [নতুন] শতাংশের সর্বোচ্চ সীমা
+  usageLimit          Int?                              // মোট ব্যবহার সীমা
+  usageLimitPerUser   Int?           @default(1)        // [নতুন] প্রতি গ্রাহকের সীমা
+  usedCount           Int            @default(0)
+  revenue             Decimal        @default(0) @db.Decimal(12, 2)
+  startsAt            DateTime
+  endsAt              DateTime?
 
   // Auditing & Soft Delete
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  redemptions DiscountRedemption[] // [নতুন] রিলেশন
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
   @@index([tenantId, deletedAt])
   @@map("discounts")
+}
+
+// [নতুন মডেল] কুপন ব্যবহারের ট্র্যাকিং
+model DiscountRedemption {
+  id               String   @id @default(uuid())
+  tenantId         String
+  discountId       String
+  orderId          String
+  userId           String?
+  customerEmail    String?  // গেস্ট ইউজারের জন্য
+  discountedAmount Decimal  @db.Decimal(12, 2)
+  createdAt        DateTime @default(now())
+
+  discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, discountId])
+  @@index([discountId, userId])
+  @@index([discountId, customerEmail])
+  @@map("discount_redemptions")
 }
