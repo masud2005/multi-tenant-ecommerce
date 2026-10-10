@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../shared/mail/email-service';
+import { NotificationGateway } from './notification.gateway';
 import { SendNotificationOptions, QueryNotificationDto } from './dto/notification.dto';
 
 @Injectable()
@@ -10,10 +11,11 @@ export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
   /**
-   * 🚀 Send notification: creates In-App notification and optionally sends Email
+   * 🚀 Send notification: creates In-App notification, emits Socket.IO event, and optionally sends Email
    */
   async send(options: SendNotificationOptions) {
     const { tenantId, userId, title, message, type = 'SYSTEM', link, email } = options;
@@ -31,6 +33,13 @@ export class NotificationService {
           isRead: false,
         },
       });
+
+      // 2. ⚡ Emit Real-Time Socket.IO Notification to the user
+      try {
+        this.notificationGateway.sendToUser(userId, notification);
+      } catch (wsErr) {
+        this.logger.error('Failed to emit real-time notification socket event', wsErr);
+      }
 
       // 2. Send Email if provided
       if (email && email.to) {

@@ -2,8 +2,10 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Bell, Check, Loader2 } from 'lucide-react';
+import { Bell, Check, Loader2, Sparkles } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
 import type { UserInfo } from '@/types/user';
+import { getAuthToken, getAuthUser } from '@/services/auth';
 import { notificationService, NotificationItem } from '@/services/notification-service';
 
 function formatRelativeTime(dateString: string): string {
@@ -37,6 +39,7 @@ export function NotificationBell({}: NotificationBellProps = {}) {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [markingAll, setMarkingAll] = useState<boolean>(false);
+  const [hasNewAlert, setHasNewAlert] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
@@ -51,16 +54,61 @@ export function NotificationBell({}: NotificationBellProps = {}) {
     }
   }, []);
 
-  // Initial fetch and auto-refresh every 20 seconds
+  // 1. Initial REST fetch and auto-refresh fallback every 30 seconds
   useEffect(() => {
     fetchNotifications();
 
     const interval = setInterval(() => {
       fetchNotifications();
-    }, 20000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [fetchNotifications]);
+
+  // 2. ⚡ Real-Time Socket.IO connection for instant notification delivery
+  useEffect(() => {
+    const token = getAuthToken();
+    const user = getAuthUser();
+    const tenantId = user?.tenantId;
+
+    if (!token) return;
+
+    const socketUrl =
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ||
+      'http://localhost:5000';
+
+    const socket: Socket = io(`${socketUrl}/notifications`, {
+      auth: {
+        token,
+        tenantId,
+      },
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+    });
+
+    socket.on('connect', () => {
+      // Successfully connected to real-time notification gateway
+    });
+
+    socket.on('new_notification', (newNotification: NotificationItem) => {
+      // 🚀 Instant Real-Time Push: prepend to notifications list & bump unread count
+      setNotifications((prev) => {
+        // Prevent duplicate addition
+        if (prev.some((n) => n.id === newNotification.id)) return prev;
+        return [newNotification, ...prev];
+      });
+      setUnreadCount((prev) => prev + 1);
+
+      // Trigger bell pulse / highlight animation
+      setHasNewAlert(true);
+      setTimeout(() => setHasNewAlert(false), 3000);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   // Close on outside click
   useEffect(() => {
@@ -110,14 +158,18 @@ export function NotificationBell({}: NotificationBellProps = {}) {
           setOpen((prev) => !prev);
           if (!open) fetchNotifications();
         }}
-        className="relative rounded-md p-2 hover:bg-subtle text-ink cursor-pointer transition-colors"
+        className={`relative rounded-md p-2 hover:bg-subtle text-ink cursor-pointer transition-all ${
+          hasNewAlert ? 'ring-2 ring-clay/40 bg-clay/10 scale-105' : ''
+        }`}
         aria-label="Notifications"
         aria-expanded={open}
       >
-        <Bell className="h-[18px] w-[18px]" />
+        <Bell className={`h-[18px] w-[18px] ${hasNewAlert ? 'text-clay animate-pulse' : ''}`} />
         {unreadCount > 0 && (
           <span
-            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-clay text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-surface shadow-sm animate-in zoom-in-50 duration-150"
+            className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-clay text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-surface shadow-sm animate-in zoom-in-50 duration-150 ${
+              hasNewAlert ? 'animate-pulse scale-110' : ''
+            }`}
             aria-hidden="true"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
