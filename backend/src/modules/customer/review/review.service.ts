@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { NotificationService } from '../../notification/notification.service';
 import { CreateReviewDto, ReviewQueryDto } from './dto';
 import { ReviewStatus, UserRole } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
@@ -14,7 +15,10 @@ import { ResponseHelper } from '../../../common/helpers/response.helper';
 export class ReviewService {
   private readonly logger = new Logger(ReviewService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   // Helper to resolve active tenant ID
   private async resolveTenantId(tenantId?: string): Promise<string> {
@@ -211,6 +215,35 @@ export class ReviewService {
     });
 
     this.logger.log(`New review created for product "${product.title}" (${review.id}) - Status: PUBLISHED`);
+
+    // Notify store owner & staff about new customer review (In-App)
+    (async () => {
+      try {
+        const staffMembers = await this.prisma.tenantMember.findMany({
+          where: {
+            tenantId: product.tenantId || resolvedTenantId,
+            deletedAt: null,
+            status: 'active',
+          },
+        });
+
+        for (const member of staffMembers) {
+          if (member.userId) {
+            await this.notificationService.send({
+              tenantId: product.tenantId || resolvedTenantId,
+              userId: member.userId,
+              title: `New Review on "${product.title}"`,
+              message: `${dto.author.trim()} rated ${dto.rating} ★: "${resolvedTitle}"`,
+              type: 'SYSTEM',
+              link: `/admin/reviews`,
+            });
+          }
+        }
+      } catch (err) {
+        this.logger.error('Failed to dispatch review notification', err);
+      }
+    })();
+
     return ResponseHelper.created(review, 'Review submitted and published successfully');
   }
 

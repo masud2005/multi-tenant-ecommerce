@@ -1,9 +1,11 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { NotificationService } from '../../notification/notification.service';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import {
   OrderQueryDto,
@@ -20,7 +22,12 @@ import {
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(OrderService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   // Fetch all orders for tenant with filtering, search, pagination, and status counters
   async getOrders(query: OrderQueryDto, tenantId?: string) {
@@ -419,6 +426,26 @@ export class OrderService {
 
       return order;
     });
+
+    // Event 2: Notify customer if order status has changed
+    if (dto.status && dto.status !== existingOrder.status && updatedOrder.email) {
+      const statusFriendly = dto.status.replace(/_/g, ' ').toLowerCase();
+      this.notificationService
+        .send({
+          tenantId: updatedOrder.tenantId,
+          userId: updatedOrder.customerId || '',
+          title: `Order #${updatedOrder.number} status: ${dto.status}`,
+          message: `Your order status has been updated to ${statusFriendly}.${dto.trackingNumber ? ` Tracking: ${dto.trackingNumber}` : ''}`,
+          type: 'ORDER',
+          link: `/account/orders`,
+          email: {
+            to: updatedOrder.email,
+            subject: `Order Update #${updatedOrder.number}: ${dto.status}`,
+            html: `<h2>Order Status Update</h2><p>Your order <b>#${updatedOrder.number}</b> is now <b>${statusFriendly}</b>.</p>${dto.trackingNumber ? `<p>Courier: <b>${dto.courier || updatedOrder.courier || 'Standard'}</b> | Tracking: <b>${dto.trackingNumber}</b></p>` : ''}`,
+          },
+        })
+        .catch((err) => this.logger.error('Failed to send status update notification', err));
+    }
 
     return ResponseHelper.success(updatedOrder, 'Order status updated successfully');
   }

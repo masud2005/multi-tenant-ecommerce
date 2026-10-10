@@ -23,6 +23,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { generateTokens } from '../utils/token.util';
 import { RedisService } from '../../../shared/redis/redis.service';
+import { NotificationService } from '../../notification/notification.service';
 
 @Injectable()
 export class AuthService {
@@ -33,6 +34,7 @@ export class AuthService {
         private readonly otpService: OtpService,
         private readonly eventEmitter: EventEmitter2,
         private readonly redisService: RedisService,
+        private readonly notificationService: NotificationService,
     ) { }
 
     async register(dto: RegisterDto) {
@@ -376,6 +378,27 @@ export class AuthService {
         const staffRole = member.role?.name || (isOwner ? 'Owner' : 'Staff');
         const effectiveRole = isOwner ? 'OWNER' : 'STAFF';
         const redirectUrl = isOwner ? '/admin' : this.resolveFirstAllowedRoute(permissions);
+
+        // Notify store owner that a staff member has accepted invite and joined (In-App)
+        (async () => {
+            try {
+                const ownerMembers = await this.prisma.tenantMember.findMany({
+                    where: { tenantId: member.tenantId, isOwner: true, deletedAt: null },
+                });
+                for (const owner of ownerMembers) {
+                    await this.notificationService.send({
+                        tenantId: member.tenantId,
+                        userId: owner.userId,
+                        title: `Staff Joined: ${updatedUser.name || 'Staff Member'}`,
+                        message: `${updatedUser.name || updatedUser.email} has accepted the invitation and joined as ${staffRole}.`,
+                        type: 'SYSTEM',
+                        link: `/admin/staff`,
+                    });
+                }
+            } catch (err) {
+                // Silently ignore notification dispatch errors
+            }
+        })();
 
         const payload = {
             sub: updatedUser.id,
