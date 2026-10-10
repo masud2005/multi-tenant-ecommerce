@@ -83,13 +83,15 @@ export function getAuthUser(): StoredUser | null {
   if (!payload) return null;
 
   const name = payload.name || payload.email?.split('@')[0] || 'User';
-  const isOwner = Boolean(payload.isOwner || payload.role === 'OWNER');
-  const isStaff = Boolean(
+  const roleStr = (payload.role || '').toUpperCase();
+  const isOwner = Boolean(payload.isOwner || roleStr === 'OWNER' || roleStr === 'SUPER_ADMIN');
+  const isCustomer = (roleStr === 'CUSTOMER' || !roleStr) && !isOwner && !payload.staffRole;
+  const isStaff = !isCustomer && !isOwner && Boolean(
     payload.staffRole ||
     (payload.permissions && Object.keys(payload.permissions).length > 0) ||
-    ['OWNER', 'ADMIN', 'SUPER_ADMIN', 'STAFF', 'MANAGER'].includes(payload.role)
+    ['STAFF', 'ADMIN', 'MANAGER'].includes(roleStr)
   );
-  const effectiveRole = isOwner ? 'OWNER' : (isStaff ? 'STAFF' : payload.role || 'CUSTOMER');
+  const effectiveRole = isOwner ? 'OWNER' : (isStaff ? 'STAFF' : 'CUSTOMER');
 
   return {
     id: payload.sub,
@@ -98,8 +100,8 @@ export function getAuthUser(): StoredUser | null {
     role: effectiveRole as UserRole,
     tenantId: payload.tenantId,
     isOwner,
-    staffRole: payload.staffRole,
-    permissions: payload.permissions || {},
+    staffRole: isStaff ? (payload.staffRole || 'Staff') : undefined,
+    permissions: isStaff ? (payload.permissions || {}) : {},
   };
 }
 
@@ -110,11 +112,11 @@ export function getAuthRole(): UserRole | null {
   if (!token) return null;
   const payload = parseJwtPayload(token);
   if (!payload) return null;
-  if (payload.isOwner || (payload.role as any) === 'OWNER') return 'OWNER' as UserRole;
+  if (payload.isOwner || (payload.role as any) === 'OWNER' || (payload.role as any) === 'SUPER_ADMIN') return 'OWNER' as UserRole;
   if (payload.staffRole || (payload.permissions && Object.keys(payload.permissions).length > 0) || (payload.role as any) === 'STAFF') {
     return 'STAFF' as UserRole;
   }
-  return (payload?.role as UserRole) || null;
+  return (payload?.role as UserRole) || 'CUSTOMER' as UserRole;
 }
 
 // Check if access_token exists and is not expired

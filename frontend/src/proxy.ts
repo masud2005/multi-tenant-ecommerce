@@ -45,6 +45,18 @@ function resolveFirstAllowedRoute(perms?: Record<string, string[]>): string {
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
+  // 1. Never intercept or block auth pages (/login, /register, /verify, /forgot-password, /reset-password)
+  // Let the user always access login/register directly without forced redirects
+  if (
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname.startsWith('/verify') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password')
+  ) {
+    return NextResponse.next();
+  }
+
   // Extract access token and refresh token
   const token = request.cookies.get('access_token')?.value;
   const refreshToken = request.cookies.get('refresh_token')?.value;
@@ -59,22 +71,22 @@ export function proxy(request: NextRequest) {
   );
   const hasValidRefreshToken = Boolean(refreshToken && !isRefreshTokenExpired && refreshPayload);
 
-  // Active or renewable session check
-  const canAuthenticate = isAuthenticated || hasValidRefreshToken;
+  // Active session payload
   const activePayload = isAuthenticated ? jwtPayload : (hasValidRefreshToken ? refreshPayload : null);
   const userRole = (activePayload?.role || '').toUpperCase();
-
-  const isStaff = Boolean(
-    activePayload?.staffRole ||
-    (activePayload?.permissions && Object.keys(activePayload.permissions).length > 0) ||
-    STAFF_ROLES.includes(userRole)
-  );
 
   const isOwner = Boolean(
     activePayload?.isOwner ||
     userRole === 'OWNER' ||
-    userRole === 'SUPER_ADMIN' ||
-    (userRole === 'ADMIN' && !activePayload?.staffRole)
+    userRole === 'SUPER_ADMIN'
+  );
+
+  const isCustomer = (userRole === 'CUSTOMER' || (!userRole && !isOwner)) && !activePayload?.staffRole && !activePayload?.isOwner;
+
+  const isStaff = !isCustomer && !isOwner && Boolean(
+    activePayload?.staffRole ||
+    (activePayload?.permissions && Object.keys(activePayload.permissions).length > 0) ||
+    STAFF_ROLES.includes(userRole)
   );
 
   const isStaffOrOwner = isOwner || isStaff;
@@ -84,7 +96,7 @@ export function proxy(request: NextRequest) {
   const isAccountRoute = pathname.startsWith('/account');
 
   // Protected routes guard: redirect unauthenticated users to login
-  if ((isAdminRoute || isAccountRoute) && !canAuthenticate) {
+  if (isAdminRoute && !isAuthenticated && !hasValidRefreshToken) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('next', `${pathname}${search}`);
     const response = NextResponse.redirect(loginUrl);
@@ -95,25 +107,24 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // Cross-role boundary redirects for authenticated users
-  if (isAdminRoute && !isStaffOrOwner) {
+  if (isAccountRoute && !isAuthenticated && !hasValidRefreshToken) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('next', `${pathname}${search}`);
+    const response = NextResponse.redirect(loginUrl);
+    if (isTokenExpired || isRefreshTokenExpired) {
+      response.cookies.delete('access_token');
+      response.cookies.delete('refresh_token');
+    }
+    return response;
+  }
+
+  // Cross-role boundary redirects for active authenticated users
+  if (isAdminRoute && isAuthenticated && !isStaffOrOwner) {
     return NextResponse.redirect(new URL('/account', request.url));
   }
 
-  if (isAccountRoute && isStaffOrOwner) {
+  if (isAccountRoute && isAuthenticated && isStaffOrOwner) {
     return NextResponse.redirect(new URL(defaultAdminRoute, request.url));
-  }
-
-  // Auth pages (/login, /register): redirect already-authenticated users
-  if ((pathname === '/login' || pathname === '/register') && canAuthenticate) {
-    const nextParam = request.nextUrl.searchParams.get('next');
-    const destination =
-      nextParam && !nextParam.startsWith('/login') && !nextParam.startsWith('/register')
-        ? nextParam
-        : isStaffOrOwner
-        ? defaultAdminRoute
-        : '/account';
-    return NextResponse.redirect(new URL(destination, request.url));
   }
 
   return NextResponse.next();

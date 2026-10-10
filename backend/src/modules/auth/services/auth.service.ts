@@ -136,12 +136,15 @@ export class AuthService {
         const membership = user.tenantMemberships?.[0];
         const tenantId = membership?.tenantId;
         const isOwner = Boolean(membership?.isOwner || user.role === UserRole.OWNER || (user.role as any) === 'SUPER_ADMIN');
-        const staffRole = membership?.role?.name || (isOwner ? 'Owner' : 'Staff');
-        const permissions = (membership?.role?.permissions as Record<string, string[]>) || {};
-        const effectiveRole = isOwner ? 'OWNER' : (membership ? 'STAFF' : user.role);
+        const isStaff = Boolean(membership && !isOwner);
+        const staffRole = isOwner ? 'Owner' : (isStaff ? (membership?.role?.name || 'Staff') : undefined);
+        const permissions = (membership?.role?.permissions as Record<string, string[]>) || (isOwner ? { all: ['*'] } : {});
+        const effectiveRole = isOwner ? 'OWNER' : (isStaff ? 'STAFF' : user.role);
 
         // Calculate dynamic landing route for staff based on all modules
-        const redirectUrl = isOwner ? '/admin' : this.resolveFirstAllowedRoute(permissions);
+        const redirectUrl = isOwner
+            ? '/admin'
+            : (isStaff ? this.resolveFirstAllowedRoute(permissions) : '/account');
 
         const payload = {
             sub: user.id,
@@ -358,6 +361,7 @@ export class AuthService {
                 password: hashedPassword,
                 name: name?.trim() || member.user.name,
                 status: UserStatus.ACTIVE,
+                role: member.isOwner ? UserRole.OWNER : UserRole.STAFF,
                 lastLoginAt: new Date(),
             },
         });
@@ -376,7 +380,7 @@ export class AuthService {
         const permissions = (member.role?.permissions as Record<string, string[]>) || {};
         const isOwner = Boolean(member.isOwner);
         const staffRole = member.role?.name || (isOwner ? 'Owner' : 'Staff');
-        const effectiveRole = isOwner ? 'OWNER' : 'STAFF';
+        const effectiveRole = isOwner ? UserRole.OWNER : UserRole.STAFF;
         const redirectUrl = isOwner ? '/admin' : this.resolveFirstAllowedRoute(permissions);
 
         // Notify store owner that a staff member has accepted invite and joined (In-App)

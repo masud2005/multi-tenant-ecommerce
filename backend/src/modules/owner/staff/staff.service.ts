@@ -330,10 +330,11 @@ export class StaffService {
         },
       });
 
-      if (existingMember) {
-        throw new BadRequestException(
-          `User with email "${email}" is already a staff member in this store`,
-        );
+      if (user.role === UserRole.CUSTOMER) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { role: UserRole.STAFF },
+        });
       }
     } else {
       // Create user account for staff member
@@ -348,7 +349,7 @@ export class StaffService {
           name: dto.name?.trim() || email.split('@')[0],
           phone: dto.phone?.trim() || null,
           password: hashedPassword,
-          role: UserRole.CUSTOMER,
+          role: UserRole.STAFF,
           status: UserStatus.ACTIVE,
         },
       });
