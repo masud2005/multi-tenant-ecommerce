@@ -28,6 +28,7 @@ model CustomerProfile {
   wishlist       WishlistItem[]
   carts          Cart[]
   supportTickets SupportTicket[]
+  conversations  Conversation[]
 
   @@unique([tenantId, email])
   @@index([tenantId, phone])

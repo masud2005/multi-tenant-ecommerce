@@ -63,6 +63,8 @@ model Tenant {
   notificationTemplates NotificationTemplate[]
   notificationLogs      NotificationLog[]
   notifications         Notification[]
+  conversations         Conversation[]
+  chatMessages          ChatMessage[]
   themes                TenantTheme[]
   searchLogs            SearchQueryLog[]
 
