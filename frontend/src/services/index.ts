@@ -21,3 +21,4 @@ export * from './store-service';
 export * from './support-service';
 export * from './staff-service';
 export * from './notification-service';
+export * from './chat-service';

@@ -100,6 +100,13 @@ export const adminNavItems: NavItem[] = [
     module: 'customers',
   },
   {
+    title: 'Live Chat & Messages',
+    href: '/admin/messages',
+    icon: 'MessageSquare',
+    category: 'Customers',
+    module: 'customers',
+  },
+  {
     title: 'Reviews',
     href: '/admin/reviews',
     icon: 'Star',
