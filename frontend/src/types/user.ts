@@ -13,6 +13,9 @@ export interface UserInfo {
   phone?: string;
   title?: string;
   tenantId?: string;
+  isOwner?: boolean;
+  staffRole?: string;
+  permissions?: Record<string, string[]>;
 }
 
 export interface StoredUser {
@@ -25,6 +28,9 @@ export interface StoredUser {
   initials?: string;
   title?: string;
   avatar?: string;
+  isOwner?: boolean;
+  staffRole?: string;
+  permissions?: Record<string, string[]>;
 }
 
 export interface UserProfile extends StoredUser {

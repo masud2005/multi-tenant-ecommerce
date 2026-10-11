@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useCallback, Suspense } from 'reac
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { Download, Plus, Search, ShoppingCart, RefreshCw, Loader2, Eye, ChevronRight } from 'lucide-react';
+import { Download, Search, ShoppingCart, RefreshCw, Loader2, Eye, ChevronRight } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { useAdmin } from '@/contexts/AdminContext';
 import { orderService } from '@/services/order-service';
@@ -279,9 +279,6 @@ function OrdersContent() {
             >
               <Download className="h-4 w-4" aria-hidden /> Export
             </GuardedButton>
-            <GuardedButton module="orders" action="create" size="sm" to="/admin/orders/drafts">
-              <Plus className="h-4 w-4" aria-hidden /> Create order
-            </GuardedButton>
           </div>
         }
       />
@@ -335,7 +332,7 @@ function OrdersContent() {
           >
             <option value="all">All channels</option>
             <option value="online">Online store</option>
-            <option value="manual">Admin / Draft</option>
+            <option value="manual">Manual / POS</option>
           </select>
         </div>
 

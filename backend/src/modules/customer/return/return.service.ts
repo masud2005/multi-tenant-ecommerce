@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { NotificationService } from '../../notification/notification.service';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import { CreateReturnDto } from './dto/create-return.dto';
 import {
@@ -10,7 +11,12 @@ import { ReturnResolution, ReturnStatus } from '../../../../prisma/generated/cli
 
 @Injectable()
 export class ReturnService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ReturnService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   // Helper to resolve tenant ID from token or fallback to active tenant
   private async resolveTenantId(tenantId?: string): Promise<string> {
@@ -135,6 +141,34 @@ export class ReturnService {
 
       return created;
     });
+
+    // Notify store owner & active staff members about Return Request (In-App)
+    (async () => {
+      try {
+        const staffMembers = await this.prisma.tenantMember.findMany({
+          where: {
+            tenantId: resolvedTenantId,
+            deletedAt: null,
+            status: 'active',
+          },
+        });
+
+        for (const member of staffMembers) {
+          if (member.userId) {
+            await this.notificationService.send({
+              tenantId: resolvedTenantId,
+              userId: member.userId,
+              title: `Return Requested: Order #${order.number}`,
+              message: `${customerName} requested a return for order #${order.number} (Reason: ${dto.reason.trim()}).`,
+              type: 'ORDER',
+              link: `/admin/returns`,
+            });
+          }
+        }
+      } catch (err) {
+        this.logger.error('Failed to dispatch return request notification', err);
+      }
+    })();
 
     return ResponseHelper.created(
       returnRequest,

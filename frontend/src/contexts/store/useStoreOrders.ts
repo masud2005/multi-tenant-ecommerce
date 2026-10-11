@@ -137,6 +137,13 @@ export function useStoreOrders(
 
   const placeOrder = useCallback(
     async (input: PlaceOrderInput): Promise<Order> => {
+      if (!user?.id) {
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login?next=/checkout';
+        }
+        throw new Error('Please log in to place an order.');
+      }
+
       const lines = cart.filter((i) => !i.savedForLater);
       const items = lines.map((i) => {
         const p = products.find((x) => x.id === i.productId);

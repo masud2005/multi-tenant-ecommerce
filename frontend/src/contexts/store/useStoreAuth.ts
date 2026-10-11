@@ -87,6 +87,29 @@ export function useStoreAuth() {
 
   // Re-sync session state and fetch addresses on mount and when user changes
   useEffect(() => {
+    let isMounted = true;
+
+    // Proactively refresh expired access token if valid refresh token exists
+    if (!authService.isAuthenticated() && authService.hasValidRefreshToken()) {
+      authService.refreshToken().then((token) => {
+        if (!isMounted) return;
+        if (token) {
+          const stored = authService.getStoredUser();
+          if (stored) {
+            setUser({
+              id: stored.id,
+              name: stored.name || stored.email?.split('@')[0] || 'User',
+              email: stored.email,
+              phone: stored.phone || '',
+              role: stored.role,
+            });
+            loadAddressesFromBackend();
+          }
+        }
+      });
+      return;
+    }
+
     const stored = authService.getStoredUser();
     if (stored) {
       setUser({
@@ -109,6 +132,10 @@ export function useStoreAuth() {
         } catch {}
       }
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [loadAddressesFromBackend]);
 
   const login = useCallback((_email: string) => {

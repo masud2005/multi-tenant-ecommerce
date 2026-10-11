@@ -55,6 +55,7 @@ model NotificationTemplate {
   event     String // 'Order confirmation', 'Order shipped', etc.
   group     String // 'Orders', 'Payments', 'Shipping', 'Returns', 'Account'
   email     Boolean  @default(true)
+  inApp     Boolean  @default(true)
   sms       Boolean  @default(false)
   push      Boolean  @default(false)
   subject   String?
@@ -66,6 +67,25 @@ model NotificationTemplate {
 
   @@unique([tenantId, event])
   @@map("notification_templates")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  title     String
+  message   String
+  type      String   @default("SYSTEM") // 'ORDER' | 'INVENTORY' | 'PAYMENT' | 'SYSTEM'
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 model NotificationLog {
@@ -82,3 +102,4 @@ model NotificationLog {
   @@index([tenantId])
   @@map("notification_logs")
 }
+

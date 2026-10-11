@@ -10,6 +10,7 @@ import type { NavItem } from '@/config/menu-items';
 import type { UserInfo } from '@/types/user';
 
 import { useTenant } from '@/contexts/TenantContext';
+import { useAdmin } from '@/contexts/AdminContext';
 
 interface DashboardSidebarContentProps {
   navItems: NavItem[];
@@ -19,22 +20,60 @@ interface DashboardSidebarContentProps {
 
 export function DashboardSidebarContent({
   navItems,
+  user: propUser,
   onItemClick,
 }: DashboardSidebarContentProps) {
   const pathname = usePathname();
   const { tenant } = useTenant();
+  const { can, user: contextUser } = useAdmin();
 
-  // Group items by category preserving config order
-  const categories: { name: string; items: NavItem[] }[] = [];
-  navItems.forEach((item) => {
-    const categoryName = item.category ?? '';
-    let existing = categories.find((c) => c.name === categoryName);
-    if (!existing) {
-      existing = { name: categoryName, items: [] };
-      categories.push(existing);
-    }
-    existing.items.push(item);
-  });
+  const activeUser = contextUser || propUser;
+  const isStaffMember = Boolean(
+    activeUser &&
+    (activeUser.staffRole || (activeUser.permissions && Object.keys(activeUser.permissions).length > 0)) &&
+    !activeUser.isOwner
+  );
+  const isOwner = !isStaffMember && Boolean(
+    activeUser?.isOwner ||
+    (activeUser?.role === 'OWNER' && !activeUser?.staffRole) ||
+    (activeUser?.role === 'ADMIN' && !activeUser?.staffRole)
+  );
+
+  // Group items by category preserving config order, strictly filtering out unpermitted modules
+  const categories = React.useMemo(() => {
+    const permissions = (activeUser?.permissions as Record<string, string[]>) || {};
+
+    const filtered = navItems.filter((item) => {
+      // Store owner sees all menu items
+      if (isOwner) return true;
+
+      // Staff member with explicit permission rules: only show permitted modules
+      if (isStaffMember) {
+        if (!item.module) return false;
+        const modPerms = permissions[item.module];
+        return Array.isArray(modPerms) && modPerms.includes('view');
+      }
+
+      // Fallback to can permission check
+      if (item.module) {
+        return can(item.module, 'view');
+      }
+      return false;
+    });
+
+    const groups: { name: string; items: NavItem[] }[] = [];
+    filtered.forEach((item) => {
+      const categoryName = item.category ?? '';
+      let existing = groups.find((c) => c.name === categoryName);
+      if (!existing) {
+        existing = { name: categoryName, items: [] };
+        groups.push(existing);
+      }
+      existing.items.push(item);
+    });
+
+    return groups;
+  }, [navItems, can, activeUser, isOwner, isStaffMember]);
 
   return (
     <div className="flex h-full flex-col bg-canvas text-ink select-none">

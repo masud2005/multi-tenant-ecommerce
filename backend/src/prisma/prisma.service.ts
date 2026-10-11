@@ -38,5 +38,5 @@ export class PrismaService
     this.logger.log('[DESTROY] Prisma disconnected');
   }
 }
-// Reloaded Prisma Service schema v2
+// Reloaded Prisma Service schema with Notification model
 

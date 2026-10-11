@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Drawer } from '@/components/ui/Drawer';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
 import {
   NotificationTemplate,
@@ -32,27 +31,27 @@ export function NotificationTemplateDrawer({
   onSave,
   editable
 }: NotificationTemplateDrawerProps) {
-  const [activeTab, setActiveTab] = useState<'email' | 'push'>('email');
+  const [activeTab, setActiveTab] = useState<'inApp' | 'email'>('inApp');
 
   // Form draft states
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
-  const [pushTitle, setPushTitle] = useState('');
-  const [pushBody, setPushBody] = useState('');
+  const [inAppTitle, setInAppTitle] = useState('');
+  const [inAppMessage, setInAppMessage] = useState('');
 
   // Focus tracking for variable insertion
-  const [focusedField, setFocusedField] = useState<'subject' | 'body' | 'pushTitle' | 'pushBody'>('body');
+  const [focusedField, setFocusedField] = useState<'subject' | 'body' | 'inAppTitle' | 'inAppMessage'>('inAppTitle');
   const [copiedTag, setCopiedTag] = useState<string | null>(null);
 
   // Sync draft states when template changes
   useEffect(() => {
     if (template) {
-      setEmailSubject(template.emailSubject);
-      setEmailBody(template.emailBody);
-      setPushTitle(template.pushTitle);
-      setPushBody(template.pushBody);
-      setActiveTab('email');
-      setFocusedField('body');
+      setEmailSubject(template.emailSubject || '');
+      setEmailBody(template.emailBody || '');
+      setInAppTitle(template.inAppTitle || '');
+      setInAppMessage(template.inAppMessage || '');
+      setActiveTab('inApp');
+      setFocusedField('inAppTitle');
     }
   }, [template]);
 
@@ -79,12 +78,12 @@ export function NotificationTemplateDrawer({
         toast.info(`Inserted ${tag} into Email body`);
       }
     } else {
-      if (focusedField === 'pushTitle') {
-        setPushTitle((prev) => `${prev} ${tag}`);
-        toast.info(`Inserted ${tag} into Push title`);
+      if (focusedField === 'inAppTitle') {
+        setInAppTitle((prev) => `${prev} ${tag}`);
+        toast.info(`Inserted ${tag} into Title`);
       } else {
-        setPushBody((prev) => `${prev} ${tag}`);
-        toast.info(`Inserted ${tag} into Push content`);
+        setInAppMessage((prev) => `${prev} ${tag}`);
+        toast.info(`Inserted ${tag} into Message`);
       }
     }
   };
@@ -95,11 +94,11 @@ export function NotificationTemplateDrawer({
       ...template,
       emailSubject,
       emailBody,
-      pushTitle,
-      pushBody
+      inAppTitle,
+      inAppMessage
     };
     onSave(updated);
-    toast.success(`${template.event} templates saved successfully`);
+    toast.success(`Updated template for "${template.event}"`);
     onClose();
   };
 
@@ -107,291 +106,179 @@ export function NotificationTemplateDrawer({
     <Drawer
       open={open}
       onClose={onClose}
-      width="max-w-2xl"
-      title={
-        <div className="flex items-center gap-2.5">
-          <span className="font-semibold text-ink text-base md:text-lg">
-            {template.event}
-          </span>
-          <Badge tone="clay">{template.group}</Badge>
-        </div>
-      }
-      subtitle={
-        <p className="text-xs text-ink-muted mt-0.5">
-          {template.description}
-        </p>
-      }
+      title={template.event}
+      subtitle={template.description}
+      width="max-w-lg"
       footer={
-        <div className="flex items-center justify-end gap-2 w-full">
-          <Button variant="ghost" size="sm" onClick={onClose}>
+        <div className="flex items-center justify-between w-full">
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            disabled={!editable}
-            onClick={handleSave}
-            className="gap-1.5"
-          >
-            <Check className="h-4 w-4" />
-            Save changes
-          </Button>
+          {editable && (
+            <Button onClick={handleSave} className="bg-clay hover:bg-clay-dark text-white">
+              Save Template
+            </Button>
+          )}
         </div>
       }
     >
-      <div className="p-5 md:p-6 space-y-6">
-        {/* Channel Segmented Tabs */}
-        <div className="border-b border-line pb-4">
-          <div className="inline-flex items-center gap-2 p-1 bg-subtle rounded-lg">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('email');
-                setFocusedField('body');
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
-                activeTab === 'email'
-                  ? 'bg-surface text-ink shadow-xs'
-                  : 'text-ink-muted hover:text-ink'
-              }`}
-            >
-              <Mail className={`h-4 w-4 ${activeTab === 'email' ? 'text-clay' : ''}`} />
-              <span>1. Email</span>
-            </button>
+      <div className="p-5 space-y-6">
+        {/* Channel Navigation Tabs */}
+        <div className="flex items-center gap-2 border-b border-line pb-3">
+          <button
+            type="button"
+            onClick={() => setActiveTab('inApp')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+              activeTab === 'inApp'
+                ? 'bg-clay text-white'
+                : 'text-ink-muted hover:text-ink hover:bg-subtle'
+            }`}
+          >
+            <Bell className="h-4 w-4" />
+            In-App Notification
+            {template.inApp && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            )}
+          </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('push');
-                setFocusedField('pushBody');
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${
-                activeTab === 'push'
-                  ? 'bg-surface text-ink shadow-xs'
-                  : 'text-ink-muted hover:text-ink'
-              }`}
-            >
-              <Bell className={`h-4 w-4 ${activeTab === 'push' ? 'text-clay' : ''}`} />
-              <span>2. Push</span>
-            </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('email')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+              activeTab === 'email'
+                ? 'bg-clay text-white'
+                : 'text-ink-muted hover:text-ink hover:bg-subtle'
+            }`}
+          >
+            <Mail className="h-4 w-4" />
+            Email Notification
+            {template.email && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Dynamic Variable Chips */}
+        <div className="rounded-lg border border-line bg-canvas/60 p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-clay" />
+              Available Dynamic Variables
+            </span>
+            <span className="text-[11px] text-ink-muted">Click to insert into focused field</span>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {template.variables.map((v) => (
+              <button
+                key={v.tag}
+                type="button"
+                onClick={() => handleInsertVariable(v.tag)}
+                className="group flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface border border-line hover:border-clay/50 text-xs font-mono text-ink transition-colors cursor-pointer"
+                title={`${v.name}: e.g. ${v.example}`}
+              >
+                <span>{v.tag}</span>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyVariable(v.tag);
+                  }}
+                  className="text-ink-muted hover:text-clay p-0.5"
+                >
+                  {copiedTag === v.tag ? (
+                    <Check className="h-3 w-3 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  )}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* TAB 1: EMAIL TEMPLATE */}
-        {activeTab === 'email' && (
-          <div className="space-y-5 animate-in fade-in duration-150">
-            {/* Email Subject Field */}
+        {/* Tab Content 1: In-App Notification Editor */}
+        {activeTab === 'inApp' && (
+          <div className="space-y-4 animate-in fade-in-50 duration-150">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-ink">
-                  Email subject
-                </label>
-                <span className="text-[11px] text-ink-muted">
-                  Supports variables (e.g. &#123;&#123;order_number&#125;&#125;)
-                </span>
-              </div>
+              <label className="block text-xs font-medium text-ink-muted mb-1.5">
+                In-App Notification Title
+              </label>
               <input
                 type="text"
-                value={emailSubject}
-                onFocus={() => setFocusedField('subject')}
-                onChange={(e) => setEmailSubject(e.target.value)}
-                placeholder="e.g. Order Confirmed: {{order_number}}"
-                className="h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/50 focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/20 transition-all"
+                value={inAppTitle}
+                onChange={(e) => setInAppTitle(e.target.value)}
+                onFocus={() => setFocusedField('inAppTitle')}
+                disabled={!editable}
+                className="w-full px-3 py-2 rounded-lg border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-clay/20 focus:border-clay"
+                placeholder="e.g. New Order {{order_number}}"
               />
             </div>
 
-            {/* Email Body Field */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-ink">
-                  Email body
-                </label>
-                <span className="text-[11px] text-ink-muted">
-                  Formatted text &amp; template variables
-                </span>
-              </div>
+              <label className="block text-xs font-medium text-ink-muted mb-1.5">
+                In-App Notification Message
+              </label>
               <textarea
-                rows={10}
-                value={emailBody}
-                onFocus={() => setFocusedField('body')}
-                onChange={(e) => setEmailBody(e.target.value)}
-                placeholder="Write your email notification body here..."
-                className="w-full rounded-md border border-line-strong bg-surface p-3 font-mono text-xs leading-relaxed text-ink placeholder:text-ink-muted/50 focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/20 transition-all"
+                rows={4}
+                value={inAppMessage}
+                onChange={(e) => setInAppMessage(e.target.value)}
+                onFocus={() => setFocusedField('inAppMessage')}
+                disabled={!editable}
+                className="w-full px-3 py-2 rounded-lg border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-clay/20 focus:border-clay font-sans"
+                placeholder="e.g. {{customer_name}} placed an order for {{total_amount}}."
               />
             </div>
 
-            {/* Available Variables Section */}
-            <div className="rounded-lg border border-line bg-subtle/30 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-clay" />
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-ink">
-                    Available Variables
-                  </h4>
+            {/* Live In-App Preview Card */}
+            <div className="mt-4 rounded-lg border border-line bg-canvas p-4 space-y-2">
+              <span className="text-xs font-semibold text-ink-muted">In-App Preview (Bell Dropdown):</span>
+              <div className="p-3 rounded-lg border border-line bg-surface shadow-sm">
+                <div className="flex items-start gap-2.5">
+                  <div className="p-1.5 rounded-full bg-clay/10 text-clay shrink-0">
+                    <Bell className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-ink">{inAppTitle || 'Notification Title'}</p>
+                    <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">{inAppMessage || 'Notification message description'}</p>
+                    <span className="text-[10px] text-ink-muted mt-1 block">Just now</span>
+                  </div>
                 </div>
-                <span className="text-[11px] text-ink-muted">
-                  Click to copy or insert into template
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                {template.variables.map((v) => {
-                  const isCopied = copiedTag === v.tag;
-                  return (
-                    <div
-                      key={v.tag}
-                      className="group flex items-center justify-between p-2 rounded-md border border-line bg-surface hover:border-clay/50 hover:bg-clay-soft/20 transition-all text-left"
-                    >
-                      <div
-                        onClick={() => handleCopyVariable(v.tag)}
-                        className="min-w-0 flex-1 cursor-pointer pr-2"
-                        title={`Click to copy ${v.tag}`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <code className="text-xs font-semibold font-mono text-clay group-hover:text-clay-dark">
-                            {v.tag}
-                          </code>
-                        </div>
-                        <p className="text-[11px] text-ink-muted truncate mt-0.5">
-                          {v.name}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleInsertVariable(v.tag)}
-                          title="Insert into active field"
-                          className="px-1.5 py-0.5 text-[10px] font-medium rounded text-ink-muted hover:text-clay hover:bg-clay/10 transition-colors cursor-pointer"
-                        >
-                          + Insert
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyVariable(v.tag)}
-                          title="Copy tag"
-                          className="p-1 text-ink-muted hover:text-ink rounded transition-colors cursor-pointer"
-                        >
-                          {isCopied ? (
-                            <Check className="h-3.5 w-3.5 text-success" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 2: PUSH NOTIFICATION TEMPLATE */}
-        {activeTab === 'push' && (
-          <div className="space-y-5 animate-in fade-in duration-150">
-            {/* Push Title Field */}
+        {/* Tab Content 2: Email Notification Editor */}
+        {activeTab === 'email' && (
+          <div className="space-y-4 animate-in fade-in-50 duration-150">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-ink">
-                  Notification title
-                </label>
-                <span className="text-[11px] text-ink-muted">
-                  Short &amp; catchy title
-                </span>
-              </div>
+              <label className="block text-xs font-medium text-ink-muted mb-1.5">
+                Email Subject Line
+              </label>
               <input
                 type="text"
-                value={pushTitle}
-                onFocus={() => setFocusedField('pushTitle')}
-                onChange={(e) => setPushTitle(e.target.value)}
-                placeholder="e.g. Order {{order_number}} Confirmed! 🛍️"
-                className="h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-ink-muted/50 focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/20 transition-all"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                onFocus={() => setFocusedField('subject')}
+                disabled={!editable}
+                className="w-full px-3 py-2 rounded-lg border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-clay/20 focus:border-clay"
+                placeholder="e.g. Order Confirmed: {{order_number}}"
               />
             </div>
 
-            {/* Push Body / Content Field */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-sm font-medium text-ink">
-                  Notification content (body)
-                </label>
-                <span className="text-[11px] text-ink-muted tabular-nums">
-                  {pushBody.length} characters
-                </span>
-              </div>
+              <label className="block text-xs font-medium text-ink-muted mb-1.5">
+                Email Body (HTML/Text)
+              </label>
               <textarea
-                rows={6}
-                value={pushBody}
-                onFocus={() => setFocusedField('pushBody')}
-                onChange={(e) => setPushBody(e.target.value)}
-                placeholder="Write your push notification message content here..."
-                className="w-full rounded-md border border-line-strong bg-surface p-3 text-sm leading-relaxed text-ink placeholder:text-ink-muted/50 focus:border-clay focus:outline-none focus:ring-2 focus:ring-clay/20 transition-all"
+                rows={10}
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                onFocus={() => setFocusedField('body')}
+                disabled={!editable}
+                className="w-full px-3 py-2 rounded-lg border border-line bg-surface text-sm text-ink focus:outline-none focus:ring-2 focus:ring-clay/20 focus:border-clay font-mono text-xs leading-relaxed"
+                placeholder="Email content..."
               />
-            </div>
-
-            {/* Available Variables Section */}
-            <div className="rounded-lg border border-line bg-subtle/30 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-clay" />
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-ink">
-                    Available Variables
-                  </h4>
-                </div>
-                <span className="text-[11px] text-ink-muted">
-                  Click to copy or insert into notification
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-                {template.variables.map((v) => {
-                  const isCopied = copiedTag === v.tag;
-                  return (
-                    <div
-                      key={v.tag}
-                      className="group flex items-center justify-between p-2 rounded-md border border-line bg-surface hover:border-clay/50 hover:bg-clay-soft/20 transition-all text-left"
-                    >
-                      <div
-                        onClick={() => handleCopyVariable(v.tag)}
-                        className="min-w-0 flex-1 cursor-pointer pr-2"
-                        title={`Click to copy ${v.tag}`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <code className="text-xs font-semibold font-mono text-clay group-hover:text-clay-dark">
-                            {v.tag}
-                          </code>
-                        </div>
-                        <p className="text-[11px] text-ink-muted truncate mt-0.5">
-                          {v.name}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleInsertVariable(v.tag)}
-                          title="Insert into notification content"
-                          className="px-1.5 py-0.5 text-[10px] font-medium rounded text-ink-muted hover:text-clay hover:bg-clay/10 transition-colors cursor-pointer"
-                        >
-                          + Insert
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyVariable(v.tag)}
-                          title="Copy tag"
-                          className="p-1 text-ink-muted hover:text-ink rounded transition-colors cursor-pointer"
-                        >
-                          {isCopied ? (
-                            <Check className="h-3.5 w-3.5 text-success" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </div>
         )}

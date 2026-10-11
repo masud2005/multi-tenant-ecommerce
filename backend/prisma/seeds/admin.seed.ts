@@ -4,7 +4,6 @@ import {
     UserStatus,
     TenantStatus,
     TenantPlan,
-    TenantMemberRole,
 } from '../generated/client';
 import * as bcrypt from 'bcrypt';
 
@@ -86,13 +85,111 @@ export async function seedAdmin(prisma: PrismaClient) {
                 userId: admin.id,
             },
         },
-        update: {},
+        update: {
+            isOwner: true,
+            status: 'active',
+        },
         create: {
             tenantId: defaultTenant.id,
             userId: admin.id,
-            role: TenantMemberRole.OWNER,
+            isOwner: true,
+            status: 'active',
         },
     });
 
-    console.log(`Admin linked as OWNER to tenant ${defaultTenant.slug}`);
+    // Seed default standard tenant roles
+    const defaultRoles = [
+        {
+            name: 'Store Manager',
+            description: 'Runs daily operations incl. orders, catalog, customers, and discounts.',
+            isSystem: true,
+            permissions: {
+                dashboard: ['view'],
+                orders: ['view', 'create', 'update', 'delete'],
+                returns: ['view', 'create', 'update'],
+                payments: ['view'],
+                products: ['view', 'create', 'update', 'delete'],
+                categories: ['view', 'create', 'update', 'delete'],
+                collections: ['view', 'create', 'update', 'delete'],
+                brands: ['view', 'create', 'update', 'delete'],
+                inventory: ['view', 'create', 'update'],
+                customers: ['view', 'create', 'update'],
+                reviews: ['view', 'update', 'delete'],
+                discounts: ['view', 'create', 'update', 'delete'],
+                marketing: ['view', 'create', 'update'],
+                shipping: ['view', 'update'],
+                theme: ['view', 'update'],
+                content: ['view', 'create', 'update', 'delete'],
+                media: ['view', 'create', 'update', 'delete'],
+                analytics: ['view'],
+                reports: ['view'],
+                notifications: ['view'],
+                audit: ['view'],
+            },
+        },
+        {
+            name: 'Fulfillment Staff',
+            description: 'Processes, packs, and ships orders; manages inventory stock.',
+            isSystem: true,
+            permissions: {
+                dashboard: ['view'],
+                orders: ['view', 'update'],
+                returns: ['view', 'update'],
+                inventory: ['view', 'update'],
+                shipping: ['view', 'update'],
+                customers: ['view'],
+            },
+        },
+        {
+            name: 'Customer Care',
+            description: 'Views orders and customers, handles returns, inquiries, and reviews.',
+            isSystem: true,
+            permissions: {
+                dashboard: ['view'],
+                orders: ['view', 'update'],
+                returns: ['view', 'update'],
+                customers: ['view', 'update'],
+                reviews: ['view', 'update', 'delete'],
+            },
+        },
+        {
+            name: 'Content Editor',
+            description: 'Manages catalog items, pages, blogs, and media assets.',
+            isSystem: true,
+            permissions: {
+                dashboard: ['view'],
+                products: ['view', 'create', 'update'],
+                categories: ['view', 'create', 'update'],
+                collections: ['view', 'create', 'update'],
+                brands: ['view', 'create', 'update'],
+                theme: ['view', 'update'],
+                content: ['view', 'create', 'update', 'delete'],
+                media: ['view', 'create', 'update', 'delete'],
+            },
+        },
+    ];
+
+    for (const r of defaultRoles) {
+        await prisma.tenantRole.upsert({
+            where: {
+                tenantId_name: {
+                    tenantId: defaultTenant.id,
+                    name: r.name,
+                },
+            },
+            update: {
+                description: r.description,
+                permissions: r.permissions,
+            },
+            create: {
+                tenantId: defaultTenant.id,
+                name: r.name,
+                description: r.description,
+                isSystem: r.isSystem,
+                permissions: r.permissions,
+            },
+        });
+    }
+
+    console.log(`Admin linked as OWNER to tenant ${defaultTenant.slug} and default roles seeded`);
 }

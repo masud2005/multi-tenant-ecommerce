@@ -33,6 +33,30 @@ class ApiClient {
     this.refreshSubscribers.push(callback);
   }
 
+  public async refreshToken(): Promise<string | null> {
+    if (this.isRefreshing) {
+      return new Promise((resolve) => {
+        this.addRefreshSubscriber((token) => resolve(token || null));
+      });
+    }
+
+    this.isRefreshing = true;
+    try {
+      const newToken = await this.tryRefreshToken();
+      this.isRefreshing = false;
+      if (newToken) {
+        this.onTokenRefreshed(newToken);
+      } else {
+        this.onTokenRefreshFailed();
+      }
+      return newToken;
+    } catch {
+      this.isRefreshing = false;
+      this.onTokenRefreshFailed();
+      return null;
+    }
+  }
+
   private async tryRefreshToken(): Promise<string | null> {
     const refreshToken = getRefreshToken();
     if (!refreshToken) return null;
@@ -52,11 +76,13 @@ class ApiClient {
       const json = await response.json();
       const newAccessToken = json.data?.accessToken;
       const newRefreshToken = json.data?.refreshToken || refreshToken;
+      const user = json.data?.user;
 
       if (newAccessToken) {
         setAuthSession({
           accessToken: newAccessToken,
           refreshToken: newRefreshToken,
+          user,
         });
         return newAccessToken;
       }
@@ -112,34 +138,12 @@ class ApiClient {
         !endpoint.includes('/auth/login') &&
         !endpoint.includes('/auth/refresh-token')
       ) {
-        if (!this.isRefreshing) {
-          this.isRefreshing = true;
-          const newToken = await this.tryRefreshToken();
-          this.isRefreshing = false;
-
-          if (newToken) {
-            this.onTokenRefreshed(newToken);
-            headers['Authorization'] = `Bearer ${newToken}`;
-            return this.request<T>(endpoint, { ...options, headers }, true);
-          } else {
-            clearAuthSession();
-            this.onTokenRefreshFailed();
-          }
+        const newToken = await this.refreshToken();
+        if (newToken) {
+          headers['Authorization'] = `Bearer ${newToken}`;
+          return this.request<T>(endpoint, { ...options, headers }, true);
         } else {
-          return new Promise<T>((resolve, reject) => {
-            this.addRefreshSubscriber(async (newToken: string) => {
-              try {
-                if (!newToken) {
-                  throw new Error('Unauthorized');
-                }
-                headers['Authorization'] = `Bearer ${newToken}`;
-                const retryRes = await this.request<T>(endpoint, { ...options, headers }, true);
-                resolve(retryRes);
-              } catch (err) {
-                reject(err);
-              }
-            });
-          });
+          clearAuthSession();
         }
       }
 

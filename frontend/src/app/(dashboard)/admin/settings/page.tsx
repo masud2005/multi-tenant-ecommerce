@@ -43,7 +43,6 @@ import { cn } from '@/lib/utils';
 
 const sections = [
   { id: 'Store Profile', label: 'Store Profile', icon: Store },
-  { id: 'Contact & Support', label: 'Contact & Support', icon: Phone },
   { id: 'Checkout', label: 'Checkout & Orders', icon: ShoppingCart },
   { id: 'Payments', label: 'Payment Gateways', icon: CreditCard },
   { id: 'Taxes', label: 'Taxes & VAT', icon: Percent },
@@ -409,136 +408,8 @@ export default function AdminSettingsPage() {
                     />
                   </div>
                 </Panel>
-              </div>
-            )}
 
-            {/* 2. PUBLIC CONTACT & SUPPORT TAB */}
-            {section === 'Contact & Support' && (
-              <div className="space-y-6">
-                {/* Live Preview Card */}
-                <div className="rounded-xl border border-clay/30 bg-clay/5 p-5">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-clay">
-                    <Sparkles className="h-4 w-4" /> Live Storefront Contact Preview
-                  </div>
-                  <p className="mt-1 text-xs text-ink-muted">
-                    This is how customers see your contact details on the Contact Us page & footer:
-                  </p>
-                  <div className="mt-4 grid gap-3 rounded-lg border border-line bg-surface p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="flex items-start gap-2.5">
-                      <Phone className="mt-0.5 h-4 w-4 text-ink-muted shrink-0" />
-                      <div>
-                        <p className="text-[11px] text-ink-muted">Hotline</p>
-                        <p className="font-semibold text-ink">{contactForm.phone || 'Not set'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <MessageSquare className="mt-0.5 h-4 w-4 text-success shrink-0" />
-                      <div>
-                        <p className="text-[11px] text-ink-muted">WhatsApp</p>
-                        <p className="font-semibold text-success">{contactForm.whatsapp || 'Not set'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <Mail className="mt-0.5 h-4 w-4 text-ink-muted shrink-0" />
-                      <div>
-                        <p className="text-[11px] text-ink-muted">Support Email</p>
-                        <p className="font-semibold text-ink truncate">{contactForm.email || 'Not set'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <Clock className="mt-0.5 h-4 w-4 text-ink-muted shrink-0" />
-                      <div>
-                        <p className="text-[11px] text-ink-muted">Hours</p>
-                        <p className="font-semibold text-ink">{contactForm.workingHours || 'Not set'}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Primary Support Channels Card */}
-                <Panel
-                  title="Direct Customer Support Channels"
-                  description="Phone, WhatsApp, and email used by customers to get in touch with you."
-                >
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <Input
-                      label="Customer Support Email *"
-                      type="email"
-                      value={contactForm.email}
-                      onChange={(e) =>
-                        setContactForm({ ...contactForm, email: e.target.value })
-                      }
-                      placeholder="care@yourbrand.com"
-                      hint="Receives customer inquiries from the Contact Us form"
-                    />
-                    <Input
-                      label="Customer Care Hotline / Phone *"
-                      value={contactForm.phone}
-                      onChange={(e) =>
-                        setContactForm({ ...contactForm, phone: e.target.value })
-                      }
-                      placeholder="09612-826842 or 017xxxxxxxx"
-                      hint="Displayed prominently for direct customer calling"
-                    />
-                    <Input
-                      label="WhatsApp Support Number (Optional)"
-                      value={contactForm.whatsapp}
-                      onChange={(e) =>
-                        setContactForm({ ...contactForm, whatsapp: e.target.value })
-                      }
-                      placeholder="+880 1700-000000"
-                      hint="Creates a direct WhatsApp chat link on the Contact Us page"
-                    />
-                    <Input
-                      label="Support Team Name"
-                      value={contactForm.supportTeam}
-                      onChange={(e) =>
-                        setContactForm({ ...contactForm, supportTeam: e.target.value })
-                      }
-                      placeholder="e.g. Tanti Care team"
-                    />
-                  </div>
-                </Panel>
-
-                {/* Physical Location & Schedule Card */}
-                <Panel
-                  title="Physical Store Address & Operating Hours"
-                  description="Your store location and customer support availability hours."
-                >
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <Input
-                        label="Flagship Store / Office Address *"
-                        value={contactForm.address}
-                        onChange={(e) =>
-                          setContactForm({ ...contactForm, address: e.target.value })
-                        }
-                        placeholder="House 14, Road 27 (old), Dhanmondi, Dhaka 1209"
-                        hint="Full physical address shown on the Contact page & footer copyright bar"
-                      />
-                    </div>
-                    <Input
-                      label="Business & Working Hours *"
-                      value={contactForm.workingHours}
-                      onChange={(e) =>
-                        setContactForm({ ...contactForm, workingHours: e.target.value })
-                      }
-                      placeholder="Sat–Thu, 10 AM – 9 PM"
-                      hint="Days and hours when your store/support is open"
-                    />
-                    <Input
-                      label="Support Response Time Note *"
-                      value={contactForm.responseTime}
-                      onChange={(e) =>
-                        setContactForm({ ...contactForm, responseTime: e.target.value })
-                      }
-                      placeholder="Replies within 2 to 4 working hours"
-                      hint="Customer expectation notice on Contact page"
-                    />
-                  </div>
-                </Panel>
-
-                {/* Social Media Links Card */}
+                {/* Social Media Profiles */}
                 <Panel
                   title="Social Media Profiles"
                   description="Connect your brand's official Facebook and Instagram pages."
@@ -567,7 +438,7 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            {/* 3. CHECKOUT TAB */}
+            {/* 2. CHECKOUT TAB */}
             {section === 'Checkout' && (
               <Panel title="Checkout & Order Processing Rules">
                 <div className="space-y-4">

@@ -37,6 +37,7 @@ const galleryPositions = [
 
 export function ProductDetailView({ slug }: { slug: string }) {
   const {
+    user,
     products,
     addToCart,
     setMiniCartOpen,
@@ -193,6 +194,14 @@ export function ProductDetailView({ slug }: { slug: string }) {
       return;
     }
     setSizeError(false);
+    if (!user) {
+      toast.error('Please log in to add items to your cart.');
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname + window.location.search;
+        window.location.href = `/login?next=${encodeURIComponent(currentPath || '/')}`;
+      }
+      return;
+    }
     addToCart(product.id, targetVariant.id, qty);
     toast.success(`${product.title} added to bag`);
     setMiniCartOpen(true);

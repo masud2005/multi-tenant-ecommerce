@@ -28,20 +28,24 @@ import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.g
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
-  // Place a new order (supports both logged-in customer and guest checkout)
+  // Place a new order (requires authenticated customer login)
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(OptionalJwtAuthGuard)
-  @ApiOperation({ summary: 'Create and place a new order from checkout' })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Create and place a new order from checkout (Login required)' })
   @ApiResponse({ status: 201, description: 'Order created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Customer login required' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   async createOrder(
     @Body() dto: CreateOrderDto,
     @CurrentUser() user?: any,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
-    const tenantId = tenantHeader || user?.tenantId;
     const userId = user?.id || user?.sub;
+    if (!userId) {
+      throw new UnauthorizedException('Please log in to place an order');
+    }
+    const tenantId = tenantHeader || user?.tenantId;
     return this.orderService.createOrder(tenantId, userId, dto);
   }
 

@@ -1,5 +1,6 @@
 enum UserRole {
   OWNER
+  STAFF
   CUSTOMER
 }
 
@@ -27,13 +28,6 @@ enum TenantPlan {
   STARTER
   GROWTH
   ENTERPRISE
-}
-
-enum TenantMemberRole {
-  OWNER
-  ADMIN
-  MANAGER
-  STAFF
 }
 
 enum CollectionType {

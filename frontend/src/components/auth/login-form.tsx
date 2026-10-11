@@ -12,7 +12,7 @@ import { authService } from '@/services/auth';
 function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get('next') ?? '';
+  const next = searchParams.get('next') ?? searchParams.get('redirect') ?? '';
 
   const [mode, setMode] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
@@ -41,16 +41,17 @@ function LoginFormContent() {
 
       const res = await authService.login({ email, password });
 
-      // Determine destination according to RBAC role
+      // Determine destination according to RBAC role and dynamic redirect
       const user = res.data?.user;
+      const redirectUrl = (res.data as any)?.redirectUrl;
       const role = (user?.role || authService.getUserRole() || '').toUpperCase();
       const isOwnerOrAdmin = ['OWNER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'STAFF'].includes(role);
 
-      let targetUrl = isOwnerOrAdmin ? '/admin' : '/account';
+      let targetUrl = redirectUrl || (isOwnerOrAdmin ? '/admin' : '/account');
 
       if (next && !next.startsWith('/login') && !next.startsWith('/register')) {
         if (isOwnerOrAdmin) {
-          targetUrl = next.startsWith('/account') ? '/admin' : next;
+          targetUrl = next.startsWith('/account') ? (redirectUrl || '/admin') : next;
         } else {
           targetUrl = next.startsWith('/admin') ? '/account' : next;
         }
@@ -161,15 +162,6 @@ function LoginFormContent() {
       >
         <span className="font-bold text-[#4285F4] mr-2">G</span> Continue with Google
       </Button>
-
-      <p className="mt-4 text-center text-xs text-ink-muted">
-        <Link
-          href={next || '/checkout'}
-          className="hover:text-ink underline"
-        >
-          Continue as guest
-        </Link>
-      </p>
     </>
   );
 }

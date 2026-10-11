@@ -21,6 +21,9 @@ model User {
   // Customer profiles across tenants
   customerProfiles CustomerProfile[]
 
+  // In-App notifications
+  notifications Notification[]
+
   @@index([deletedAt])
   @@map("users")
 }

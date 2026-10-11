@@ -21,6 +21,7 @@ import {
   getAuthUser,
   getAuthRole,
   isAuthenticated,
+  hasValidRefreshToken,
 } from './auth.storage';
 
 class AuthService {
@@ -117,6 +118,14 @@ class AuthService {
   isAuthenticated(): boolean {
     return isAuthenticated();
   }
+
+  hasValidRefreshToken(): boolean {
+    return hasValidRefreshToken();
+  }
+
+  async refreshToken(): Promise<string | null> {
+    return apiClient.refreshToken();
+  }
 }
 
 export const authService = new AuthService();
@@ -128,4 +137,5 @@ export {
   getAuthUser,
   getAuthRole,
   isAuthenticated,
+  hasValidRefreshToken,
 };

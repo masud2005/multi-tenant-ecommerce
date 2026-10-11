@@ -31,6 +31,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
                 tenantMemberships: {
                     select: {
                         tenantId: true,
+                        isOwner: true,
+                        roleId: true,
                         role: true,
                     },
                 },

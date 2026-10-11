@@ -22,7 +22,6 @@ import {
   OrderQueryDto,
   UpdateOrderStatusDto,
   AddOrderNoteDto,
-  CreateDraftOrderDto,
 } from './dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -52,35 +51,6 @@ export class OrderController {
   ) {
     const tenantId = tenantHeader || user?.tenantId;
     return this.orderService.getOrders(query, tenantId);
-  }
-
-  // Create manual or draft order for phone, showroom, or wholesale customers
-  @Post('drafts')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create manual/draft order for phone, showroom, or wholesale' })
-  @ApiResponse({ status: 201, description: 'Draft order created successfully' })
-  @ApiResponse({ status: 400, description: 'Validation failed or item list empty' })
-  async createDraftOrder(
-    @Body() dto: CreateDraftOrderDto,
-    @CurrentUser() user?: any,
-    @Headers('x-tenant-id') tenantHeader?: string,
-  ) {
-    const tenantId = tenantHeader || user?.tenantId;
-    return this.orderService.createDraftOrder(dto, tenantId, user);
-  }
-
-  // List all draft and manual orders
-  @Get('drafts')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List all draft and manual orders' })
-  @ApiResponse({ status: 200, description: 'Draft orders retrieved successfully' })
-  async getDraftOrders(
-    @Query() query: OrderQueryDto,
-    @CurrentUser() user?: any,
-    @Headers('x-tenant-id') tenantHeader?: string,
-  ) {
-    const tenantId = tenantHeader || user?.tenantId;
-    return this.orderService.getDraftOrders(query, tenantId);
   }
 
   // Get full details of a specific order by ID or order number

@@ -56,6 +56,9 @@ export interface JwtPayload {
   name?: string;
   role: UserRole;
   tenantId?: string;
+  isOwner?: boolean;
+  staffRole?: string;
+  permissions?: Record<string, string[]>;
   iat?: number;
   exp?: number;
 }

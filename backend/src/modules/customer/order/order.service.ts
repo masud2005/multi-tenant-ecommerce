@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { NotificationService } from '../../notification/notification.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import {
   FulfillmentStatus,
@@ -19,7 +20,10 @@ import { ResponseHelper } from '../../../common/helpers/response.helper';
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   // Helper to resolve active tenant ID
   private async resolveTenantId(tenantId?: string): Promise<string> {
@@ -294,6 +298,93 @@ export class OrderService {
     });
 
     this.logger.log(`Order ${createdOrder.number} created successfully for tenant ${resolvedTenantId}`);
+
+    // Trigger Notification Events asynchronously (does not block order response)
+    (async () => {
+      try {
+        const customerDisplayName =
+          createdOrder.shippingAddress?.name ||
+          createdOrder.customerName ||
+          createdOrder.email ||
+          'Customer';
+
+        // Event 1.A: Notify store owner & active staff members (In-App + Email)
+        const staffMembers = await this.prisma.tenantMember.findMany({
+          where: {
+            tenantId: resolvedTenantId,
+            deletedAt: null,
+            status: 'active',
+          },
+          include: { user: true },
+        });
+
+        for (const member of staffMembers) {
+          if (member.userId) {
+            await this.notificationService.send({
+              tenantId: resolvedTenantId,
+              userId: member.userId,
+              title: `New Order #${createdOrder.number}`,
+              message: `${customerDisplayName} placed an order for ৳${createdOrder.total}`,
+              type: 'ORDER',
+              link: `/admin/orders`,
+              email: member.user?.email
+                ? {
+                    to: member.user.email,
+                    subject: `[New Order] #${createdOrder.number} received (৳${createdOrder.total})`,
+                    html: `<h2>New Order Received!</h2><p>Order <b>#${createdOrder.number}</b> has been placed by <b>${customerDisplayName}</b>.</p><p>Total Amount: <b>৳${createdOrder.total}</b></p><p>Payment Method: ${createdOrder.paymentMethod}</p>`,
+                  }
+                : undefined,
+            });
+          }
+        }
+
+        // Event 1.B: Send order confirmation to Customer if email is present
+        if (createdOrder.email) {
+          await this.notificationService.send({
+            tenantId: resolvedTenantId,
+            userId: createdOrder.customerId || '',
+            title: `Order Confirmation #${createdOrder.number}`,
+            message: `Thank you for your order! Total: ৳${createdOrder.total}`,
+            type: 'ORDER',
+            link: `/account/orders`,
+            email: {
+              to: createdOrder.email,
+              subject: `Order Confirmation #${createdOrder.number}`,
+              html: `<h2>Thank you for your order!</h2><p>Hi ${customerDisplayName},</p><p>Your order <b>#${createdOrder.number}</b> has been received and is being processed.</p><p>Total Amount: <b>৳${createdOrder.total}</b></p>`,
+            },
+          });
+        }
+
+        // Event 3: Low Stock Alert Check
+        for (const item of dto.items) {
+          if (item.variantId) {
+            const variant = await this.prisma.productVariant.findUnique({
+              where: { id: item.variantId },
+              include: { product: true },
+            });
+
+            const threshold = variant?.lowStockThreshold ?? 5;
+            if (variant && variant.stock <= threshold) {
+              const owners = staffMembers.filter((m) => m.isOwner);
+              const variantName = `${variant.color ? `${variant.color} - ` : ''}${variant.size || variant.sku || 'Default'}`;
+              for (const owner of owners) {
+                await this.notificationService.send({
+                  tenantId: resolvedTenantId,
+                  userId: owner.userId,
+                  title: `Low Stock Alert: ${variant.product?.title || 'Product'}`,
+                  message: `Stock for variant "${variantName}" is low (${variant.stock} units remaining).`,
+                  type: 'INVENTORY',
+                  link: `/admin/inventory`,
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        this.logger.error('Failed to dispatch order notifications', err);
+      }
+    })();
+
     return ResponseHelper.created(createdOrder, 'Order created successfully');
   }
 

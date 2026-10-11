@@ -21,14 +21,25 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
       .slice(0, 2)
       .toUpperCase() || 'SO';
 
+    const isOwner = Boolean(payload.isOwner || payload.role === 'OWNER');
+    const isStaff = Boolean(
+      payload.staffRole ||
+      (payload.permissions && Object.keys(payload.permissions).length > 0) ||
+      ['OWNER', 'ADMIN', 'SUPER_ADMIN', 'STAFF', 'MANAGER'].includes(payload.role)
+    );
+    const effectiveRole = isOwner ? 'OWNER' : (isStaff ? 'STAFF' : payload.role || 'STAFF');
+
     return {
       id: payload.sub,
       name,
       email: payload.email,
-      role: payload.role || 'OWNER',
+      role: effectiveRole as any,
       initials,
-      title: payload.role === 'OWNER' ? 'Owner' : 'Staff',
+      title: payload.staffRole || (isOwner ? 'Owner' : 'Staff'),
       tenantId: payload.tenantId,
+      isOwner,
+      staffRole: payload.staffRole,
+      permissions: payload.permissions || {},
     };
   } catch {
     return undefined;
