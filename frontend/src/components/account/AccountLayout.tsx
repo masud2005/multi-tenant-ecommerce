@@ -69,7 +69,7 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
               href="/"
               className="inline-flex h-10 w-full sm:w-auto items-center justify-center rounded-lg border border-line bg-surface px-5 text-sm font-medium text-ink hover:bg-subtle transition-all cursor-pointer"
             >
-              <Store className="mr-2 h-4 w-4 text-clay" /> Back to Store
+              <Store className="mr-2 h-4 w-4 text-ink-muted" /> Back to Store
             </Link>
           </div>
         </div>
