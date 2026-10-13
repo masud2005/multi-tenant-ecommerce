@@ -48,14 +48,6 @@ export async function seedCustomers(prisma: PrismaClient) {
     },
   });
 
-  // Clean up any other test users if needed
-  await prisma.user.deleteMany({
-    where: {
-      email: 'tanvir@gmail.com',
-      role: UserRole.CUSTOMER,
-    },
-  }).catch(() => { });
-
   // 2. Upsert Customer Profile with VIP segment and store credit
   const profile = await prisma.customerProfile.upsert({
     where: {
@@ -362,5 +354,75 @@ export async function seedCustomers(prisma: PrismaClient) {
     },
   });
 
-  console.log(`✅ Seeded rich demo customer data for: ${customerEmail} (Password: 123456)`);
+  // 11. Seed Customer Login Logs for Conversion Rate Analytics
+  const nowMs = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const additionalCustomers = [
+    { name: 'Tanvir Hossain', email: 'tanvir@gmail.com', phone: '01711000001' },
+    { name: 'Farhana Akhter', email: 'farhana@gmail.com', phone: '01811000002' },
+    { name: 'Sadia Sultana', email: 'sadia@gmail.com', phone: '01711000008' },
+    { name: 'Rahim Visitor', email: 'rahim.visitor@gmail.com', phone: '01999000099' },
+  ];
+
+  const demoCustomerUsers = [user];
+
+  for (const ac of additionalCustomers) {
+    const cu = await prisma.user.upsert({
+      where: { email: ac.email },
+      update: {
+        name: ac.name,
+        phone: ac.phone,
+        role: UserRole.CUSTOMER,
+        status: UserStatus.ACTIVE,
+      },
+      create: {
+        name: ac.name,
+        email: ac.email,
+        phone: ac.phone,
+        password: hashedPassword,
+        role: UserRole.CUSTOMER,
+        status: UserStatus.ACTIVE,
+      },
+    });
+    demoCustomerUsers.push(cu);
+  }
+
+  const loginLogsData = [
+    // Today
+    { userId: demoCustomerUsers[0].id, email: demoCustomerUsers[0].email, createdAt: new Date(nowMs - 2 * 3600 * 1000) },
+    { userId: demoCustomerUsers[1].id, email: demoCustomerUsers[1].email, createdAt: new Date(nowMs - 4 * 3600 * 1000) },
+    // Past 7 days
+    { userId: demoCustomerUsers[0].id, email: demoCustomerUsers[0].email, createdAt: new Date(nowMs - 2 * dayMs) },
+    { userId: demoCustomerUsers[1].id, email: demoCustomerUsers[1].email, createdAt: new Date(nowMs - 3 * dayMs) },
+    { userId: demoCustomerUsers[2].id, email: demoCustomerUsers[2].email, createdAt: new Date(nowMs - 5 * dayMs) },
+    { userId: demoCustomerUsers[4].id, email: demoCustomerUsers[4].email, createdAt: new Date(nowMs - 6 * dayMs) },
+    // Past 30 days
+    { userId: demoCustomerUsers[0].id, email: demoCustomerUsers[0].email, createdAt: new Date(nowMs - 12 * dayMs) },
+    { userId: demoCustomerUsers[1].id, email: demoCustomerUsers[1].email, createdAt: new Date(nowMs - 15 * dayMs) },
+    { userId: demoCustomerUsers[2].id, email: demoCustomerUsers[2].email, createdAt: new Date(nowMs - 18 * dayMs) },
+    { userId: demoCustomerUsers[3].id, email: demoCustomerUsers[3].email, createdAt: new Date(nowMs - 22 * dayMs) },
+    { userId: demoCustomerUsers[4].id, email: demoCustomerUsers[4].email, createdAt: new Date(nowMs - 25 * dayMs) },
+    // Previous period (30-60 days ago) for deltas
+    { userId: demoCustomerUsers[0].id, email: demoCustomerUsers[0].email, createdAt: new Date(nowMs - 35 * dayMs) },
+    { userId: demoCustomerUsers[1].id, email: demoCustomerUsers[1].email, createdAt: new Date(nowMs - 40 * dayMs) },
+    { userId: demoCustomerUsers[2].id, email: demoCustomerUsers[2].email, createdAt: new Date(nowMs - 45 * dayMs) },
+    { userId: demoCustomerUsers[4].id, email: demoCustomerUsers[4].email, createdAt: new Date(nowMs - 50 * dayMs) },
+  ];
+
+  await prisma.customerLoginLog.deleteMany({
+    where: { tenantId: tenant.id },
+  });
+
+  await prisma.customerLoginLog.createMany({
+    data: loginLogsData.map((l) => ({
+      tenantId: tenant.id,
+      userId: l.userId,
+      email: l.email,
+      createdAt: l.createdAt,
+    })),
+  });
+
+  console.log(`✅ Seeded rich demo customer data & login logs for: ${customerEmail} (Password: 123456)`);
 }
+

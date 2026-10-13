@@ -57,6 +57,12 @@ export default function AdminAnalyticsPage() {
     netSales: number;
     grossSales: number;
     salesDelta: string;
+    conversionRate: number;
+    conversionDelta: string;
+    loggedInCustomers?: number;
+    orderingCustomers?: number;
+    shippingRevenue?: number;
+    shippingDelta?: string;
   } | null>(null);
   const [isLoadingKpis, setIsLoadingKpis] = useState(false);
 
@@ -84,6 +90,12 @@ export default function AdminAnalyticsPage() {
             netSales: overview.kpis.netSales,
             grossSales: overview.kpis.grossSales,
             salesDelta: overview.kpis.salesDelta || '+0%',
+            conversionRate: overview.kpis.conversionRate ?? 0,
+            conversionDelta: overview.kpis.conversionDelta || '+0 pt',
+            loggedInCustomers: overview.kpis.loggedInCustomers,
+            orderingCustomers: overview.kpis.orderingCustomers,
+            shippingRevenue: overview.kpis.shippingRevenue,
+            shippingDelta: overview.kpis.shippingDelta || '+0%',
           });
           if (Array.isArray(overview.salesByRegion) && overview.salesByRegion.length > 0) {
             setRegionData(overview.salesByRegion);
@@ -147,27 +159,49 @@ export default function AdminAnalyticsPage() {
       realKpis ? formatNumber(realKpis.orders) : formatNumber(mockKpis.orders),
       realKpis ? realKpis.ordersDelta : '+18%',
       Boolean(realKpis),
+      undefined,
     ],
     [
       'Avg. order value',
       realKpis ? formatBDT(realKpis.aov) : formatBDT(mockKpis.aov),
       realKpis ? realKpis.aovDelta : '+4%',
       Boolean(realKpis),
+      undefined,
     ],
-    ['Conversion rate', `${mockKpis.conversionRate}%`, '+0.3 pt', false],
+    [
+      'Conversion rate',
+      realKpis ? `${realKpis.conversionRate}%` : `${mockKpis.conversionRate}%`,
+      realKpis ? realKpis.conversionDelta : '+0.3 pt',
+      Boolean(realKpis),
+      realKpis && realKpis.loggedInCustomers !== undefined
+        ? `${realKpis.orderingCustomers ?? 0}/${realKpis.loggedInCustomers ?? 0} logged-in ordered`
+        : undefined,
+    ],
     [
       'Returning customers',
       realKpis ? `${realKpis.returningRate}%` : `${mockKpis.returningRate}%`,
       realKpis ? realKpis.returningDelta : '+2 pt',
       Boolean(realKpis),
+      realKpis && realKpis.returningCustomers !== undefined
+        ? `${realKpis.returningCustomers}/${realKpis.totalCustomers ?? 0} repeat buyers`
+        : undefined,
     ],
     [
       'Discounts',
       realKpis ? formatBDT(realKpis.discounts) : formatBDT(mockKpis.discounts),
       realKpis ? realKpis.discountsDelta : '+11%',
       Boolean(realKpis),
+      undefined,
     ],
-    ['Shipping revenue', formatBDT(mockKpis.shippingRevenue), '+9%', false],
+    [
+      'Shipping revenue',
+      realKpis?.shippingRevenue !== undefined
+        ? formatBDT(realKpis.shippingRevenue)
+        : formatBDT(mockKpis.shippingRevenue),
+      realKpis?.shippingDelta || '+9%',
+      Boolean(realKpis),
+      undefined,
+    ],
   ];
 
   return (
@@ -289,7 +323,7 @@ export default function AdminAnalyticsPage() {
         </Panel>
 
         <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
-          {secondary.map(([l, v, d, isReal]) => (
+          {secondary.map(([l, v, d, isReal, extra]) => (
             <div key={l as string} className="bg-surface px-4 py-3">
               <div className="flex items-center justify-between">
                 <dt className="text-xs text-ink-muted">{l as string}</dt>
@@ -306,6 +340,9 @@ export default function AdminAnalyticsPage() {
                 {v as string}{' '}
                 <span className="text-xs font-normal text-ink-muted">{d as string}</span>
               </dd>
+              {extra && (
+                <p className="mt-0.5 text-[11px] text-ink-muted">{extra as string}</p>
+              )}
             </div>
           ))}
         </dl>

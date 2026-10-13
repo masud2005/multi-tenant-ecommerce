@@ -67,18 +67,19 @@ model Tenant {
   chatMessages          ChatMessage[]
   themes                TenantTheme[]
   searchLogs            SearchQueryLog[]
+  customerLoginLogs     CustomerLoginLog[]
 
   @@index([deletedAt])
   @@map("tenants")
 }
 
 model TenantRole {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   tenantId    String
-  name        String   // e.g. 'Store Manager', 'Fulfillment Staff', 'Customer Care', 'Content Editor'
+  name        String // e.g. 'Store Manager', 'Fulfillment Staff', 'Customer Care', 'Content Editor'
   description String?
-  isSystem    Boolean  @default(false) // System default roles cannot be deleted
-  permissions Json     // Granular module permission matrix: { "dashboard": ["view"], "orders": ["view", "create"], ... }
+  isSystem    Boolean @default(false) // System default roles cannot be deleted
+  permissions Json // Granular module permission matrix: { "dashboard": ["view"], "orders": ["view", "create"], ... }
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -96,7 +97,7 @@ model TenantMember {
   id           String    @id @default(uuid())
   tenantId     String
   userId       String
-  roleId       String?   // Relation to dynamic TenantRole
+  roleId       String? // Relation to dynamic TenantRole
   isOwner      Boolean   @default(false) // Direct owner flag with full store access
   status       String    @default("active") // 'active' | 'invited' | 'deactivated'
   twoFactor    Boolean   @default(false)

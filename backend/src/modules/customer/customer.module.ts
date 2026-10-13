@@ -36,5 +36,5 @@ import { CustomerFaqModule } from './faq/faq.module';
     CustomerFaqModule,
   ],
 })
-export class CustomerModule {}
+export class CustomerModule { }
 

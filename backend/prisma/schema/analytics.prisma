@@ -15,3 +15,18 @@ model SearchQueryLog {
   @@index([tenantId, count(sort: Desc)])
   @@map("search_query_logs")
 }
+model CustomerLoginLog {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  email     String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([tenantId, userId])
+  @@index([tenantId, email])
+  @@map("customer_login_logs")
+}

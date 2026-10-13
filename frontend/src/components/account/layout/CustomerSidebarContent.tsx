@@ -20,6 +20,20 @@ import { useStore } from '@/contexts/StoreContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { cn } from '@/utils/cn';
 
+interface CustomerNavItem {
+  label: string;
+  href: string;
+  icon: any;
+  exact?: boolean;
+  badge?: number;
+  isLive?: boolean;
+}
+
+interface CustomerNavGroup {
+  category?: string;
+  items: CustomerNavItem[];
+}
+
 interface CustomerSidebarContentProps {
   onItemClick?: () => void;
   onLogoutClick?: () => void;
@@ -44,7 +58,7 @@ export function CustomerSidebarContent({
   const wishlistCount = wishlist.length;
 
   // Nav Groups strictly matching Admin Dashboard structure
-  const navGroups = [
+  const navGroups: CustomerNavGroup[] = [
     {
       category: '',
       items: [

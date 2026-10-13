@@ -49,8 +49,16 @@ export interface AnalyticsOverviewResponse {
     totalCustomers?: number;
     prevReturningRate?: number;
     shippingRevenue?: number;
+    shippingDelta?: string;
+    prevShipping?: number;
     tax?: number;
     conversionRate?: number;
+    conversionDelta?: string;
+    prevConversionRate?: number;
+    loggedInCustomers?: number;
+    orderingCustomers?: number;
+    prevLoggedInCustomers?: number;
+    prevOrderingCustomers?: number;
     cartAbandonment?: number;
   };
 }

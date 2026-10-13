@@ -7,7 +7,7 @@ import { OrderStatus, PaymentMethod, OrderChannel } from '../../../../prisma/gen
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // Helper to resolve the active tenant ID
   private async resolveTenantId(tenantId?: string): Promise<string> {
@@ -132,6 +132,7 @@ export class AnalyticsService {
       include: {
         shippingAddress: true,
         items: true,
+        customer: { select: { userId: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -149,9 +150,11 @@ export class AnalyticsService {
       select: {
         total: true,
         discount: true,
+        shipping: true,
         customerId: true,
         email: true,
         phone: true,
+        customer: { select: { userId: true } },
       },
     });
 
@@ -200,14 +203,14 @@ export class AnalyticsService {
         method === PaymentMethod.COD
           ? 'Cash on delivery'
           : method === PaymentMethod.BKASH
-          ? 'bKash'
-          : method === PaymentMethod.NAGAD
-          ? 'Nagad'
-          : method === PaymentMethod.SSLCOMMERZ
-          ? 'SSLCommerz'
-          : method === PaymentMethod.STRIPE
-          ? 'Stripe'
-          : 'Other';
+            ? 'bKash'
+            : method === PaymentMethod.NAGAD
+              ? 'Nagad'
+              : method === PaymentMethod.SSLCOMMERZ
+                ? 'SSLCommerz'
+                : method === PaymentMethod.STRIPE
+                  ? 'Stripe'
+                  : 'Other';
       paymentTotals.set(cleanMethod, (paymentTotals.get(cleanMethod) || 0) + 1);
 
       // Channel
@@ -420,6 +423,128 @@ export class AnalyticsService {
       returningDelta = `+${returningRate} pt`;
     }
 
+    // Real Customer Login & Conversion Rate (Logged-in Customers who ordered / Total Logged-in Customers)
+    const currentLoginLogs = await this.prisma.customerLoginLog.findMany({
+      where: {
+        tenantId: targetTenantId,
+        createdAt: { gte: start, lte: end },
+      },
+      select: {
+        userId: true,
+        email: true,
+      },
+    });
+
+    const userToCanonical = new Map<string, string>();
+    const emailToCanonical = new Map<string, string>();
+    const loggedInCustomerKeys = new Set<string>();
+
+    for (const log of currentLoginLogs) {
+      const canonical = log.userId || (log.email ? `email:${log.email.trim().toLowerCase()}` : `log:${log.userId}`);
+      loggedInCustomerKeys.add(canonical);
+      if (log.userId) {
+        userToCanonical.set(log.userId, canonical);
+      }
+      if (log.email) {
+        emailToCanonical.set(log.email.trim().toLowerCase(), canonical);
+      }
+    }
+
+    const loggedInCustomersCount = loggedInCustomerKeys.size;
+
+    const orderingLoggedInCustomerKeys = new Set<string>();
+    for (const o of orders) {
+      const oUserId = o.customer?.userId;
+      const oEmail = o.email ? o.email.trim().toLowerCase() : null;
+
+      let matchedCanonical: string | undefined;
+      if (oUserId && userToCanonical.has(oUserId)) {
+        matchedCanonical = userToCanonical.get(oUserId);
+      } else if (oEmail && emailToCanonical.has(oEmail)) {
+        matchedCanonical = emailToCanonical.get(oEmail);
+      }
+
+      if (matchedCanonical) {
+        orderingLoggedInCustomerKeys.add(matchedCanonical);
+      }
+    }
+
+    const orderingCustomersCount = orderingLoggedInCustomerKeys.size;
+    const conversionRate =
+      loggedInCustomersCount > 0
+        ? Number(((orderingCustomersCount / loggedInCustomersCount) * 100).toFixed(1))
+        : 0;
+
+    // Previous Period Conversion Rate
+    const prevLoginLogs = await this.prisma.customerLoginLog.findMany({
+      where: {
+        tenantId: targetTenantId,
+        createdAt: { gte: prevStart, lte: prevEnd },
+      },
+      select: {
+        userId: true,
+        email: true,
+      },
+    });
+
+    const prevUserToCanonical = new Map<string, string>();
+    const prevEmailToCanonical = new Map<string, string>();
+    const prevLoggedInCustomerKeys = new Set<string>();
+
+    for (const log of prevLoginLogs) {
+      const canonical = log.userId || (log.email ? `email:${log.email.trim().toLowerCase()}` : `log:${log.userId}`);
+      prevLoggedInCustomerKeys.add(canonical);
+      if (log.userId) {
+        prevUserToCanonical.set(log.userId, canonical);
+      }
+      if (log.email) {
+        prevEmailToCanonical.set(log.email.trim().toLowerCase(), canonical);
+      }
+    }
+
+    const prevLoggedInCustomersCount = prevLoggedInCustomerKeys.size;
+
+    const prevOrderingLoggedInCustomerKeys = new Set<string>();
+    for (const po of prevOrders) {
+      const poUserId = po.customer?.userId;
+      const poEmail = po.email ? po.email.trim().toLowerCase() : null;
+
+      let matchedCanonical: string | undefined;
+      if (poUserId && prevUserToCanonical.has(poUserId)) {
+        matchedCanonical = prevUserToCanonical.get(poUserId);
+      } else if (poEmail && prevEmailToCanonical.has(poEmail)) {
+        matchedCanonical = prevEmailToCanonical.get(poEmail);
+      }
+
+      if (matchedCanonical) {
+        prevOrderingLoggedInCustomerKeys.add(matchedCanonical);
+      }
+    }
+
+    const prevOrderingCustomersCount = prevOrderingLoggedInCustomerKeys.size;
+    const prevConversionRate =
+      prevLoggedInCustomersCount > 0
+        ? Number(((prevOrderingCustomersCount / prevLoggedInCustomersCount) * 100).toFixed(1))
+        : 0;
+
+    let conversionDelta = '+0 pt';
+    if (prevConversionRate > 0) {
+      const diff = Number((conversionRate - prevConversionRate).toFixed(1));
+      conversionDelta = `${diff >= 0 ? '+' : ''}${diff} pt`;
+    } else if (conversionRate > 0) {
+      conversionDelta = `+${conversionRate} pt`;
+    }
+
+    // Shipping revenue delta
+    const prevTotalShipping = prevOrders.reduce((sum, o) => sum + (Number(o.shipping) || 0), 0);
+    let shippingDelta = '+0%';
+    if (prevTotalShipping > 0) {
+      const diff = Math.round(((totalShipping - prevTotalShipping) / prevTotalShipping) * 100);
+      shippingDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (totalShipping > 0) {
+      shippingDelta = '+100%';
+    }
+
     // Convert Sales by District
     const salesByRegion = Array.from(districtTotals.entries())
       .map(([name, value]) => ({ name, value }))
@@ -475,9 +600,17 @@ export class AnalyticsService {
           returningCustomers: returningCustomersCount,
           totalCustomers: totalCustomersInPeriod,
           prevReturningRate,
+          conversionRate,
+          conversionDelta,
+          prevConversionRate,
+          loggedInCustomers: loggedInCustomersCount,
+          orderingCustomers: orderingCustomersCount,
+          prevLoggedInCustomers: prevLoggedInCustomersCount,
+          prevOrderingCustomers: prevOrderingCustomersCount,
           shippingRevenue: totalShipping,
+          shippingDelta,
+          prevShipping: prevTotalShipping,
           tax: 0,
-          conversionRate: 3.2,
           cartAbandonment: 65.4,
         },
       },
