@@ -32,8 +32,13 @@ export interface AnalyticsOverviewResponse {
   kpis: {
     grossSales: number;
     netSales: number;
+    salesDelta?: string;
     orders: number;
+    ordersDelta?: string;
+    prevOrders?: number;
     aov: number;
+    aovDelta?: string;
+    prevAov?: number;
     productsSold: number;
     refunds: number;
     discounts: number;

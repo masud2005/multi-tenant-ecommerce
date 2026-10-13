@@ -30,40 +30,50 @@ export class AnalyticsService {
     return defaultTenant.id;
   }
 
-  // Calculate start date from range string
-  private getStartDateForRange(range?: string): Date | null {
-    if (!range) return null;
+  // Calculate date boundaries for current period and comparison previous period
+  private getPeriodBounds(range?: string): {
+    start: Date;
+    end: Date;
+    prevStart: Date;
+    prevEnd: Date;
+  } {
     const now = new Date();
-    const normalized = range.toLowerCase().trim();
+    const normalized = (range || '30 days').toLowerCase().trim();
 
     if (normalized.includes('today')) {
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
-      return today;
-    }
-    if (normalized.includes('7')) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 7);
-      return d;
-    }
-    if (normalized.includes('30')) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 30);
-      return d;
-    }
-    if (normalized.includes('90')) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 90);
-      return d;
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+
+      const prevStart = new Date(start);
+      prevStart.setDate(prevStart.getDate() - 1);
+
+      const prevEnd = new Date(start);
+      prevEnd.setMilliseconds(-1);
+
+      return { start, end: now, prevStart, prevEnd };
     }
 
-    return null;
+    let days = 30;
+    if (normalized.includes('7')) {
+      days = 7;
+    } else if (normalized.includes('90')) {
+      days = 90;
+    } else if (normalized.includes('30')) {
+      days = 30;
+    }
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const start = new Date(now.getTime() - days * msPerDay);
+    const prevStart = new Date(now.getTime() - 2 * days * msPerDay);
+    const prevEnd = start;
+
+    return { start, end: now, prevStart, prevEnd };
   }
 
   // 1. Get Real Sales aggregated by District from Database
   async getSalesByDistrict(range?: string, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
-    const startDate = this.getStartDateForRange(range);
+    const { start, end } = this.getPeriodBounds(range);
 
     const orders = await this.prisma.order.findMany({
       where: {
@@ -72,7 +82,7 @@ export class AnalyticsService {
         status: {
           notIn: [OrderStatus.CANCELLED],
         },
-        ...(startDate ? { createdAt: { gte: startDate } } : {}),
+        createdAt: { gte: start, lte: end },
       },
       select: {
         total: true,
@@ -107,7 +117,7 @@ export class AnalyticsService {
   // 2. Full Analytics Overview with Real Data from PostgreSQL
   async getAnalyticsOverview(range?: string, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
-    const startDate = this.getStartDateForRange(range) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const { start, end, prevStart, prevEnd } = this.getPeriodBounds(range);
 
     // Fetch all non-cancelled orders for current period
     const orders = await this.prisma.order.findMany({
@@ -117,13 +127,28 @@ export class AnalyticsService {
         status: {
           notIn: [OrderStatus.CANCELLED],
         },
-        createdAt: { gte: startDate },
+        createdAt: { gte: start, lte: end },
       },
       include: {
         shippingAddress: true,
         items: true,
       },
       orderBy: { createdAt: 'asc' },
+    });
+
+    // Fetch all non-cancelled orders for previous period to calculate real delta
+    const prevOrders = await this.prisma.order.findMany({
+      where: {
+        tenantId: targetTenantId,
+        deletedAt: null,
+        status: {
+          notIn: [OrderStatus.CANCELLED],
+        },
+        createdAt: { gte: prevStart, lte: prevEnd },
+      },
+      select: {
+        total: true,
+      },
     });
 
     // 1) Sales by District
@@ -200,6 +225,36 @@ export class AnalyticsService {
     const orderCount = orders.length;
     const aov = orderCount > 0 ? Math.round(netSales / orderCount) : 0;
 
+    // Previous period stats
+    const prevOrderCount = prevOrders.length;
+    const prevNetSales = prevOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const prevAov = prevOrderCount > 0 ? Math.round(prevNetSales / prevOrderCount) : 0;
+
+    // Calculate real deltas
+    let ordersDelta = '+0%';
+    if (prevOrderCount > 0) {
+      const diff = Math.round(((orderCount - prevOrderCount) / prevOrderCount) * 100);
+      ordersDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (orderCount > 0) {
+      ordersDelta = '+100%';
+    }
+
+    let aovDelta = '+0%';
+    if (prevAov > 0) {
+      const diff = Math.round(((aov - prevAov) / prevAov) * 100);
+      aovDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (aov > 0) {
+      aovDelta = '+100%';
+    }
+
+    let salesDelta = '+0%';
+    if (prevNetSales > 0) {
+      const diff = Math.round(((netSales - prevNetSales) / prevNetSales) * 100);
+      salesDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (netSales > 0) {
+      salesDelta = '+100%';
+    }
+
     // Convert Sales by District
     const salesByRegion = Array.from(districtTotals.entries())
       .map(([name, value]) => ({ name, value }))
@@ -240,8 +295,13 @@ export class AnalyticsService {
         kpis: {
           grossSales,
           netSales,
+          salesDelta,
           orders: orderCount,
+          ordersDelta,
+          prevOrders: prevOrderCount,
           aov,
+          aovDelta,
+          prevAov,
           productsSold: totalProductsSold,
           refunds: totalRefunds,
           discounts: totalDiscount,

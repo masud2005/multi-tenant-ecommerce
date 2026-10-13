@@ -19,7 +19,6 @@ import {
   salesSeries as mockSalesSeries,
   kpis as mockKpis,
   salesByRegion as mockSalesByRegion,
-  salesByChannel as mockSalesByChannel,
 } from '@/data/analytics';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
@@ -43,33 +42,66 @@ export default function AdminAnalyticsPage() {
   const [isLoadingRegion, setIsLoadingRegion] = useState(false);
   const [searchesData, setSearchesData] = useState<SearchQueryItem[]>([]);
   const [isLoadingSearches, setIsLoadingSearches] = useState(false);
+  const [seriesData, setSeriesData] = useState<any[]>([]);
+  const [realKpis, setRealKpis] = useState<{
+    orders: number;
+    ordersDelta: string;
+    aov: number;
+    aovDelta: string;
+    netSales: number;
+    grossSales: number;
+    salesDelta: string;
+  } | null>(null);
+  const [isLoadingKpis, setIsLoadingKpis] = useState(false);
 
-  // Fetch real database sales by district whenever date range changes
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadDistrictSales() {
+  // Fetch real database KPIs (Orders, AOV, Sales, District) whenever date range changes
+  const fetchOverview = useCallback(
+    async (selectedRange: (typeof ranges)[number], showLoader = false) => {
       try {
-        setIsLoadingRegion(true);
-        const data = await analyticsService.getSalesByDistrict(range);
-        if (mounted && data && data.length > 0) {
-          setRegionData(data);
+        if (showLoader) {
+          setIsLoadingKpis(true);
+          setIsLoadingRegion(true);
+        }
+        const overview = await analyticsService.getAnalyticsOverview(selectedRange);
+        if (overview?.kpis) {
+          setRealKpis({
+            orders: overview.kpis.orders,
+            ordersDelta: overview.kpis.ordersDelta || '+0%',
+            aov: overview.kpis.aov,
+            aovDelta: overview.kpis.aovDelta || '+0%',
+            netSales: overview.kpis.netSales,
+            grossSales: overview.kpis.grossSales,
+            salesDelta: overview.kpis.salesDelta || '+0%',
+          });
+          if (Array.isArray(overview.salesByRegion) && overview.salesByRegion.length > 0) {
+            setRegionData(overview.salesByRegion);
+          }
+          if (Array.isArray(overview.salesSeries) && overview.salesSeries.length > 0) {
+            setSeriesData(overview.salesSeries);
+          }
         }
       } catch (err) {
-        console.error('Failed to load real district sales:', err);
+        console.error('Failed to load real analytics overview:', err);
       } finally {
-        if (mounted) {
+        if (showLoader) {
+          setIsLoadingKpis(false);
           setIsLoadingRegion(false);
         }
       }
-    }
+    },
+    []
+  );
 
-    loadDistrictSales();
+  useEffect(() => {
+    fetchOverview(range, true);
 
-    return () => {
-      mounted = false;
-    };
-  }, [range]);
+    // Auto-refresh real KPIs every 5 seconds so live customer orders reflect dynamically
+    const interval = setInterval(() => {
+      fetchOverview(range, false);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [range, fetchOverview]);
 
   // Fetch real database top searches from PostgreSQL with auto-polling
   const fetchTopSearches = useCallback(async (showLoader = false) => {
@@ -98,14 +130,22 @@ export default function AdminAnalyticsPage() {
   }, [fetchTopSearches]);
 
   const secondary = [
-    ['Orders', formatNumber(mockKpis.orders), '+18%'],
-    ['Avg. order value', formatBDT(mockKpis.aov), '+4%'],
-    ['Conversion rate', `${mockKpis.conversionRate}%`, '+0.3 pt'],
-    ['Returning customers', `${mockKpis.returningRate}%`, '+2 pt'],
-    ['Refunds', formatBDT(mockKpis.refunds), '−6%'],
-    ['Discounts', formatBDT(mockKpis.discounts), '+11%'],
-    ['Shipping revenue', formatBDT(mockKpis.shippingRevenue), '+9%'],
-    ['Cart abandonment', `${mockKpis.cartAbandonment}%`, '−1.4 pt'],
+    [
+      'Orders',
+      realKpis ? formatNumber(realKpis.orders) : formatNumber(mockKpis.orders),
+      realKpis ? realKpis.ordersDelta : '+18%',
+      Boolean(realKpis),
+    ],
+    [
+      'Avg. order value',
+      realKpis ? formatBDT(realKpis.aov) : formatBDT(mockKpis.aov),
+      realKpis ? realKpis.aovDelta : '+4%',
+      Boolean(realKpis),
+    ],
+    ['Conversion rate', `${mockKpis.conversionRate}%`, '+0.3 pt', false],
+    ['Returning customers', `${mockKpis.returningRate}%`, '+2 pt', false],
+    ['Discounts', formatBDT(mockKpis.discounts), '+11%', false],
+    ['Shipping revenue', formatBDT(mockKpis.shippingRevenue), '+9%', false],
   ];
 
   return (
@@ -156,10 +196,10 @@ export default function AdminAnalyticsPage() {
             <div>
               <p className="text-sm text-ink-muted">Net sales · {range}</p>
               <p className="mt-1 text-3xl font-semibold tabular-nums text-ink">
-                {formatBDT(mockKpis.netSales)}
+                {formatBDT(realKpis ? realKpis.netSales : mockKpis.netSales)}
               </p>
               <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                +22.4% vs previous period · Gross {formatBDT(mockKpis.grossSales)}
+                {realKpis ? `${realKpis.salesDelta} vs previous period` : '+22.4% vs previous period'} · Gross {formatBDT(realKpis ? realKpis.grossSales : mockKpis.grossSales)}
               </p>
             </div>
             <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
@@ -175,7 +215,7 @@ export default function AdminAnalyticsPage() {
           <div className="mt-5 h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
-                data={mockSalesSeries}
+                data={seriesData.length > 0 ? seriesData : mockSalesSeries}
                 margin={{ left: 0, right: 8, top: 8 }}
               >
                 <CartesianGrid stroke="#E9E4DA" vertical={false} opacity={0.5} />
@@ -226,19 +266,29 @@ export default function AdminAnalyticsPage() {
           </div>
         </Panel>
 
-        <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-4">
-          {secondary.map(([l, v, d]) => (
-            <div key={l} className="bg-surface px-4 py-3">
-              <dt className="text-xs text-ink-muted">{l}</dt>
+        <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
+          {secondary.map(([l, v, d, isReal]) => (
+            <div key={l as string} className="bg-surface px-4 py-3">
+              <div className="flex items-center justify-between">
+                <dt className="text-xs text-ink-muted">{l as string}</dt>
+                {isReal && (
+                  <span
+                    title="Real database live data"
+                    className="inline-flex items-center text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+                  >
+                    ● Real
+                  </span>
+                )}
+              </div>
               <dd className="mt-1 text-base font-semibold tabular-nums text-ink">
-                {v}{' '}
-                <span className="text-xs font-normal text-ink-muted">{d}</span>
+                {v as string}{' '}
+                <span className="text-xs font-normal text-ink-muted">{d as string}</span>
               </dd>
             </div>
           ))}
         </dl>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           {/* Real Database Connected: Sales by District */}
           <Panel
             title="Sales by district"
@@ -299,29 +349,6 @@ export default function AdminAnalyticsPage() {
             </div>
           </Panel>
 
-          {/* Traffic Source */}
-          <Panel title="Traffic source">
-            <ul className="space-y-2.5">
-              {mockSalesByChannel.map((d) => (
-                <li
-                  key={d.name}
-                  className="grid grid-cols-[130px_1fr_40px] items-center gap-3 text-sm"
-                >
-                  <span className="text-ink">{d.name}</span>
-                  <div className="h-2 rounded-full bg-subtle">
-                    <div
-                      className="h-full rounded-full bg-clay"
-                      style={{ width: `${d.value}%` }}
-                    />
-                  </div>
-                  <span className="text-right tabular-nums text-ink-muted">
-                    {d.value}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-
           {/* Real Database Connected: Top Searches */}
           <Panel
             title="Top searches"
@@ -349,7 +376,6 @@ export default function AdminAnalyticsPage() {
               </div>
             }
             flush
-            className="lg:col-span-2"
           >
             {searchesData.length === 0 ? (
               <div className="px-5 py-8 text-center text-xs text-ink-muted">

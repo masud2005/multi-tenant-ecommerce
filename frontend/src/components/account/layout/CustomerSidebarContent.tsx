@@ -15,12 +15,10 @@ import {
   User,
   Shield,
   ExternalLink,
-  Wallet,
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { cn } from '@/utils/cn';
-import { formatBDT } from '@/utils/format';
 
 interface CustomerSidebarContentProps {
   onItemClick?: () => void;
@@ -31,18 +29,8 @@ export function CustomerSidebarContent({
   onItemClick,
 }: CustomerSidebarContentProps) {
   const pathname = usePathname();
-  const { user, orders, returns, wishlist, storeCredit } = useStore();
+  const { orders, returns, wishlist } = useStore();
   const { tenant } = useTenant();
-
-  const customerName = user?.name || user?.email?.split('@')[0] || 'Customer';
-  const customerEmail = user?.email || '';
-  const initials = customerName
-    .split(' ')
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || 'CU';
 
   // Counts for badges
   const activeOrdersCount = orders.filter((o) =>
@@ -159,31 +147,6 @@ export function CustomerSidebarContent({
         </Link>
       </div>
 
-      {/* 2. Customer Profile Card Widget (Admin theme neutral colors) */}
-      <div className="p-3 border-b border-line bg-canvas">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface border border-line text-xs font-semibold text-ink shrink-0">
-            {initials}
-          </span>
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-xs font-semibold text-ink">{customerName}</p>
-            <p className="truncate text-[11px] text-ink-muted">{customerEmail}</p>
-          </div>
-          <span className="rounded-full border border-line bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
-            VIP
-          </span>
-        </div>
-
-        {/* Store Credit Widget */}
-        <div className="mt-2.5 flex items-center justify-between rounded-md border border-line bg-surface px-2.5 py-1 text-xs">
-          <span className="flex items-center gap-1.5 text-ink-muted text-[11px]">
-            <Wallet className="h-3.5 w-3.5 text-ink-muted" /> Store Credit
-          </span>
-          <span className="font-semibold text-ink text-xs">
-            {formatBDT(storeCredit || 500)}
-          </span>
-        </div>
-      </div>
 
       {/* 3. Navigation Groups (Exact 1:1 match with Admin Sidebar: bg-surface text-ink shadow-sm) */}
       <nav aria-label="Customer Navigation" className="flex-1 overflow-y-auto px-2.5 py-3 scrollbar-none">
