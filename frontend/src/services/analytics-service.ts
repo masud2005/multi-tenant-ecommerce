@@ -63,6 +63,9 @@ export interface AnalyticsOverviewResponse {
   };
 }
 
+let lastLoggedSearchTerm = '';
+let lastLoggedSearchTime = 0;
+
 export const analyticsService = {
   // Check if current session belongs to an admin/owner
   isAdminUser(): boolean {
@@ -112,6 +115,14 @@ export const analyticsService = {
 
     const cleanTerm = term ? term.trim().toLowerCase() : '';
     if (!cleanTerm || cleanTerm.length < 2) return;
+
+    // Deduplicate: avoid logging the same search term multiple times within 3 seconds
+    const now = Date.now();
+    if (lastLoggedSearchTerm === cleanTerm && now - lastLoggedSearchTime < 3000) {
+      return;
+    }
+    lastLoggedSearchTerm = cleanTerm;
+    lastLoggedSearchTime = now;
 
     try {
       return await apiClient.post('/customer/search/log', {
