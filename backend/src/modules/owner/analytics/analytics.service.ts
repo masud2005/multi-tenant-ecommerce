@@ -148,6 +148,10 @@ export class AnalyticsService {
       },
       select: {
         total: true,
+        discount: true,
+        customerId: true,
+        email: true,
+        phone: true,
       },
     });
 
@@ -228,6 +232,7 @@ export class AnalyticsService {
     // Previous period stats
     const prevOrderCount = prevOrders.length;
     const prevNetSales = prevOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const prevTotalDiscount = prevOrders.reduce((sum, o) => sum + (Number(o.discount) || 0), 0);
     const prevAov = prevOrderCount > 0 ? Math.round(prevNetSales / prevOrderCount) : 0;
 
     // Calculate real deltas
@@ -253,6 +258,166 @@ export class AnalyticsService {
       salesDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
     } else if (netSales > 0) {
       salesDelta = '+100%';
+    }
+
+    // Real Discounts delta
+    let discountsDelta = '+0%';
+    if (prevTotalDiscount > 0) {
+      const diff = Math.round(((totalDiscount - prevTotalDiscount) / prevTotalDiscount) * 100);
+      discountsDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (totalDiscount > 0) {
+      discountsDelta = '+100%';
+    }
+
+    // Customer key resolver helper
+    const getCustomerKey = (o: {
+      customerId?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    }) => {
+      if (o.customerId) return `id:${o.customerId}`;
+      if (o.email) return `email:${o.email.trim().toLowerCase()}`;
+      if (o.phone) return `phone:${o.phone.trim()}`;
+      return null;
+    };
+
+    // Calculate Real Returning Customers for Current Period
+    const currentCustomerCounts = new Map<string, number>();
+    for (const o of orders) {
+      const key = getCustomerKey(o);
+      if (key) {
+        currentCustomerCounts.set(key, (currentCustomerCounts.get(key) || 0) + 1);
+      }
+    }
+
+    const currentCustomerIds = orders.map((o) => o.customerId).filter(Boolean) as string[];
+    const currentCustomerEmails = orders.map((o) => o.email?.trim().toLowerCase()).filter(Boolean);
+    const currentCustomerPhones = orders.map((o) => o.phone?.trim()).filter(Boolean);
+
+    const returningCustomerKeys = new Set<string>();
+
+    if (
+      currentCustomerIds.length > 0 ||
+      currentCustomerEmails.length > 0 ||
+      currentCustomerPhones.length > 0
+    ) {
+      const pastCustomerOrders = await this.prisma.order.findMany({
+        where: {
+          tenantId: targetTenantId,
+          deletedAt: null,
+          status: {
+            notIn: [OrderStatus.CANCELLED],
+          },
+          createdAt: { lt: start },
+          OR: [
+            ...(currentCustomerIds.length > 0 ? [{ customerId: { in: currentCustomerIds } }] : []),
+            ...(currentCustomerEmails.length > 0 ? [{ email: { in: currentCustomerEmails } }] : []),
+            ...(currentCustomerPhones.length > 0 ? [{ phone: { in: currentCustomerPhones } }] : []),
+          ],
+        },
+        select: {
+          customerId: true,
+          email: true,
+          phone: true,
+        },
+      });
+
+      for (const po of pastCustomerOrders) {
+        const key = getCustomerKey(po);
+        if (key) returningCustomerKeys.add(key);
+      }
+    }
+
+    // Customers who placed 2+ orders in current period are also returning/repeat customers
+    for (const [key, count] of currentCustomerCounts.entries()) {
+      if (count > 1) {
+        returningCustomerKeys.add(key);
+      }
+    }
+
+    const totalCustomersInPeriod = currentCustomerCounts.size;
+    let returningCustomersCount = 0;
+    for (const key of currentCustomerCounts.keys()) {
+      if (returningCustomerKeys.has(key)) {
+        returningCustomersCount++;
+      }
+    }
+
+    const returningRate =
+      totalCustomersInPeriod > 0
+        ? Number(((returningCustomersCount / totalCustomersInPeriod) * 100).toFixed(1))
+        : 0;
+
+    // Calculate Real Returning Customers for Previous Period (for point delta)
+    const prevCustomerCounts = new Map<string, number>();
+    for (const o of prevOrders) {
+      const key = getCustomerKey(o);
+      if (key) {
+        prevCustomerCounts.set(key, (prevCustomerCounts.get(key) || 0) + 1);
+      }
+    }
+
+    const prevCustomerIds = prevOrders.map((o) => o.customerId).filter(Boolean) as string[];
+    const prevCustomerEmails = prevOrders.map((o) => o.email?.trim().toLowerCase()).filter(Boolean);
+    const prevCustomerPhones = prevOrders.map((o) => o.phone?.trim()).filter(Boolean);
+
+    let prevReturningRate = 0;
+    if (
+      prevCustomerIds.length > 0 ||
+      prevCustomerEmails.length > 0 ||
+      prevCustomerPhones.length > 0
+    ) {
+      const prevPastOrders = await this.prisma.order.findMany({
+        where: {
+          tenantId: targetTenantId,
+          deletedAt: null,
+          status: {
+            notIn: [OrderStatus.CANCELLED],
+          },
+          createdAt: { lt: prevStart },
+          OR: [
+            ...(prevCustomerIds.length > 0 ? [{ customerId: { in: prevCustomerIds } }] : []),
+            ...(prevCustomerEmails.length > 0 ? [{ email: { in: prevCustomerEmails } }] : []),
+            ...(prevCustomerPhones.length > 0 ? [{ phone: { in: prevCustomerPhones } }] : []),
+          ],
+        },
+        select: {
+          customerId: true,
+          email: true,
+          phone: true,
+        },
+      });
+
+      const prevReturningKeys = new Set<string>();
+      for (const po of prevPastOrders) {
+        const key = getCustomerKey(po);
+        if (key) prevReturningKeys.add(key);
+      }
+      for (const [key, count] of prevCustomerCounts.entries()) {
+        if (count > 1) {
+          prevReturningKeys.add(key);
+        }
+      }
+
+      let prevReturningCount = 0;
+      for (const key of prevCustomerCounts.keys()) {
+        if (prevReturningKeys.has(key)) {
+          prevReturningCount++;
+        }
+      }
+
+      prevReturningRate =
+        prevCustomerCounts.size > 0
+          ? Number(((prevReturningCount / prevCustomerCounts.size) * 100).toFixed(1))
+          : 0;
+    }
+
+    let returningDelta = '+0 pt';
+    if (prevReturningRate > 0) {
+      const diff = Number((returningRate - prevReturningRate).toFixed(1));
+      returningDelta = `${diff >= 0 ? '+' : ''}${diff} pt`;
+    } else if (returningRate > 0) {
+      returningDelta = `+${returningRate} pt`;
     }
 
     // Convert Sales by District
@@ -302,14 +467,18 @@ export class AnalyticsService {
           aov,
           aovDelta,
           prevAov,
-          productsSold: totalProductsSold,
-          refunds: totalRefunds,
           discounts: totalDiscount,
+          discountsDelta,
+          prevDiscounts: prevTotalDiscount,
+          returningRate,
+          returningDelta,
+          returningCustomers: returningCustomersCount,
+          totalCustomers: totalCustomersInPeriod,
+          prevReturningRate,
           shippingRevenue: totalShipping,
           tax: 0,
           conversionRate: 3.2,
           cartAbandonment: 65.4,
-          returningRate: 35.0,
         },
       },
       'Analytics overview retrieved successfully',

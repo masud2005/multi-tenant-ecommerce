@@ -38,15 +38,20 @@ export interface AnalyticsOverviewResponse {
     prevOrders?: number;
     aov: number;
     aovDelta?: string;
-    prevAov?: number;
-    productsSold: number;
-    refunds: number;
+    productsSold?: number;
+    refunds?: number;
     discounts: number;
-    shippingRevenue: number;
-    tax: number;
-    conversionRate: number;
-    cartAbandonment: number;
+    discountsDelta?: string;
+    prevDiscounts?: number;
     returningRate: number;
+    returningDelta?: string;
+    returningCustomers?: number;
+    totalCustomers?: number;
+    prevReturningRate?: number;
+    shippingRevenue?: number;
+    tax?: number;
+    conversionRate?: number;
+    cartAbandonment?: number;
   };
 }
 

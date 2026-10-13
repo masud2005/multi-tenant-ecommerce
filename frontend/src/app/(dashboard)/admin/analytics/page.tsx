@@ -48,13 +48,19 @@ export default function AdminAnalyticsPage() {
     ordersDelta: string;
     aov: number;
     aovDelta: string;
+    discounts: number;
+    discountsDelta: string;
+    returningRate: number;
+    returningDelta: string;
+    returningCustomers?: number;
+    totalCustomers?: number;
     netSales: number;
     grossSales: number;
     salesDelta: string;
   } | null>(null);
   const [isLoadingKpis, setIsLoadingKpis] = useState(false);
 
-  // Fetch real database KPIs (Orders, AOV, Sales, District) whenever date range changes
+  // Fetch real database KPIs (Orders, AOV, Returning Customers, Discounts, Sales, District) whenever date range changes
   const fetchOverview = useCallback(
     async (selectedRange: (typeof ranges)[number], showLoader = false) => {
       try {
@@ -69,6 +75,12 @@ export default function AdminAnalyticsPage() {
             ordersDelta: overview.kpis.ordersDelta || '+0%',
             aov: overview.kpis.aov,
             aovDelta: overview.kpis.aovDelta || '+0%',
+            discounts: overview.kpis.discounts,
+            discountsDelta: overview.kpis.discountsDelta || '+0%',
+            returningRate: overview.kpis.returningRate,
+            returningDelta: overview.kpis.returningDelta || '+0 pt',
+            returningCustomers: overview.kpis.returningCustomers,
+            totalCustomers: overview.kpis.totalCustomers,
             netSales: overview.kpis.netSales,
             grossSales: overview.kpis.grossSales,
             salesDelta: overview.kpis.salesDelta || '+0%',
@@ -143,8 +155,18 @@ export default function AdminAnalyticsPage() {
       Boolean(realKpis),
     ],
     ['Conversion rate', `${mockKpis.conversionRate}%`, '+0.3 pt', false],
-    ['Returning customers', `${mockKpis.returningRate}%`, '+2 pt', false],
-    ['Discounts', formatBDT(mockKpis.discounts), '+11%', false],
+    [
+      'Returning customers',
+      realKpis ? `${realKpis.returningRate}%` : `${mockKpis.returningRate}%`,
+      realKpis ? realKpis.returningDelta : '+2 pt',
+      Boolean(realKpis),
+    ],
+    [
+      'Discounts',
+      realKpis ? formatBDT(realKpis.discounts) : formatBDT(mockKpis.discounts),
+      realKpis ? realKpis.discountsDelta : '+11%',
+      Boolean(realKpis),
+    ],
     ['Shipping revenue', formatBDT(mockKpis.shippingRevenue), '+9%', false],
   ];
 
