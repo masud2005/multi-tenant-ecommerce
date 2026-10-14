@@ -15,6 +15,7 @@ import { OwnerSupportModule } from './support/support.module';
 import { OwnerAnalyticsModule } from './analytics/analytics.module';
 import { OwnerFaqModule } from './faq/faq.module';
 import { StaffModule } from './staff/staff.module';
+import { OwnerPageModule } from './page/page.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { StaffModule } from './staff/staff.module';
     OwnerAnalyticsModule,
     OwnerFaqModule,
     StaffModule,
+    OwnerPageModule,
   ],
   exports: [
     CategoryModule,
@@ -52,6 +54,7 @@ import { StaffModule } from './staff/staff.module';
     OwnerAnalyticsModule,
     OwnerFaqModule,
     StaffModule,
+    OwnerPageModule,
   ],
 })
 export class OwnerModule {}
