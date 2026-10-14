@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { FaqEditorDrawer, FaqItemData } from '@/components/dashboard/admin/content/FaqEditorDrawer';
 import { ContactEditorDrawer } from '@/components/dashboard/admin/content/ContactEditorDrawer';
+import { AboutEditorDrawer } from '@/components/dashboard/admin/content/AboutEditorDrawer';
 import { faqService } from '@/services/faq-service';
 import { cn } from '@/utils/cn';
 
@@ -37,7 +38,8 @@ export default function AdminContentPage() {
   const [publishMode, setPublishMode] = useState('Publish now');
   const page = cmsPages.find((p) => p.id === editing);
 
-  // FAQ & Contact Editor state
+  // About, Contact & FAQ Editor state
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
   const [faqTitle, setFaqTitle] = useState('Help & FAQ');
@@ -208,6 +210,8 @@ export default function AdminContentPage() {
                         setFaqOpen(true);
                       } else if (p.id === 'pg2' || p.slug === '/contact' || p.title.toLowerCase() === 'contact') {
                         setContactOpen(true);
+                      } else if (p.id === 'pg1' || p.slug === '/about' || p.title.toLowerCase().includes('about')) {
+                        setAboutOpen(true);
                       } else {
                         setEditing(p.id);
                       }
@@ -399,6 +403,12 @@ export default function AdminContentPage() {
         <ContactEditorDrawer
           open={contactOpen}
           onClose={() => setContactOpen(false)}
+        />
+
+        {/* Dedicated About Us Page Editor Drawer */}
+        <AboutEditorDrawer
+          open={aboutOpen}
+          onClose={() => setAboutOpen(false)}
         />
 
 
