@@ -1,10 +1,11 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { policies } from '@/data/content';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { pageService, ReturnsPageData } from '@/services/page-service';
 
 interface PolicyPageProps {
   params: Promise<{ slug: string }>;
@@ -12,9 +13,32 @@ interface PolicyPageProps {
 
 export default function PolicyPage({ params }: PolicyPageProps) {
   const { slug } = use(params);
-  const policy = slug ? policies[slug] : undefined;
+  const staticPolicy = slug ? policies[slug] : undefined;
+  const [dynamicReturns, setDynamicReturns] = useState<ReturnsPageData | null>(null);
 
-  if (!policy) {
+  // Fetch dynamic Returns policy from backend if viewing returns
+  useEffect(() => {
+    if (slug !== 'returns') return;
+    let isMounted = true;
+
+    async function loadReturns() {
+      try {
+        const data = await pageService.getPublicReturnsPage();
+        if (isMounted && data) {
+          setDynamicReturns(data);
+        }
+      } catch (err) {
+        console.error('Failed to load dynamic return policy:', err);
+      }
+    }
+
+    loadReturns();
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  if (!staticPolicy && !dynamicReturns) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <p className="text-lg font-medium text-ink">Policy not found</p>
@@ -24,6 +48,17 @@ export default function PolicyPage({ params }: PolicyPageProps) {
       </div>
     );
   }
+
+  // Determine active policy data (dynamic if returns and loaded, otherwise static)
+  const isReturns = slug === 'returns';
+  const displayTitle = (isReturns && dynamicReturns?.title) || staticPolicy?.title || 'Policy';
+  const displayHeading = isReturns && dynamicReturns?.heading;
+  const displaySections =
+    isReturns && dynamicReturns?.sections && dynamicReturns.sections.length > 0
+      ? dynamicReturns.sections
+      : staticPolicy?.sections || [];
+  const displayUpdated =
+    (isReturns && dynamicReturns?.updatedAt) || staticPolicy?.updated || '2026-08-01';
 
   return (
     <div className="mx-auto grid max-w-6xl gap-12 px-4 py-12 sm:px-6 lg:grid-cols-[220px_1fr] lg:px-8">
@@ -51,13 +86,20 @@ export default function PolicyPage({ params }: PolicyPageProps) {
         </ul>
       </nav>
       <article className="max-w-2xl">
-        <h1 className="font-display text-4xl">{policy.title}</h1>
-        <p className="mt-2 text-sm text-ink-muted">Last updated {formatDate(policy.updated)}</p>
+        <h1 className="font-display text-4xl">{displayTitle}</h1>
+        {displayHeading && (
+          <p className="mt-2 text-base text-ink-soft font-medium">
+            {displayHeading}
+          </p>
+        )}
+        <p className="mt-2 text-sm text-ink-muted">
+          Last updated {formatDate(displayUpdated)}
+        </p>
         <div className="mt-10 space-y-8">
-          {policy.sections.map((s) => (
-            <section key={s.heading}>
-              <h2 className="text-lg font-semibold">{s.heading}</h2>
-              <p className="mt-2 leading-relaxed text-ink-soft">{s.body}</p>
+          {displaySections.map((s) => (
+            <section key={s.heading} className="space-y-2">
+              <h2 className="text-lg font-semibold text-ink">{s.heading}</h2>
+              <p className="leading-relaxed text-ink-soft whitespace-pre-line">{s.body}</p>
             </section>
           ))}
         </div>
@@ -65,3 +107,4 @@ export default function PolicyPage({ params }: PolicyPageProps) {
     </div>
   );
 }
+
