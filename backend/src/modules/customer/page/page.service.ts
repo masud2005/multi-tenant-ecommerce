@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import { NotFoundException } from '../../../common/exceptions/business.exception';
-import { DEFAULT_ABOUT_PAGE } from '../../owner/page/page.service';
+import { DEFAULT_ABOUT_PAGE, DEFAULT_RETURNS_PAGE } from '../../owner/page/page.service';
 
 @Injectable()
 export class CustomerPageService {
@@ -75,6 +75,19 @@ export class CustomerPageService {
           updatedAt: page?.updatedAt || new Date().toISOString(),
         },
         'About Us page retrieved successfully'
+      );
+    }
+
+    // Default fallback for Returns & Refund policy page
+    if (cleanSlug === 'returns' || cleanSlug === 'policies/returns') {
+      return ResponseHelper.success(
+        {
+          ...DEFAULT_RETURNS_PAGE,
+          id: page?.id || null,
+          slug: 'returns',
+          updatedAt: page?.updatedAt || new Date().toISOString(),
+        },
+        'Returns policy page retrieved successfully'
       );
     }
 

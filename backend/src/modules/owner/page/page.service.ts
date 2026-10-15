@@ -7,6 +7,37 @@ import {
   NotFoundException,
 } from '../../../common/exceptions/business.exception';
 
+export const DEFAULT_RETURNS_PAGE = {
+  title: 'Return & Refund Policy',
+  heading: 'Easy 7-day returns & Cash on Delivery refunds',
+  sections: [
+    {
+      heading: 'Return window',
+      body: 'You may request a return within 7 days of delivery. Items must be unworn, unwashed and have all original tags attached.',
+    },
+    {
+      heading: 'Non-returnable items',
+      body: 'Sarees, jewellery and innerwear are non-returnable unless they arrive damaged or defective. Sale items marked “Final sale” cannot be returned.',
+    },
+    {
+      heading: 'Cash on Delivery (COD) refunds',
+      body: 'For cash on delivery orders, refunds are processed via bKash or Nagad within 3–5 working days after quality inspection, or issued instantly as store credit for your next purchase.',
+    },
+    {
+      heading: 'How refunds work',
+      body: 'Once we receive and inspect your item (usually within 2 working days), refunds are issued to your original payment method: bKash/Nagad within 3 days, cards within 7–10 days. You may choose store credit for an instant refund.',
+    },
+    {
+      heading: 'Exchanges',
+      body: 'Size exchanges are free inside Dhaka. Our courier delivers the replacement and collects the original in a single visit.',
+    },
+  ],
+  status: 'published',
+  seoTitle: 'Return & Refund Policy | Tanti',
+  seoDescription:
+    'Learn about our easy 7-day return process, cash on delivery refund terms and doorstep size exchange.',
+};
+
 export const DEFAULT_ABOUT_PAGE = {
   title: 'Our story',
   heading: 'Clothing that carries the hands that made it',
@@ -183,32 +214,147 @@ export class OwnerPageService {
       },
     });
 
-    // Ensure 'about' page appears in the list even if not yet saved in DB
+    // Ensure 'about' and 'returns' pages appear in the list even if not yet saved in DB
     const hasAbout = pages.some((p) => p.slug === 'about' || p.slug === '/about');
-    const allPages = hasAbout
-      ? pages
-      : [
-          {
-            id: 'default-about',
-            title: DEFAULT_ABOUT_PAGE.title,
-            slug: '/about',
-            status: DEFAULT_ABOUT_PAGE.status,
-            author: 'System Default',
-            updatedAt: new Date(),
-          },
-          ...pages,
-        ];
+    const hasReturns = pages.some(
+      (p) => p.slug === 'returns' || p.slug === '/policies/returns' || p.slug === 'policies/returns'
+    );
+
+    const defaultPages: any[] = [];
+    if (!hasAbout) {
+      defaultPages.push({
+        id: 'default-about',
+        title: DEFAULT_ABOUT_PAGE.title,
+        slug: '/about',
+        status: DEFAULT_ABOUT_PAGE.status,
+        author: 'System Default',
+        updatedAt: new Date(),
+      });
+    }
+    if (!hasReturns) {
+      defaultPages.push({
+        id: 'default-returns',
+        title: DEFAULT_RETURNS_PAGE.title,
+        slug: '/policies/returns',
+        status: DEFAULT_RETURNS_PAGE.status,
+        author: 'System Default',
+        updatedAt: new Date(),
+      });
+    }
+
+    const allPages = [...defaultPages, ...pages];
 
     return ResponseHelper.success(allPages, 'Pages retrieved successfully');
   }
 
-  // Returns page (initial placeholder - API not implemented yet)
+  // 4. Get Returns page content for editing
   async getReturnsPage(tenantId?: string) {
-    return null;
+    if (!tenantId) {
+      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+    }
+
+    const page = await this.prisma.cmsPage.findUnique({
+      where: {
+        tenantId_slug: {
+          tenantId,
+          slug: 'returns',
+        },
+      },
+    });
+
+    if (!page || !page.content) {
+      return ResponseHelper.success(
+        {
+          ...DEFAULT_RETURNS_PAGE,
+          id: page?.id || null,
+          isDefault: !page,
+          updatedAt: page?.updatedAt || new Date().toISOString(),
+        },
+        'Default Returns page retrieved successfully'
+      );
+    }
+
+    try {
+      const parsed = JSON.parse(page.content);
+      return ResponseHelper.success(
+        {
+          ...DEFAULT_RETURNS_PAGE,
+          ...parsed,
+          title: page.title || parsed.title || DEFAULT_RETURNS_PAGE.title,
+          status: page.status || parsed.status || 'published',
+          id: page.id,
+          isDefault: false,
+          updatedAt: page.updatedAt,
+        },
+        'Returns page retrieved successfully'
+      );
+    } catch {
+      return ResponseHelper.success(
+        {
+          ...DEFAULT_RETURNS_PAGE,
+          id: page.id,
+          rawContent: page.content,
+          isDefault: false,
+          updatedAt: page.updatedAt,
+        },
+        'Returns page retrieved successfully'
+      );
+    }
   }
 
+  // 5. Update / Upsert Returns page content
   async updateReturnsPage(dto: UpdateReturnsPageDto, tenantId?: string, authorName?: string) {
-    return null;
+    if (!tenantId) {
+      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+    if (!tenant) {
+      throw new NotFoundException('Tenant');
+    }
+
+    const title = dto.title?.trim() || DEFAULT_RETURNS_PAGE.title;
+    const status = dto.status || 'published';
+    const contentString = JSON.stringify(dto);
+
+    const saved = await this.prisma.cmsPage.upsert({
+      where: {
+        tenantId_slug: {
+          tenantId,
+          slug: 'returns',
+        },
+      },
+      create: {
+        tenantId,
+        title,
+        slug: 'returns',
+        status,
+        author: authorName || 'Store Admin',
+        content: contentString,
+      },
+      update: {
+        title,
+        status,
+        author: authorName || 'Store Admin',
+        content: contentString,
+      },
+    });
+
+    this.logger.log(`Upserted Returns page [${saved.id}] for tenant [${tenantId}]`);
+
+    return ResponseHelper.success(
+      {
+        ...DEFAULT_RETURNS_PAGE,
+        ...dto,
+        id: saved.id,
+        title: saved.title,
+        status: saved.status,
+        updatedAt: saved.updatedAt,
+      },
+      'Returns page saved successfully'
+    );
   }
 }
 

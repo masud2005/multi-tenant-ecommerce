@@ -64,12 +64,27 @@ export class OwnerPageController {
     return this.pageService.getAllPages(user?.tenantId);
   }
 
-  // Returns page (initial placeholder - API route not exposed yet)
-  async getReturnsPage(user?: any) {
+  @Get('returns')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get Returns & Refund page content for editing' })
+  @ApiResponse({ status: 200, description: 'Returns page retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
+  async getReturnsPage(@CurrentUser() user?: any) {
     return this.pageService.getReturnsPage(user?.tenantId);
   }
 
-  async updateReturnsPage(dto: UpdateReturnsPageDto, user?: any) {
+  @Put('returns')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update or save Returns & Refund page content' })
+  @ApiResponse({ status: 200, description: 'Returns page saved successfully' })
+  @ApiResponse({ status: 400, description: 'Validation failed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
+  async updateReturnsPage(
+    @Body() dto: UpdateReturnsPageDto,
+    @CurrentUser() user?: any
+  ) {
     const authorName = user?.name || user?.email || 'Store Admin';
     return this.pageService.updateReturnsPage(dto, user?.tenantId, authorName);
   }
