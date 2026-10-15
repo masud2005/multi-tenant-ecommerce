@@ -38,7 +38,17 @@ export function CustomerNavbar({
   onLogoutClick,
 }: CustomerNavbarProps) {
   const pathname = usePathname();
-  const { cart, storeCredit, setMiniCartOpen, setSearchOpen } = useStore();
+  const { cart, storeCredit, setMiniCartOpen, setSearchOpen, categories } = useStore();
+
+  const displayCategories =
+    categories && categories.length > 0
+      ? categories.slice(0, 4)
+      : [
+          { key: 'women', name: 'Women' },
+          { key: 'men', name: 'Men' },
+          { key: 'kids', name: 'Kids' },
+          { key: 'home', name: 'Home & Living' },
+        ];
 
   const currentTitle =
     routeTitles[pathname] ||
@@ -51,7 +61,7 @@ export function CustomerNavbar({
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-4">
       {/* Left: Mobile Drawer Trigger + Search Bar (Matching Admin Navbar) */}
-      <div className="flex items-center gap-3 flex-1 max-w-lg">
+      <div className="flex items-center gap-3 flex-1 max-w-sm xl:max-w-md">
         <button
           type="button"
           onClick={onOpenMobileSidebar}
@@ -65,7 +75,7 @@ export function CustomerNavbar({
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
-          className="relative flex h-9 w-full max-w-sm items-center gap-2 rounded-md border border-line bg-canvas px-3 text-sm text-ink-muted hover:border-line-strong transition-colors cursor-pointer text-left"
+          className="relative flex h-9 w-full items-center gap-2 rounded-md border border-line bg-canvas px-3 text-sm text-ink-muted hover:border-line-strong transition-colors cursor-pointer text-left"
         >
           <Search className="h-4 w-4 text-ink-muted shrink-0" aria-hidden="true" />
           <span className="flex-1 truncate text-xs sm:text-sm">Search products, orders…</span>
@@ -73,16 +83,26 @@ export function CustomerNavbar({
             ⌘K
           </kbd>
         </button>
-
-        {/* Breadcrumb Hierarchy */}
-        <div className="hidden xl:flex items-center gap-1.5 text-xs text-ink-muted whitespace-nowrap">
-          <Link href="/account" className="hover:text-ink transition-colors">
-            Account
-          </Link>
-          <ChevronRight className="h-3 w-3 text-ink-muted/60" />
-          <span className="font-medium text-ink">{currentTitle}</span>
-        </div>
       </div>
+
+      {/* Center: Store Category Navigation (All Products, Women, Men, Kids) */}
+      <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 mx-2">
+        <Link
+          href="/shop"
+          className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-ink hover:text-clay hover:bg-canvas rounded-md transition-colors whitespace-nowrap"
+        >
+          All Products
+        </Link>
+        {displayCategories.map((cat) => (
+          <Link
+            key={cat.key}
+            href={`/shop?category=${cat.key}`}
+            className="inline-flex items-center px-2.5 py-1 text-xs font-medium text-ink-soft hover:text-ink hover:bg-canvas rounded-md transition-colors whitespace-nowrap"
+          >
+            {cat.name}
+          </Link>
+        ))}
+      </nav>
 
       {/* Right: Store credit badge, Cart, Notification, Storefront Link & User Dropdown */}
       <div className="flex items-center gap-2 sm:gap-2.5">
