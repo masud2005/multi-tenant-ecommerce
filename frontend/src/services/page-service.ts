@@ -43,6 +43,32 @@ export interface UpdateAboutPagePayload {
   seoDescription?: string;
 }
 
+export interface ReturnSectionItem {
+  heading: string;
+  body: string;
+}
+
+export interface ReturnsPageData {
+  id?: string | null;
+  title: string;
+  heading?: string;
+  sections: ReturnSectionItem[];
+  status: 'published' | 'draft';
+  seoTitle?: string;
+  seoDescription?: string;
+  updatedAt?: string;
+  isDefault?: boolean;
+}
+
+export interface UpdateReturnsPagePayload {
+  title?: string;
+  heading?: string;
+  sections?: ReturnSectionItem[];
+  status?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+}
+
 class PageService {
   // 1. Get About Us page for Admin / Owner
   async getOwnerAboutPage(): Promise<AboutPageData | null> {
@@ -73,13 +99,41 @@ class PageService {
   }
 
   // 4. Get Public page by slug for Storefront
-  async getPublicPage(slug: string): Promise<AboutPageData | null> {
+  async getPublicPage<T = any>(slug: string): Promise<T | null> {
     try {
       const cleanSlug = slug.replace(/^\//, '');
-      const res = await apiClient.get<ApiResponse<AboutPageData>>(`/customer/pages/${cleanSlug}`);
+      const res = await apiClient.get<ApiResponse<T>>(`/customer/pages/${cleanSlug}`);
       return res.data || null;
     } catch (error) {
       console.error(`Failed to fetch public page '${slug}':`, error);
+      return null;
+    }
+  }
+
+  // 5. Get Returns & Refund page for Admin / Owner
+  async getOwnerReturnsPage(): Promise<ReturnsPageData | null> {
+    try {
+      const res = await apiClient.get<ApiResponse<ReturnsPageData>>('/owner/pages/returns');
+      return res.data || null;
+    } catch (error) {
+      console.error('Failed to fetch owner returns page:', error);
+      return null;
+    }
+  }
+
+  // 6. Update Returns & Refund page for Admin / Owner
+  async updateOwnerReturnsPage(payload: UpdateReturnsPagePayload): Promise<ReturnsPageData | null> {
+    const res = await apiClient.put<ApiResponse<ReturnsPageData>>('/owner/pages/returns', payload);
+    return res.data || null;
+  }
+
+  // 7. Get Public Returns & Refund page for Storefront
+  async getPublicReturnsPage(): Promise<ReturnsPageData | null> {
+    try {
+      const res = await apiClient.get<ApiResponse<ReturnsPageData>>('/customer/pages/returns');
+      return res.data || null;
+    } catch (error) {
+      console.error('Failed to fetch public returns page:', error);
       return null;
     }
   }
