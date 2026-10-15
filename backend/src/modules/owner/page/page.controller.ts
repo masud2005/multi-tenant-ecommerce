@@ -14,7 +14,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { OwnerPageService } from './page.service';
-import { UpdateAboutPageDto } from './dto';
+import { UpdateAboutPageDto, UpdateReturnsPageDto } from './dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -63,4 +63,15 @@ export class OwnerPageController {
   async getAllPages(@CurrentUser() user?: any) {
     return this.pageService.getAllPages(user?.tenantId);
   }
+
+  // Returns page (initial placeholder - API route not exposed yet)
+  async getReturnsPage(user?: any) {
+    return this.pageService.getReturnsPage(user?.tenantId);
+  }
+
+  async updateReturnsPage(dto: UpdateReturnsPageDto, user?: any) {
+    const authorName = user?.name || user?.email || 'Store Admin';
+    return this.pageService.updateReturnsPage(dto, user?.tenantId, authorName);
+  }
 }
+

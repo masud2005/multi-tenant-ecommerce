@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { UpdateAboutPageDto } from './dto';
+import { UpdateAboutPageDto, UpdateReturnsPageDto } from './dto';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import {
   ConflictException,
@@ -201,4 +201,14 @@ export class OwnerPageService {
 
     return ResponseHelper.success(allPages, 'Pages retrieved successfully');
   }
+
+  // Returns page (initial placeholder - API not implemented yet)
+  async getReturnsPage(tenantId?: string) {
+    return null;
+  }
+
+  async updateReturnsPage(dto: UpdateReturnsPageDto, tenantId?: string, authorName?: string) {
+    return null;
+  }
 }
+
