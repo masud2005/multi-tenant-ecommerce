@@ -65,6 +65,9 @@ export interface StoreContextValue {
   removeFromCart: (key: string) => void;
   toggleSaveForLater: (key: string) => void;
   clearCart: () => void;
+  wishlistProducts?: Product[];
+  isWishlistLoading?: boolean;
+  refreshWishlist?: () => Promise<void>;
   toggleWishlist: (productId: string) => void;
   toggleCompare: (productId: string) => void;
   trackView: (productId: string) => void;
