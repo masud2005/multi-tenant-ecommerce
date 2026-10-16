@@ -24,6 +24,9 @@ model User {
   // In-App notifications
   notifications Notification[]
 
+  // Customer login logs for conversion rate analytics
+  customerLoginLogs CustomerLoginLog[]
+
   @@index([deletedAt])
   @@map("users")
 }

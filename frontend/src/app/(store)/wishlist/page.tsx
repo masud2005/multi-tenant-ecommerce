@@ -1,28 +1,46 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { HeartIcon, TrendingDownIcon, BellIcon } from 'lucide-react';
+import { HeartIcon, TrendingDownIcon, BellIcon, Loader2Icon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { productPrice, productStock, available } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
+import type { Product } from '@/types/commerce';
 
 export default function WishlistPage() {
   const {
     user,
     wishlist,
+    wishlistProducts,
+    isWishlistLoading,
+    refreshWishlist,
     products,
     toggleWishlist,
     addToCart,
     setMiniCartOpen,
     setQuickViewId,
   } = useStore();
-  const items = wishlist
-    .map((id) => products.find((p) => p.id === id)!)
-    .filter(Boolean);
+
+  // Always trigger a fresh fetch from the backend database when entering the wishlist page
+  useEffect(() => {
+    if (refreshWishlist && user?.id) {
+      refreshWishlist();
+    }
+  }, [refreshWishlist, user?.id]);
+
+  // Resolve items by matching catalog products first, then falling back to direct backend wishlist products
+  const items: Product[] = wishlist
+    .map((id) => {
+      const fromCatalog = products.find((p) => p.id === id);
+      if (fromCatalog) return fromCatalog;
+      const fromWishlistDb = wishlistProducts?.find((p) => p.id === id);
+      return fromWishlistDb || null;
+    })
+    .filter(Boolean) as Product[];
 
   const moveToBag = (id: string) => {
     if (!user) {
@@ -32,14 +50,16 @@ export default function WishlistPage() {
       }
       return;
     }
-    const p = products.find((x) => x.id === id)!;
-    if (p.sizes.length > 1) {
+    const p = items.find((x) => x.id === id) || products.find((x) => x.id === id);
+    if (!p) return;
+
+    if (p.sizes && p.sizes.length > 1) {
       setQuickViewId(p.id);
       return;
     }
-    const v = p.variants.find((x) => available(x) > 0);
-    if (!v) return;
-    addToCart(p.id, v.id);
+    const v = p.variants?.find((x) => available(x) > 0) || p.variants?.[0];
+    const variantId = v?.id || `${p.id}-default`;
+    addToCart(p.id, variantId);
     toggleWishlist(p.id);
     toast.success('Moved to bag');
     setMiniCartOpen(true);
@@ -60,12 +80,28 @@ export default function WishlistPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <h1 className="font-display text-4xl">Wishlist</h1>
-      <p className="mt-1 text-sm text-ink-muted">
-        {items.length} saved {items.length === 1 ? 'piece' : 'pieces'} · we’ll alert you
-        about price drops and restocks
-      </p>
-      {items.length === 0 ? (
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-4xl">Wishlist</h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            {items.length} saved {items.length === 1 ? 'piece' : 'pieces'} · we’ll alert you
+            about price drops and restocks
+          </p>
+        </div>
+        {isWishlistLoading && (
+          <div className="flex items-center gap-2 text-xs text-ink-muted">
+            <Loader2Icon className="h-4 w-4 animate-spin text-clay" />
+            <span>Updating...</span>
+          </div>
+        )}
+      </div>
+
+      {isWishlistLoading && items.length === 0 ? (
+        <div className="py-24 text-center">
+          <Loader2Icon className="mx-auto h-8 w-8 animate-spin text-clay" />
+          <p className="mt-3 text-sm text-ink-muted">Loading your saved pieces...</p>
+        </div>
+      ) : items.length === 0 ? (
         <EmptyState
           icon={HeartIcon}
           title="Nothing saved yet"
@@ -76,6 +112,7 @@ export default function WishlistPage() {
         <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const stock = productStock(p);
+            const imageSrc = p.images?.[0] || (p as any).coverImage || '/placeholder.png';
             return (
               <li key={p.id} className="flex flex-col">
                 <Link
@@ -83,7 +120,7 @@ export default function WishlistPage() {
                   className="relative block overflow-hidden rounded-md bg-subtle"
                 >
                   <img
-                    src={p.images[0]}
+                    src={imageSrc}
                     alt={p.title}
                     className="aspect-[3/4] w-full object-cover transition-transform duration-300 hover:scale-105"
                   />

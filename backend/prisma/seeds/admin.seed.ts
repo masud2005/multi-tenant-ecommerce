@@ -8,27 +8,30 @@ import {
 import * as bcrypt from 'bcrypt';
 
 export async function seedAdmin(prisma: PrismaClient) {
-    const adminEmail = process.env.ADMIN_EMAIL;
-    const plainPassword = process.env.ADMIN_PASSWORD;
-
-    if (!adminEmail || !plainPassword) {
-        throw new Error('ADMIN_EMAIL or ADMIN_PASSWORD is not set');
-    }
+    const ownerEmail = process.env.OWNER_EMAIL || 'owner@gmail.com';
+    const plainPassword = process.env.OWNER_PASSWORD || '123456';
+    const ownerName = process.env.OWNER_NAME || 'Demo Owner';
 
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-    const admin = await prisma.user.upsert({
-        where: { email: adminEmail },
-        update: {},
+    const owner = await prisma.user.upsert({
+        where: { email: ownerEmail },
+        update: {
+            name: ownerName,
+            role: UserRole.OWNER,
+            status: UserStatus.ACTIVE,
+            password: hashedPassword,
+        },
         create: {
-            email: adminEmail,
+            name: ownerName,
+            email: ownerEmail,
             password: hashedPassword,
             role: UserRole.OWNER,
             status: UserStatus.ACTIVE,
         },
     });
 
-    console.log(`Admin user seeded: ${admin.email}`);
+    console.log(`Owner user seeded: ${owner.email} (${owner.name})`);
 
     // Seed default tenant: tanti
     const defaultTenant = await prisma.tenant.upsert({
@@ -77,12 +80,12 @@ export async function seedAdmin(prisma: PrismaClient) {
 
     console.log(`Default tenant seeded: ${defaultTenant.name} (${defaultTenant.slug})`);
 
-    // Assign admin as OWNER of default tenant
+    // Assign owner as OWNER of default tenant
     await prisma.tenantMember.upsert({
         where: {
             tenantId_userId: {
                 tenantId: defaultTenant.id,
-                userId: admin.id,
+                userId: owner.id,
             },
         },
         update: {
@@ -91,7 +94,7 @@ export async function seedAdmin(prisma: PrismaClient) {
         },
         create: {
             tenantId: defaultTenant.id,
-            userId: admin.id,
+            userId: owner.id,
             isOwner: true,
             status: 'active',
         },
@@ -191,5 +194,5 @@ export async function seedAdmin(prisma: PrismaClient) {
         });
     }
 
-    console.log(`Admin linked as OWNER to tenant ${defaultTenant.slug} and default roles seeded`);
+    console.log(`Owner linked as OWNER to tenant ${defaultTenant.slug} and default roles seeded`);
 }

@@ -96,13 +96,12 @@ export class SearchService {
 
     try {
       await this.prisma.$executeRaw`
-        INSERT INTO search_query_logs ("id", "tenantId", "term", "count", "results", "clicks", "lastSearchedAt", "createdAt", "updatedAt")
-        VALUES (gen_random_uuid(), ${targetTenantId}, ${cleanTerm}, 1, 0, 1, ${now}, ${now}, ${now})
-        ON CONFLICT ("tenantId", "term")
-        DO UPDATE SET
+        UPDATE search_query_logs
+        SET
           "clicks" = search_query_logs."clicks" + 1,
           "lastSearchedAt" = ${now},
           "updatedAt" = ${now}
+        WHERE "tenantId" = ${targetTenantId} AND "term" = ${cleanTerm}
       `;
 
       return ResponseHelper.success({ term: cleanTerm }, 'Product click recorded');

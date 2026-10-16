@@ -53,12 +53,7 @@ export function SearchOverlay() {
 
   // Triggered when an intentional search query or suggestion is selected
   const go = (term: string) => {
-    const clean = term.trim().toLowerCase();
     setSearchOpen(false);
-    if (clean.length >= 2) {
-      const matchCount = searchProducts(live, clean).results.length;
-      analyticsService.logCustomerSearch(clean, matchCount);
-    }
     router.push(`/search?q=${encodeURIComponent(term)}`);
   };
 
@@ -200,7 +195,6 @@ export function SearchOverlay() {
                             key={c.key}
                             href={`/shop?category=${c.key}`}
                             onClick={() => {
-                              analyticsService.logCustomerSearch(c.name, results.length);
                               close();
                             }}
                             className="rounded-full bg-subtle px-3 py-1 text-xs font-medium text-ink hover:bg-ink hover:text-canvas transition-colors"
@@ -217,12 +211,7 @@ export function SearchOverlay() {
                           <Link
                             key={p.id}
                             href={`/products/${p.slug}`}
-                            onClick={() => {
-                              if (q.trim()) {
-                                analyticsService.logProductClick(q.trim());
-                              }
-                              close();
-                            }}
+                            onClick={close}
                             className="group block"
                           >
                             <div className="aspect-[3/4] overflow-hidden rounded bg-subtle border border-line">

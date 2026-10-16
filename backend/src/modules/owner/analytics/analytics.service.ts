@@ -7,7 +7,7 @@ import { OrderStatus, PaymentMethod, OrderChannel } from '../../../../prisma/gen
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // Helper to resolve the active tenant ID
   private async resolveTenantId(tenantId?: string): Promise<string> {
@@ -30,40 +30,50 @@ export class AnalyticsService {
     return defaultTenant.id;
   }
 
-  // Calculate start date from range string
-  private getStartDateForRange(range?: string): Date | null {
-    if (!range) return null;
+  // Calculate date boundaries for current period and comparison previous period
+  private getPeriodBounds(range?: string): {
+    start: Date;
+    end: Date;
+    prevStart: Date;
+    prevEnd: Date;
+  } {
     const now = new Date();
-    const normalized = range.toLowerCase().trim();
+    const normalized = (range || '30 days').toLowerCase().trim();
 
     if (normalized.includes('today')) {
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
-      return today;
-    }
-    if (normalized.includes('7')) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 7);
-      return d;
-    }
-    if (normalized.includes('30')) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 30);
-      return d;
-    }
-    if (normalized.includes('90')) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - 90);
-      return d;
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+
+      const prevStart = new Date(start);
+      prevStart.setDate(prevStart.getDate() - 1);
+
+      const prevEnd = new Date(start);
+      prevEnd.setMilliseconds(-1);
+
+      return { start, end: now, prevStart, prevEnd };
     }
 
-    return null;
+    let days = 30;
+    if (normalized.includes('7')) {
+      days = 7;
+    } else if (normalized.includes('90')) {
+      days = 90;
+    } else if (normalized.includes('30')) {
+      days = 30;
+    }
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const start = new Date(now.getTime() - days * msPerDay);
+    const prevStart = new Date(now.getTime() - 2 * days * msPerDay);
+    const prevEnd = start;
+
+    return { start, end: now, prevStart, prevEnd };
   }
 
   // 1. Get Real Sales aggregated by District from Database
   async getSalesByDistrict(range?: string, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
-    const startDate = this.getStartDateForRange(range);
+    const { start, end } = this.getPeriodBounds(range);
 
     const orders = await this.prisma.order.findMany({
       where: {
@@ -72,7 +82,7 @@ export class AnalyticsService {
         status: {
           notIn: [OrderStatus.CANCELLED],
         },
-        ...(startDate ? { createdAt: { gte: startDate } } : {}),
+        createdAt: { gte: start, lte: end },
       },
       select: {
         total: true,
@@ -107,7 +117,7 @@ export class AnalyticsService {
   // 2. Full Analytics Overview with Real Data from PostgreSQL
   async getAnalyticsOverview(range?: string, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
-    const startDate = this.getStartDateForRange(range) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const { start, end, prevStart, prevEnd } = this.getPeriodBounds(range);
 
     // Fetch all non-cancelled orders for current period
     const orders = await this.prisma.order.findMany({
@@ -117,13 +127,35 @@ export class AnalyticsService {
         status: {
           notIn: [OrderStatus.CANCELLED],
         },
-        createdAt: { gte: startDate },
+        createdAt: { gte: start, lte: end },
       },
       include: {
         shippingAddress: true,
         items: true,
+        customer: { select: { userId: true } },
       },
       orderBy: { createdAt: 'asc' },
+    });
+
+    // Fetch all non-cancelled orders for previous period to calculate real delta
+    const prevOrders = await this.prisma.order.findMany({
+      where: {
+        tenantId: targetTenantId,
+        deletedAt: null,
+        status: {
+          notIn: [OrderStatus.CANCELLED],
+        },
+        createdAt: { gte: prevStart, lte: prevEnd },
+      },
+      select: {
+        total: true,
+        discount: true,
+        shipping: true,
+        customerId: true,
+        email: true,
+        phone: true,
+        customer: { select: { userId: true } },
+      },
     });
 
     // 1) Sales by District
@@ -171,14 +203,14 @@ export class AnalyticsService {
         method === PaymentMethod.COD
           ? 'Cash on delivery'
           : method === PaymentMethod.BKASH
-          ? 'bKash'
-          : method === PaymentMethod.NAGAD
-          ? 'Nagad'
-          : method === PaymentMethod.SSLCOMMERZ
-          ? 'SSLCommerz'
-          : method === PaymentMethod.STRIPE
-          ? 'Stripe'
-          : 'Other';
+            ? 'bKash'
+            : method === PaymentMethod.NAGAD
+              ? 'Nagad'
+              : method === PaymentMethod.SSLCOMMERZ
+                ? 'SSLCommerz'
+                : method === PaymentMethod.STRIPE
+                  ? 'Stripe'
+                  : 'Other';
       paymentTotals.set(cleanMethod, (paymentTotals.get(cleanMethod) || 0) + 1);
 
       // Channel
@@ -199,6 +231,319 @@ export class AnalyticsService {
 
     const orderCount = orders.length;
     const aov = orderCount > 0 ? Math.round(netSales / orderCount) : 0;
+
+    // Previous period stats
+    const prevOrderCount = prevOrders.length;
+    const prevNetSales = prevOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+    const prevTotalDiscount = prevOrders.reduce((sum, o) => sum + (Number(o.discount) || 0), 0);
+    const prevAov = prevOrderCount > 0 ? Math.round(prevNetSales / prevOrderCount) : 0;
+
+    // Calculate real deltas
+    let ordersDelta = '+0%';
+    if (prevOrderCount > 0) {
+      const diff = Math.round(((orderCount - prevOrderCount) / prevOrderCount) * 100);
+      ordersDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (orderCount > 0) {
+      ordersDelta = '+100%';
+    }
+
+    let aovDelta = '+0%';
+    if (prevAov > 0) {
+      const diff = Math.round(((aov - prevAov) / prevAov) * 100);
+      aovDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (aov > 0) {
+      aovDelta = '+100%';
+    }
+
+    let salesDelta = '+0%';
+    if (prevNetSales > 0) {
+      const diff = Math.round(((netSales - prevNetSales) / prevNetSales) * 100);
+      salesDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (netSales > 0) {
+      salesDelta = '+100%';
+    }
+
+    // Real Discounts delta
+    let discountsDelta = '+0%';
+    if (prevTotalDiscount > 0) {
+      const diff = Math.round(((totalDiscount - prevTotalDiscount) / prevTotalDiscount) * 100);
+      discountsDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (totalDiscount > 0) {
+      discountsDelta = '+100%';
+    }
+
+    // Customer key resolver helper
+    const getCustomerKey = (o: {
+      customerId?: string | null;
+      email?: string | null;
+      phone?: string | null;
+    }) => {
+      if (o.customerId) return `id:${o.customerId}`;
+      if (o.email) return `email:${o.email.trim().toLowerCase()}`;
+      if (o.phone) return `phone:${o.phone.trim()}`;
+      return null;
+    };
+
+    // Calculate Real Returning Customers for Current Period
+    const currentCustomerCounts = new Map<string, number>();
+    for (const o of orders) {
+      const key = getCustomerKey(o);
+      if (key) {
+        currentCustomerCounts.set(key, (currentCustomerCounts.get(key) || 0) + 1);
+      }
+    }
+
+    const currentCustomerIds = orders.map((o) => o.customerId).filter(Boolean) as string[];
+    const currentCustomerEmails = orders.map((o) => o.email?.trim().toLowerCase()).filter(Boolean);
+    const currentCustomerPhones = orders.map((o) => o.phone?.trim()).filter(Boolean);
+
+    const returningCustomerKeys = new Set<string>();
+
+    if (
+      currentCustomerIds.length > 0 ||
+      currentCustomerEmails.length > 0 ||
+      currentCustomerPhones.length > 0
+    ) {
+      const pastCustomerOrders = await this.prisma.order.findMany({
+        where: {
+          tenantId: targetTenantId,
+          deletedAt: null,
+          status: {
+            notIn: [OrderStatus.CANCELLED],
+          },
+          createdAt: { lt: start },
+          OR: [
+            ...(currentCustomerIds.length > 0 ? [{ customerId: { in: currentCustomerIds } }] : []),
+            ...(currentCustomerEmails.length > 0 ? [{ email: { in: currentCustomerEmails } }] : []),
+            ...(currentCustomerPhones.length > 0 ? [{ phone: { in: currentCustomerPhones } }] : []),
+          ],
+        },
+        select: {
+          customerId: true,
+          email: true,
+          phone: true,
+        },
+      });
+
+      for (const po of pastCustomerOrders) {
+        const key = getCustomerKey(po);
+        if (key) returningCustomerKeys.add(key);
+      }
+    }
+
+    // Customers who placed 2+ orders in current period are also returning/repeat customers
+    for (const [key, count] of currentCustomerCounts.entries()) {
+      if (count > 1) {
+        returningCustomerKeys.add(key);
+      }
+    }
+
+    const totalCustomersInPeriod = currentCustomerCounts.size;
+    let returningCustomersCount = 0;
+    for (const key of currentCustomerCounts.keys()) {
+      if (returningCustomerKeys.has(key)) {
+        returningCustomersCount++;
+      }
+    }
+
+    const returningRate =
+      totalCustomersInPeriod > 0
+        ? Number(((returningCustomersCount / totalCustomersInPeriod) * 100).toFixed(1))
+        : 0;
+
+    // Calculate Real Returning Customers for Previous Period (for point delta)
+    const prevCustomerCounts = new Map<string, number>();
+    for (const o of prevOrders) {
+      const key = getCustomerKey(o);
+      if (key) {
+        prevCustomerCounts.set(key, (prevCustomerCounts.get(key) || 0) + 1);
+      }
+    }
+
+    const prevCustomerIds = prevOrders.map((o) => o.customerId).filter(Boolean) as string[];
+    const prevCustomerEmails = prevOrders.map((o) => o.email?.trim().toLowerCase()).filter(Boolean);
+    const prevCustomerPhones = prevOrders.map((o) => o.phone?.trim()).filter(Boolean);
+
+    let prevReturningRate = 0;
+    if (
+      prevCustomerIds.length > 0 ||
+      prevCustomerEmails.length > 0 ||
+      prevCustomerPhones.length > 0
+    ) {
+      const prevPastOrders = await this.prisma.order.findMany({
+        where: {
+          tenantId: targetTenantId,
+          deletedAt: null,
+          status: {
+            notIn: [OrderStatus.CANCELLED],
+          },
+          createdAt: { lt: prevStart },
+          OR: [
+            ...(prevCustomerIds.length > 0 ? [{ customerId: { in: prevCustomerIds } }] : []),
+            ...(prevCustomerEmails.length > 0 ? [{ email: { in: prevCustomerEmails } }] : []),
+            ...(prevCustomerPhones.length > 0 ? [{ phone: { in: prevCustomerPhones } }] : []),
+          ],
+        },
+        select: {
+          customerId: true,
+          email: true,
+          phone: true,
+        },
+      });
+
+      const prevReturningKeys = new Set<string>();
+      for (const po of prevPastOrders) {
+        const key = getCustomerKey(po);
+        if (key) prevReturningKeys.add(key);
+      }
+      for (const [key, count] of prevCustomerCounts.entries()) {
+        if (count > 1) {
+          prevReturningKeys.add(key);
+        }
+      }
+
+      let prevReturningCount = 0;
+      for (const key of prevCustomerCounts.keys()) {
+        if (prevReturningKeys.has(key)) {
+          prevReturningCount++;
+        }
+      }
+
+      prevReturningRate =
+        prevCustomerCounts.size > 0
+          ? Number(((prevReturningCount / prevCustomerCounts.size) * 100).toFixed(1))
+          : 0;
+    }
+
+    let returningDelta = '+0 pt';
+    if (prevReturningRate > 0) {
+      const diff = Number((returningRate - prevReturningRate).toFixed(1));
+      returningDelta = `${diff >= 0 ? '+' : ''}${diff} pt`;
+    } else if (returningRate > 0) {
+      returningDelta = `+${returningRate} pt`;
+    }
+
+    // Real Customer Login & Conversion Rate (Logged-in Customers who ordered / Total Logged-in Customers)
+    const currentLoginLogs = await this.prisma.customerLoginLog.findMany({
+      where: {
+        tenantId: targetTenantId,
+        createdAt: { gte: start, lte: end },
+      },
+      select: {
+        userId: true,
+        email: true,
+      },
+    });
+
+    const userToCanonical = new Map<string, string>();
+    const emailToCanonical = new Map<string, string>();
+    const loggedInCustomerKeys = new Set<string>();
+
+    for (const log of currentLoginLogs) {
+      const canonical = log.userId || (log.email ? `email:${log.email.trim().toLowerCase()}` : `log:${log.userId}`);
+      loggedInCustomerKeys.add(canonical);
+      if (log.userId) {
+        userToCanonical.set(log.userId, canonical);
+      }
+      if (log.email) {
+        emailToCanonical.set(log.email.trim().toLowerCase(), canonical);
+      }
+    }
+
+    const loggedInCustomersCount = loggedInCustomerKeys.size;
+
+    const orderingLoggedInCustomerKeys = new Set<string>();
+    for (const o of orders) {
+      const oUserId = o.customer?.userId;
+      const oEmail = o.email ? o.email.trim().toLowerCase() : null;
+
+      let matchedCanonical: string | undefined;
+      if (oUserId && userToCanonical.has(oUserId)) {
+        matchedCanonical = userToCanonical.get(oUserId);
+      } else if (oEmail && emailToCanonical.has(oEmail)) {
+        matchedCanonical = emailToCanonical.get(oEmail);
+      }
+
+      if (matchedCanonical) {
+        orderingLoggedInCustomerKeys.add(matchedCanonical);
+      }
+    }
+
+    const orderingCustomersCount = orderingLoggedInCustomerKeys.size;
+    const conversionRate =
+      loggedInCustomersCount > 0
+        ? Number(((orderingCustomersCount / loggedInCustomersCount) * 100).toFixed(1))
+        : 0;
+
+    // Previous Period Conversion Rate
+    const prevLoginLogs = await this.prisma.customerLoginLog.findMany({
+      where: {
+        tenantId: targetTenantId,
+        createdAt: { gte: prevStart, lte: prevEnd },
+      },
+      select: {
+        userId: true,
+        email: true,
+      },
+    });
+
+    const prevUserToCanonical = new Map<string, string>();
+    const prevEmailToCanonical = new Map<string, string>();
+    const prevLoggedInCustomerKeys = new Set<string>();
+
+    for (const log of prevLoginLogs) {
+      const canonical = log.userId || (log.email ? `email:${log.email.trim().toLowerCase()}` : `log:${log.userId}`);
+      prevLoggedInCustomerKeys.add(canonical);
+      if (log.userId) {
+        prevUserToCanonical.set(log.userId, canonical);
+      }
+      if (log.email) {
+        prevEmailToCanonical.set(log.email.trim().toLowerCase(), canonical);
+      }
+    }
+
+    const prevLoggedInCustomersCount = prevLoggedInCustomerKeys.size;
+
+    const prevOrderingLoggedInCustomerKeys = new Set<string>();
+    for (const po of prevOrders) {
+      const poUserId = po.customer?.userId;
+      const poEmail = po.email ? po.email.trim().toLowerCase() : null;
+
+      let matchedCanonical: string | undefined;
+      if (poUserId && prevUserToCanonical.has(poUserId)) {
+        matchedCanonical = prevUserToCanonical.get(poUserId);
+      } else if (poEmail && prevEmailToCanonical.has(poEmail)) {
+        matchedCanonical = prevEmailToCanonical.get(poEmail);
+      }
+
+      if (matchedCanonical) {
+        prevOrderingLoggedInCustomerKeys.add(matchedCanonical);
+      }
+    }
+
+    const prevOrderingCustomersCount = prevOrderingLoggedInCustomerKeys.size;
+    const prevConversionRate =
+      prevLoggedInCustomersCount > 0
+        ? Number(((prevOrderingCustomersCount / prevLoggedInCustomersCount) * 100).toFixed(1))
+        : 0;
+
+    let conversionDelta = '+0 pt';
+    if (prevConversionRate > 0) {
+      const diff = Number((conversionRate - prevConversionRate).toFixed(1));
+      conversionDelta = `${diff >= 0 ? '+' : ''}${diff} pt`;
+    } else if (conversionRate > 0) {
+      conversionDelta = `+${conversionRate} pt`;
+    }
+
+    // Shipping revenue delta
+    const prevTotalShipping = prevOrders.reduce((sum, o) => sum + (Number(o.shipping) || 0), 0);
+    let shippingDelta = '+0%';
+    if (prevTotalShipping > 0) {
+      const diff = Math.round(((totalShipping - prevTotalShipping) / prevTotalShipping) * 100);
+      shippingDelta = `${diff >= 0 ? '+' : ''}${diff}%`;
+    } else if (totalShipping > 0) {
+      shippingDelta = '+100%';
+    }
 
     // Convert Sales by District
     const salesByRegion = Array.from(districtTotals.entries())
@@ -240,16 +585,33 @@ export class AnalyticsService {
         kpis: {
           grossSales,
           netSales,
+          salesDelta,
           orders: orderCount,
+          ordersDelta,
+          prevOrders: prevOrderCount,
           aov,
-          productsSold: totalProductsSold,
-          refunds: totalRefunds,
+          aovDelta,
+          prevAov,
           discounts: totalDiscount,
+          discountsDelta,
+          prevDiscounts: prevTotalDiscount,
+          returningRate,
+          returningDelta,
+          returningCustomers: returningCustomersCount,
+          totalCustomers: totalCustomersInPeriod,
+          prevReturningRate,
+          conversionRate,
+          conversionDelta,
+          prevConversionRate,
+          loggedInCustomers: loggedInCustomersCount,
+          orderingCustomers: orderingCustomersCount,
+          prevLoggedInCustomers: prevLoggedInCustomersCount,
+          prevOrderingCustomers: prevOrderingCustomersCount,
           shippingRevenue: totalShipping,
+          shippingDelta,
+          prevShipping: prevTotalShipping,
           tax: 0,
-          conversionRate: 3.2,
           cartAbandonment: 65.4,
-          returningRate: 35.0,
         },
       },
       'Analytics overview retrieved successfully',

@@ -7,6 +7,7 @@ import { seedBrands } from './brand.seed';
 import { seedCollections } from './collection.seed';
 import { seedProducts } from './product.seed';
 import { seedDiscounts } from './discount.seed';
+import { seedCustomers } from './customer.seed';
 import { seedOrders } from './order.seed';
 
 const connectionString =
@@ -26,6 +27,7 @@ async function main() {
     await seedBrands(prisma);
     await seedCollections(prisma);
     await seedProducts(prisma);
+    await seedCustomers(prisma);
     await seedDiscounts(prisma);
     await seedOrders(prisma);
 

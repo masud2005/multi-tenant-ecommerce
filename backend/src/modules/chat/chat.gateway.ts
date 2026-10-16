@@ -38,10 +38,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private readonly logger = new Logger(ChatGateway.name);
 
-  // In-Memory Presence Registry: TenantId -> Map<UserIdOrGuestId, { socketIds: Set<string>, role: string, name: string }>
+  // In-Memory Presence Registry: TenantId -> Map<UserIdOrGuestId, { socketIds: Set<string>, role: string, name: string, email?: string }>
   private readonly onlineUsers = new Map<
     string,
-    Map<string, { socketIds: Set<string>; role: string; name: string }>
+    Map<string, { socketIds: Set<string>; role: string; name: string; email?: string }>
   >();
 
   // Conversation Presence Registry: RoomName -> Set<string> (userIds/socketIds)
@@ -72,7 +72,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       if (token) {
         try {
-          const secret = this.configService.get<string>('app.jwtSecret') || 'jwt-secret';
+          const secret =
+            this.configService.get<string>('jwt.accessSecret') ||
+            this.configService.get<string>('app.jwtSecret') ||
+            'jwt-secret';
           const payload = await this.jwtService.verifyAsync(token, { secret });
           client.user = {
             id: payload.sub || payload.id,
@@ -82,11 +85,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             tenantId: payload.tenantId || tenantId,
           };
           this.logger.log(`Authenticated client connected: ${client.user?.name} (${client.id})`);
+
+          if (client.user?.role === 'OWNER' || client.user?.role === 'STAFF') {
+            await client.join('admins');
+            this.logger.log(`Staff/Owner client joined admins room: ${client.id}`);
+            // Broadcast live support presence to all storefront visitors
+            client.broadcast.emit('presence_status', {
+              role: 'OWNER',
+              isOnline: true,
+            });
+          }
         } catch (err) {
           this.logger.warn(`Guest or expired token client connected: ${client.id}`);
         }
       } else {
         this.logger.log(`Guest customer connected: ${client.id}`);
+      }
+
+      if (client.tenantId) {
+        await client.join(`tenant_${client.tenantId}`);
       }
 
       // Track Presence (🟢 Online)
@@ -102,6 +119,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: AuthenticatedSocket) {
     this.logger.log(`Client disconnected: ${client.id}`);
     this.trackUserOffline(client);
+
+    // If staff/owner disconnected, check if any admin sockets remain in /chat namespace
+    if (client.user?.role === 'OWNER' || client.user?.role === 'STAFF') {
+      const adminRoom = client.nsp?.adapter?.rooms?.get('admins');
+      const hasAdminsLeft = adminRoom ? adminRoom.size > 0 : false;
+      if (!hasAdminsLeft) {
+        client.broadcast.emit('presence_status', {
+          role: 'OWNER',
+          isOnline: false,
+        });
+      }
+    }
   }
 
   /**
@@ -129,17 +158,34 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.logger.log(`Client ${client.id} joined room: ${roomName}`);
 
+    const clientRole = client.user?.role || 'CUSTOMER';
+
     // Broadcast Online Presence to the room (🟢 Online)
     client.to(roomName).emit('presence_status', {
       conversationId: data.conversationId,
       userId: client.user?.id || client.id,
-      name: client.user?.name || (client.user?.role === 'CUSTOMER' ? 'Customer' : 'Store Support'),
-      role: client.user?.role || 'CUSTOMER',
+      name: client.user?.name || (clientRole === 'CUSTOMER' ? 'Customer' : 'Store Support'),
+      role: clientRole,
       isOnline: true,
     });
 
-    // Check if other party is already in this room
-    const isOtherPartyOnline = this.roomPresence.get(roomName)!.size > 1;
+    // If customer joined, notify admins so conversation inbox reflects online status
+    if (clientRole === 'CUSTOMER') {
+      client.to('admins').emit('presence_status', {
+        conversationId: data.conversationId,
+        userId: client.user?.id || client.id,
+        name: client.user?.name || 'Customer',
+        role: 'CUSTOMER',
+        isOnline: true,
+      });
+    }
+
+    // Check if other party is online
+    let isOtherPartyOnline = this.roomPresence.get(roomName)!.size > 1;
+    if (clientRole === 'CUSTOMER') {
+      const adminRoom = client.nsp?.adapter?.rooms?.get('admins');
+      isOtherPartyOnline = isOtherPartyOnline || (adminRoom ? adminRoom.size > 0 : false);
+    }
 
     return {
       success: true,
@@ -167,14 +213,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.roomPresence.get(roomName)!.delete(userIdOrSocket);
     }
 
+    const clientRole = client.user?.role || 'CUSTOMER';
+
     // Broadcast Offline Presence to the room (⚪ Offline)
     client.to(roomName).emit('presence_status', {
       conversationId: data.conversationId,
       userId: client.user?.id || client.id,
       name: client.user?.name || 'User',
-      role: client.user?.role || 'CUSTOMER',
+      role: clientRole,
       isOnline: false,
     });
+
+    if (clientRole === 'CUSTOMER') {
+      client.to('admins').emit('presence_status', {
+        conversationId: data.conversationId,
+        userId: client.user?.id || client.id,
+        name: client.user?.name || 'Customer',
+        role: 'CUSTOMER',
+        isOnline: false,
+      });
+    }
 
     client.activeConversationId = undefined;
     this.logger.log(`Client ${client.id} left room: ${roomName}`);
@@ -207,17 +265,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       const messagePayload = response.data;
-      const roomName = `chat_${conversationId}`;
-
-      // ⚡ নির্দিষ্ট চ্যাট রুমে থাকা সবাইকে রিয়েল-টাইমে মেসেজ পুশ করা (new_message & receive_message)
-      this.server.to(roomName).emit('new_message', messagePayload);
-      this.server.to(roomName).emit('receive_message', messagePayload);
+      this.broadcastMessage(conversationId, messagePayload);
 
       return { success: true, data: messagePayload };
     } catch (error: any) {
       this.logger.error('Failed to process socket message', error);
       return { success: false, message: error.message || 'Failed to send message' };
     }
+  }
+
+  /**
+   * Broadcast message to conversation room and admins
+   */
+  broadcastMessage(conversationId: string, messagePayload: any) {
+    if (!this.server) return;
+    const roomName = `chat_${conversationId}`;
+    this.server.to(roomName).emit('new_message', messagePayload);
+    this.server.to(roomName).emit('receive_message', messagePayload);
+    this.server.to('admins').emit('new_message', messagePayload);
   }
 
   /**
@@ -255,15 +320,54 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * 7. 🟢 অনলাইন স্ট্যাটাস ইনকোয়ারি (Check Online Status)
    */
   @SubscribeMessage('check_presence')
-  handleCheckPresence(
+  async handleCheckPresence(
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { conversationId: string },
   ) {
     if (!data?.conversationId) return { isOnline: false };
     const roomName = `chat_${data.conversationId}`;
     const presenceSet = this.roomPresence.get(roomName);
-    const isOnline = presenceSet ? presenceSet.size > 1 : false;
-    return { isOnline };
+    const clientRole = client.user?.role || 'CUSTOMER';
+    const isClientAdmin = clientRole === 'OWNER' || clientRole === 'STAFF';
+
+    if (isClientAdmin) {
+      // Admin is checking if the customer is online
+      if (presenceSet && presenceSet.size > 1) {
+        return { isOnline: true };
+      }
+      try {
+        const conv = await this.chatService.getConversationCustomer(data.conversationId);
+        if (conv) {
+          const tenantId = client.tenantId || 'global';
+          const tenantMap = this.onlineUsers.get(tenantId);
+          if (tenantMap) {
+            if (conv.customerId && tenantMap.has(conv.customerId)) {
+              return { isOnline: true };
+            }
+            if (conv.customerEmail) {
+              for (const [, userEntry] of tenantMap.entries()) {
+                if (
+                  userEntry.email &&
+                  conv.customerEmail &&
+                  userEntry.email.toLowerCase() === conv.customerEmail.toLowerCase()
+                ) {
+                  return { isOnline: true };
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Fallback
+      }
+      return { isOnline: false };
+    } else {
+      // Customer is checking if Store Support is online
+      const adminRoom = client.nsp?.adapter?.rooms?.get('admins');
+      const hasOnlineAdmin = adminRoom ? adminRoom.size > 0 : false;
+      const inRoom = presenceSet ? presenceSet.size > 1 : false;
+      return { isOnline: hasOnlineAdmin || inRoom };
+    }
   }
 
   // --- Helpers for Presence Registry ---
@@ -273,6 +377,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = client.user?.id || client.id;
     const role = client.user?.role || 'CUSTOMER';
     const name = client.user?.name || (role === 'CUSTOMER' ? 'Customer' : 'Store Support');
+    const email = client.user?.email;
 
     if (!this.onlineUsers.has(tenantId)) {
       this.onlineUsers.set(tenantId, new Map());
@@ -280,12 +385,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const tenantMap = this.onlineUsers.get(tenantId)!;
     if (!tenantMap.has(userId)) {
-      tenantMap.set(userId, { socketIds: new Set(), role, name });
+      tenantMap.set(userId, { socketIds: new Set(), role, name, email });
     }
     tenantMap.get(userId)!.socketIds.add(client.id);
 
-    // Broadcast to tenant that staff/owner or customer is online
-    this.server.to(`tenant_${tenantId}`).emit('tenant_presence', {
+    // Broadcast to tenant that user is online
+    this.server.of('/chat').to(`tenant_${tenantId}`).emit('tenant_presence', {
       userId,
       role,
       name,
@@ -306,7 +411,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (entry.socketIds.size === 0) {
           tenantMap.delete(userId);
           // Broadcast offline
-          this.server.to(`tenant_${tenantId}`).emit('tenant_presence', {
+          this.server.of('/chat').to(`tenant_${tenantId}`).emit('tenant_presence', {
             userId,
             role: entry.role,
             name: entry.name,
@@ -327,6 +432,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           role: client.user?.role || 'CUSTOMER',
           isOnline: false,
         });
+        if ((client.user?.role || 'CUSTOMER') === 'CUSTOMER') {
+          client.to('admins').emit('presence_status', {
+            conversationId: client.activeConversationId,
+            userId,
+            role: 'CUSTOMER',
+            isOnline: false,
+          });
+        }
       }
     }
   }

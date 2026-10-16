@@ -178,10 +178,21 @@ export async function seedOrders(prisma: PrismaClient) {
     });
 
     if (!existing) {
+      const customer = await prisma.customerProfile.findUnique({
+        where: {
+          tenantId_email: {
+            tenantId: tenant.id,
+            email: item.email,
+          },
+        },
+        select: { id: true },
+      });
+
       await prisma.order.create({
         data: {
           tenantId: tenant.id,
           number: orderNumber,
+          customerId: customer?.id ?? null,
           customerName: item.customerName,
           phone: item.phone,
           email: item.email,

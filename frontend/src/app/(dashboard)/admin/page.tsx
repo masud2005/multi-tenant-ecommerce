@@ -16,6 +16,7 @@ import { formatBDT, formatCompactBDT, formatNumber, timeAgo } from '@/utils/form
 import { available } from '@/utils/pricing';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth';
+import { analyticsService, AnalyticsOverviewResponse } from '@/services/analytics-service';
 
 type Range = '7d' | '30d';
 
@@ -24,8 +25,28 @@ export default function AdminDashboardPage() {
   const { role, can } = useAdmin();
   const [userName, setUserName] = useState<string>('');
   const [range, setRange] = useState<Range>('30d');
+  const [realOverview, setRealOverview] = useState<AnalyticsOverviewResponse | null>(null);
+
+  useEffect(() => {
+    analyticsService
+      .getAnalyticsOverview(range === '7d' ? '7 days' : '30 days')
+      .then((res) => {
+        if (res) setRealOverview(res);
+      })
+      .catch(() => {});
+  }, [range]);
+
+  const displayKpis = realOverview?.kpis
+    ? {
+        orders: realOverview.kpis.orders,
+        aov: realOverview.kpis.aov,
+        conversionRate: realOverview.kpis.conversionRate ?? kpis.conversionRate,
+        returningRate: realOverview.kpis.returningRate,
+      }
+    : kpis;
+
   const series = range === '7d' ? salesSeries.slice(-4) : salesSeries;
-  const total = series.reduce((s, d) => s + d.sales, 0);
+  const total = realOverview?.kpis ? realOverview.kpis.netSales : series.reduce((s, d) => s + d.sales, 0);
   const prev = series.reduce((s, d) => s + d.prev, 0);
   const change = ((total - prev) / prev) * 100;
   const showMoney = can('analytics');
@@ -147,10 +168,10 @@ export default function AdminDashboardPage() {
             </div>
             <dl className="grid grid-cols-2 border-t border-line sm:grid-cols-4">
               {[
-                ['Orders', formatNumber(kpis.orders)],
-                ['Avg. order value', formatBDT(kpis.aov)],
-                ['Conversion', `${kpis.conversionRate}%`],
-                ['Returning customers', `${kpis.returningRate}%`],
+                ['Orders', formatNumber(displayKpis.orders)],
+                ['Avg. order value', formatBDT(displayKpis.aov)],
+                ['Conversion', `${displayKpis.conversionRate}%`],
+                ['Returning customers', `${displayKpis.returningRate}%`],
               ].map(([l, v], i) => (
                 <div
                   key={l}

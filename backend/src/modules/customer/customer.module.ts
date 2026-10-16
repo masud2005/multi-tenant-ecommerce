@@ -9,6 +9,7 @@ import { StoreModule } from './store/store.module';
 import { CustomerSupportModule } from './support/support.module';
 import { CustomerSearchModule } from './search/search.module';
 import { CustomerFaqModule } from './faq/faq.module';
+import { CustomerPageModule } from './page/page.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CustomerFaqModule } from './faq/faq.module';
     CustomerSupportModule,
     CustomerSearchModule,
     CustomerFaqModule,
+    CustomerPageModule,
   ],
   exports: [
     CartModule,
@@ -34,7 +36,8 @@ import { CustomerFaqModule } from './faq/faq.module';
     CustomerSupportModule,
     CustomerSearchModule,
     CustomerFaqModule,
+    CustomerPageModule,
   ],
 })
-export class CustomerModule {}
+export class CustomerModule { }
 

@@ -25,7 +25,7 @@ import { UserRole } from '../../../../prisma/generated/client';
 @Controller('owner/analytics')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.OWNER)
+@Roles(UserRole.OWNER, UserRole.STAFF)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 

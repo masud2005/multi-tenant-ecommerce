@@ -126,6 +126,27 @@ export class OtpService {
                 data: { status: 'ACTIVE' },
             });
 
+            if ((updatedUser.role as any) === 'CUSTOMER') {
+                try {
+                    const defaultTenant = await this.prisma.tenant.findFirst({
+                        where: { deletedAt: null },
+                        orderBy: { createdAt: 'asc' },
+                        select: { id: true },
+                    });
+                    if (defaultTenant) {
+                        await this.prisma.customerLoginLog.create({
+                            data: {
+                                tenantId: defaultTenant.id,
+                                userId: updatedUser.id,
+                                email: updatedUser.email,
+                            },
+                        });
+                    }
+                } catch {
+                    // Non-blocking
+                }
+            }
+
             const payload = {
                 sub: updatedUser.id,
                 email: updatedUser.email,

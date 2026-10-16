@@ -32,18 +32,39 @@ export interface AnalyticsOverviewResponse {
   kpis: {
     grossSales: number;
     netSales: number;
+    salesDelta?: string;
     orders: number;
+    ordersDelta?: string;
+    prevOrders?: number;
     aov: number;
-    productsSold: number;
-    refunds: number;
+    aovDelta?: string;
+    productsSold?: number;
+    refunds?: number;
     discounts: number;
-    shippingRevenue: number;
-    tax: number;
-    conversionRate: number;
-    cartAbandonment: number;
+    discountsDelta?: string;
+    prevDiscounts?: number;
     returningRate: number;
+    returningDelta?: string;
+    returningCustomers?: number;
+    totalCustomers?: number;
+    prevReturningRate?: number;
+    shippingRevenue?: number;
+    shippingDelta?: string;
+    prevShipping?: number;
+    tax?: number;
+    conversionRate?: number;
+    conversionDelta?: string;
+    prevConversionRate?: number;
+    loggedInCustomers?: number;
+    orderingCustomers?: number;
+    prevLoggedInCustomers?: number;
+    prevOrderingCustomers?: number;
+    cartAbandonment?: number;
   };
 }
+
+let lastLoggedSearchTerm = '';
+let lastLoggedSearchTime = 0;
 
 export const analyticsService = {
   // Check if current session belongs to an admin/owner
@@ -94,6 +115,14 @@ export const analyticsService = {
 
     const cleanTerm = term ? term.trim().toLowerCase() : '';
     if (!cleanTerm || cleanTerm.length < 2) return;
+
+    // Deduplicate: avoid logging the same search term multiple times within 3 seconds
+    const now = Date.now();
+    if (lastLoggedSearchTerm === cleanTerm && now - lastLoggedSearchTime < 3000) {
+      return;
+    }
+    lastLoggedSearchTerm = cleanTerm;
+    lastLoggedSearchTime = now;
 
     try {
       return await apiClient.post('/customer/search/log', {

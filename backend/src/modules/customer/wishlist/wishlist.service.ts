@@ -227,6 +227,7 @@ export class WishlistService {
             availableSizes: Array.from(
               new Set(prod.variants.map((v) => v.size).filter(Boolean)),
             ),
+            variants: prod.variants,
             availableColors: Array.from(
               new Set(prod.variants.map((v) => v.color).filter(Boolean)),
             ),
