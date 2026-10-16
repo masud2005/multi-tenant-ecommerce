@@ -14,27 +14,140 @@ export class CartService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Helper to dynamically resolve target tenant for customer or guest
+   */
+  private async resolveTenantId(tenantId?: string, customerId?: string): Promise<string> {
+    if (tenantId && tenantId.length > 10 && tenantId !== 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2') {
+      const exists = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+      });
+      if (exists) return exists.id;
+    }
+
+    if (customerId) {
+      // Find tenant from customer's profile or previous cart
+      const profile = await this.prisma.customerProfile.findFirst({
+        where: { userId: customerId, deletedAt: null },
+        select: { tenantId: true },
+      });
+      if (profile?.tenantId) return profile.tenantId;
+
+      const existingCart = await this.prisma.cart.findFirst({
+        where: { customerId },
+        orderBy: { updatedAt: 'desc' },
+        select: { tenantId: true },
+      });
+      if (existingCart?.tenantId) return existingCart.tenantId;
+    }
+
+    const defaultTenant = await this.prisma.tenant.findFirst({
+      where: { deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!defaultTenant) {
+      throw new NotFoundException('Tenant not found');
+    }
+    return defaultTenant.id;
+  }
+
+  /**
+   * কাস্টমার প্রোফাইল আইডি খুঁজে বের করা বা স্বয়ংক্রিয়ভাবে তৈরি করা
+   */
+  private async resolveCustomerProfileId(
+    userIdOrCustomerId?: string,
+    tenantId?: string,
+  ): Promise<string | null> {
+    if (!userIdOrCustomerId) return null;
+
+    // ১. সরাসরি CustomerProfile ID দিয়ে খোঁজা
+    const profileById = await this.prisma.customerProfile.findFirst({
+      where: {
+        id: userIdOrCustomerId,
+        ...(tenantId ? { tenantId } : {}),
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (profileById) return profileById.id;
+
+    // ২. Auth User ID দিয়ে CustomerProfile খোঁজা
+    const profileByUserId = await this.prisma.customerProfile.findFirst({
+      where: {
+        userId: userIdOrCustomerId,
+        ...(tenantId ? { tenantId } : {}),
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (profileByUserId) return profileByUserId.id;
+
+    // ৩. User টেবিল থেকে প্রোফাইল তৈরি বা লিঙ্ক করা
+    if (tenantId) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userIdOrCustomerId },
+      });
+      if (user) {
+        const userEmail = user.email || `${user.id}@customer.store`;
+        const profileName = user.name || (user.email ? user.email.split('@')[0] : 'Customer');
+        const newProfile = await this.prisma.customerProfile.upsert({
+          where: {
+            tenantId_email: {
+              tenantId,
+              email: userEmail,
+            },
+          },
+          update: {
+            userId: user.id,
+            name: profileName,
+          },
+          create: {
+            tenantId,
+            userId: user.id,
+            email: userEmail,
+            name: profileName,
+          },
+        });
+        return newProfile.id;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * ধাপ ১.১: কার্ট তৈরি করা অথবা বিদ্যমান কার্ট খুঁজে নেওয়া (Get or Create Cart)
    */
   async getOrCreateCart(
     tenantId: string,
-    customerId?: string,
+    userIdOrCustomerId?: string,
     sessionToken?: string,
   ) {
+    const customerProfileId = await this.resolveCustomerProfileId(
+      userIdOrCustomerId,
+      tenantId,
+    );
     let cart = null;
 
     // ১. লগইন করা কাস্টমারের কার্ট খোঁজা
-    if (customerId) {
+    if (customerProfileId) {
       cart = await this.prisma.cart.findFirst({
         where: {
           tenantId,
-          customerId,
+          customerId: customerProfileId,
         },
       });
+
+      // কাস্টমারের কোনো পূর্ববর্তী সক্রিয় কার্ট থাকলে সেটা ব্যবহার করা
+      if (!cart) {
+        cart = await this.prisma.cart.findFirst({
+          where: { customerId: customerProfileId },
+          orderBy: { updatedAt: 'desc' },
+        });
+      }
     }
 
     // ২. গেস্ট ইউজারের সেশন টোকেন দিয়ে কার্ট খোঁজা (শুধুমাত্র আনঅথেনটিকেটেড অবস্থায়)
-    if (!cart && !customerId && sessionToken) {
+    if (!cart && !customerProfileId && sessionToken) {
       cart = await this.prisma.cart.findFirst({
         where: {
           tenantId,
@@ -53,8 +166,8 @@ export class CartService {
       cart = await this.prisma.cart.create({
         data: {
           tenantId,
-          customerId: customerId || null,
-          sessionToken: customerId ? null : activeSessionToken,
+          customerId: customerProfileId || null,
+          sessionToken: customerProfileId ? null : activeSessionToken,
         },
       });
     }
@@ -70,8 +183,10 @@ export class CartService {
     customerId?: string,
     sessionTokenHeader?: string,
   ) {
-    const targetTenantId =
-      query?.tenantId || 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2';
+    const targetTenantId = await this.resolveTenantId(
+      query?.tenantId,
+      customerId,
+    );
     const activeSessionToken = query?.sessionToken || sessionTokenHeader;
 
     // কার্ট নিশ্চিত করা (না থাকলে তৈরি হবে)
@@ -188,14 +303,7 @@ export class CartService {
     customerId?: string,
     sessionTokenHeader?: string,
   ) {
-    let targetTenantId = dto.tenantId;
-    if (!targetTenantId) {
-      const activeTenant = await this.prisma.tenant.findFirst({
-        where: { deletedAt: null },
-        orderBy: { createdAt: 'asc' },
-      });
-      targetTenantId = activeTenant?.id || 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2';
-    }
+    const targetTenantId = await this.resolveTenantId(dto?.tenantId, customerId);
 
     const activeSessionToken = dto.sessionToken || sessionTokenHeader;
 
@@ -284,14 +392,7 @@ export class CartService {
     customerId?: string,
     sessionTokenHeader?: string,
   ) {
-    let targetTenantId = dto.tenantId;
-    if (!targetTenantId) {
-      const activeTenant = await this.prisma.tenant.findFirst({
-        where: { deletedAt: null },
-        orderBy: { createdAt: 'asc' },
-      });
-      targetTenantId = activeTenant?.id || 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2';
-    }
+    const targetTenantId = await this.resolveTenantId(dto?.tenantId, customerId);
 
     const activeSessionToken = dto.sessionToken || sessionTokenHeader;
 
@@ -370,14 +471,7 @@ export class CartService {
     sessionTokenHeader?: string,
     tenantId?: string,
   ) {
-    let targetTenantId = tenantId;
-    if (!targetTenantId) {
-      const activeTenant = await this.prisma.tenant.findFirst({
-        where: { deletedAt: null },
-        orderBy: { createdAt: 'asc' },
-      });
-      targetTenantId = activeTenant?.id || 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2';
-    }
+    const targetTenantId = await this.resolveTenantId(tenantId, customerId);
 
     const cart = await this.getOrCreateCart(
       targetTenantId,

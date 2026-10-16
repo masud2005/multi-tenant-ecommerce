@@ -5,12 +5,23 @@ import { toast } from 'sonner';
 import { wishlistService } from '@/services';
 import { getAuthToken } from '@/services/auth/auth.storage';
 import type { User } from './types';
+import { loadWishlist } from './utils';
 
 export function useStoreWishlist(user: User | null) {
-  const [wishlist, setWishlist] = useState<string[]>([]);
+  // Initialize immediately from localStorage so wishlist never flashes empty on page refresh
+  const [wishlist, setWishlist] = useState<string[]>(() => loadWishlist());
   const syncedUserIdRef = useRef<string | null>(null);
 
-  // Sync wishlist from backend database whenever logged-in user changes
+  // Keep localStorage continuously in sync with current wishlist state
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tanti.wishlist', JSON.stringify(wishlist));
+      }
+    } catch {}
+  }, [wishlist]);
+
+  // Sync wishlist from backend database whenever authenticated customer changes or refreshes
   useEffect(() => {
     let isMounted = true;
     const token = getAuthToken();
@@ -19,7 +30,7 @@ export function useStoreWishlist(user: User | null) {
       if (syncedUserIdRef.current === user.id) return;
       syncedUserIdRef.current = user.id;
 
-      // Always load the specific authenticated customer's own wishlist from database
+      // Load authenticated customer's own wishlist from database
       wishlistService
         .getWishlist()
         .then((res) => {
@@ -29,22 +40,12 @@ export function useStoreWishlist(user: User | null) {
               .map((item) => item.product?.id)
               .filter(Boolean) as string[];
             setWishlist(dbWishlistIds);
-          } else {
-            setWishlist([]);
           }
         })
         .catch((err) => {
-          console.warn('Failed to load wishlist from server:', err);
-          if (isMounted) setWishlist([]);
+          console.warn('Failed to load wishlist from server on load:', err);
+          // Preserve cached wishlist on transient network errors
         });
-    } else {
-      syncedUserIdRef.current = null;
-      setWishlist([]);
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('tanti.wishlist');
-        }
-      } catch {}
     }
 
     return () => {
@@ -65,7 +66,7 @@ export function useStoreWishlist(user: User | null) {
         return;
       }
 
-      // 1. Optimistic UI update
+      // 1. Optimistic UI update (immediately updates state & localStorage)
       setWishlist((prev) =>
         prev.includes(productId)
           ? prev.filter((x) => x !== productId)
@@ -93,4 +94,3 @@ export function useStoreWishlist(user: User | null) {
     toggleWishlist,
   };
 }
-
