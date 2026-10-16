@@ -15,8 +15,6 @@ import {
   User,
   Shield,
   ExternalLink,
-  Store,
-  Sparkles,
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { useTenant } from '@/contexts/TenantContext';
@@ -45,7 +43,7 @@ export function CustomerSidebarContent({
   onItemClick,
 }: CustomerSidebarContentProps) {
   const pathname = usePathname();
-  const { orders, returns, wishlist, categories } = useStore();
+  const { orders, returns, wishlist } = useStore();
   const { tenant } = useTenant();
 
   // Counts for badges
@@ -59,16 +57,6 @@ export function CustomerSidebarContent({
 
   const wishlistCount = wishlist.length;
 
-  const displayCategories =
-    categories && categories.length > 0
-      ? categories.slice(0, 4)
-      : [
-          { key: 'women', name: 'Women' },
-          { key: 'men', name: 'Men' },
-          { key: 'kids', name: 'Kids' },
-          { key: 'home', name: 'Home & Living' },
-        ];
-
   // Nav Groups strictly matching Admin Dashboard structure
   const navGroups: CustomerNavGroup[] = [
     {
@@ -80,21 +68,6 @@ export function CustomerSidebarContent({
           icon: LayoutDashboard,
           exact: true,
         },
-      ],
-    },
-    {
-      category: 'Shop by Category',
-      items: [
-        {
-          label: 'All Products',
-          href: '/shop',
-          icon: Store,
-        },
-        ...displayCategories.map((c) => ({
-          label: c.name,
-          href: `/shop?category=${c.key}`,
-          icon: Sparkles,
-        })),
       ],
     },
     {
