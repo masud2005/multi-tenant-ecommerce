@@ -78,7 +78,7 @@ export class CustomerPageService {
       );
     }
 
-    // Default fallback for Returns & Refund policy page
+    // Default fallback for Return policy page
     if (cleanSlug === 'returns' || cleanSlug === 'policies/returns') {
       return ResponseHelper.success(
         {
@@ -87,7 +87,7 @@ export class CustomerPageService {
           slug: 'returns',
           updatedAt: page?.updatedAt || new Date().toISOString(),
         },
-        'Returns policy page retrieved successfully'
+        'Return policy page retrieved successfully'
       );
     }
 

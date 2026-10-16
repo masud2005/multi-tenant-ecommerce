@@ -54,8 +54,6 @@ export interface ReturnsPageData {
   heading?: string;
   sections: ReturnSectionItem[];
   status: 'published' | 'draft';
-  seoTitle?: string;
-  seoDescription?: string;
   updatedAt?: string;
   isDefault?: boolean;
 }
@@ -65,8 +63,6 @@ export interface UpdateReturnsPagePayload {
   heading?: string;
   sections?: ReturnSectionItem[];
   status?: string;
-  seoTitle?: string;
-  seoDescription?: string;
 }
 
 class PageService {
@@ -110,7 +106,7 @@ class PageService {
     }
   }
 
-  // 5. Get Returns & Refund page for Admin / Owner
+  // 5. Get Return page for Admin / Owner
   async getOwnerReturnsPage(): Promise<ReturnsPageData | null> {
     try {
       const res = await apiClient.get<ApiResponse<ReturnsPageData>>('/owner/pages/returns');
@@ -121,13 +117,13 @@ class PageService {
     }
   }
 
-  // 6. Update Returns & Refund page for Admin / Owner
+  // 6. Update Return page for Admin / Owner
   async updateOwnerReturnsPage(payload: UpdateReturnsPagePayload): Promise<ReturnsPageData | null> {
     const res = await apiClient.put<ApiResponse<ReturnsPageData>>('/owner/pages/returns', payload);
     return res.data || null;
   }
 
-  // 7. Get Public Returns & Refund page for Storefront
+  // 7. Get Public Return page for Storefront
   async getPublicReturnsPage(): Promise<ReturnsPageData | null> {
     try {
       const res = await apiClient.get<ApiResponse<ReturnsPageData>>('/customer/pages/returns');

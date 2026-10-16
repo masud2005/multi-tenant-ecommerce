@@ -8,8 +8,8 @@ import {
 } from '../../../common/exceptions/business.exception';
 
 export const DEFAULT_RETURNS_PAGE = {
-  title: 'Return & Refund Policy',
-  heading: 'Easy 7-day returns & Cash on Delivery refunds',
+  title: 'Return Policy',
+  heading: 'Easy 7-day returns & doorstep size exchange',
   sections: [
     {
       heading: 'Return window',
@@ -20,22 +20,11 @@ export const DEFAULT_RETURNS_PAGE = {
       body: 'Sarees, jewellery and innerwear are non-returnable unless they arrive damaged or defective. Sale items marked “Final sale” cannot be returned.',
     },
     {
-      heading: 'Cash on Delivery (COD) refunds',
-      body: 'For cash on delivery orders, refunds are processed via bKash or Nagad within 3–5 working days after quality inspection, or issued instantly as store credit for your next purchase.',
-    },
-    {
-      heading: 'How refunds work',
-      body: 'Once we receive and inspect your item (usually within 2 working days), refunds are issued to your original payment method: bKash/Nagad within 3 days, cards within 7–10 days. You may choose store credit for an instant refund.',
-    },
-    {
       heading: 'Exchanges',
       body: 'Size exchanges are free inside Dhaka. Our courier delivers the replacement and collects the original in a single visit.',
     },
   ],
   status: 'published',
-  seoTitle: 'Return & Refund Policy | Tanti',
-  seoDescription:
-    'Learn about our easy 7-day return process, cash on delivery refund terms and doorstep size exchange.',
 };
 
 export const DEFAULT_ABOUT_PAGE = {

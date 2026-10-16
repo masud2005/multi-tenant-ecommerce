@@ -9,8 +9,6 @@ import {
   ExternalLink,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
-  Banknote,
 } from 'lucide-react';
 import { Drawer } from '@/components/ui/Drawer';
 import { Input } from '@/components/ui/Input';
@@ -30,8 +28,8 @@ export interface ReturnsEditorDrawerProps {
 }
 
 const DEFAULT_FORM: ReturnsPageData = {
-  title: 'Return & Refund Policy',
-  heading: 'Easy 7-day returns & Cash on Delivery refunds',
+  title: 'Return Policy',
+  heading: 'Easy 7-day returns & doorstep size exchange',
   sections: [
     {
       heading: 'Return window',
@@ -42,22 +40,11 @@ const DEFAULT_FORM: ReturnsPageData = {
       body: 'Sarees, jewellery and innerwear are non-returnable unless they arrive damaged or defective. Sale items marked “Final sale” cannot be returned.',
     },
     {
-      heading: 'Cash on Delivery (COD) refunds',
-      body: 'For cash on delivery orders, refunds are processed via bKash or Nagad within 3–5 working days after quality inspection, or issued instantly as store credit for your next purchase.',
-    },
-    {
-      heading: 'How refunds work',
-      body: 'Once we receive and inspect your item (usually within 2 working days), refunds are issued to your original payment method: bKash/Nagad within 3 days, cards within 7–10 days. You may choose store credit for an instant refund.',
-    },
-    {
       heading: 'Exchanges',
       body: 'Size exchanges are free inside Dhaka. Our courier delivers the replacement and collects the original in a single visit.',
     },
   ],
   status: 'published',
-  seoTitle: 'Return & Refund Policy | Tanti',
-  seoDescription:
-    'Learn about our easy 7-day return process, cash on delivery refund terms and doorstep size exchange.',
 };
 
 export function ReturnsEditorDrawer({
@@ -69,7 +56,7 @@ export function ReturnsEditorDrawer({
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ReturnsPageData>(DEFAULT_FORM);
 
-  // Load existing Returns page data when drawer opens
+  // Load existing Return page data when drawer opens
   useEffect(() => {
     if (!open) return;
     let isMounted = true;
@@ -87,12 +74,10 @@ export function ReturnsEditorDrawer({
                 ? data.sections
                 : DEFAULT_FORM.sections,
             status: data.status || 'published',
-            seoTitle: data.seoTitle || DEFAULT_FORM.seoTitle,
-            seoDescription: data.seoDescription || DEFAULT_FORM.seoDescription,
           });
         }
       } catch (err) {
-        console.error('Failed to load Returns page settings:', err);
+        console.error('Failed to load Return page settings:', err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -121,7 +106,7 @@ export function ReturnsEditorDrawer({
       sections: [
         ...form.sections,
         {
-          heading: 'New Policy Section',
+          heading: 'New Return Clause',
           body: '',
         },
       ],
@@ -158,21 +143,19 @@ export function ReturnsEditorDrawer({
         heading: form.heading?.trim() || DEFAULT_FORM.heading,
         sections: validSections.length > 0 ? validSections : DEFAULT_FORM.sections,
         status: form.status || 'published',
-        seoTitle: form.seoTitle?.trim() || DEFAULT_FORM.seoTitle,
-        seoDescription: form.seoDescription?.trim() || DEFAULT_FORM.seoDescription,
       });
 
       if (res) {
-        toast.success('Return & Refund policy updated and published!');
+        toast.success('Return policy updated and published!');
         if (onSaved) onSaved();
         onClose();
       } else {
-        toast.error('Failed to update Return & Refund page');
+        toast.error('Failed to update Return page');
       }
     } catch (err: any) {
-      console.error('Failed to save returns page:', err);
+      console.error('Failed to save return page:', err);
       toast.error(
-        err?.response?.data?.message || 'Error saving Return & Refund policy'
+        err?.response?.data?.message || 'Error saving Return policy'
       );
     } finally {
       setSaving(false);
@@ -184,7 +167,7 @@ export function ReturnsEditorDrawer({
       open={open}
       onClose={onClose}
       width="max-w-2xl"
-      title="Edit “Return & Refund Policy” Page"
+      title="Edit “Return Policy” Page"
       footer={
         <div className="flex w-full items-center justify-between gap-3">
           <Button
@@ -219,19 +202,6 @@ export function ReturnsEditorDrawer({
       }
     >
       <div className="space-y-6">
-        {/* COD Educational Notice Card */}
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200/60 bg-amber-50/70 p-4 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-          <Banknote className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-          <div className="text-xs leading-relaxed">
-            <p className="font-semibold text-amber-950 dark:text-amber-100">
-              Cash on Delivery (COD) Refund Policy
-            </p>
-            <p className="mt-1 text-amber-800 dark:text-amber-300">
-              Customers who pay cash at delivery cannot receive cash back from couriers. Make sure your policy explains how you refund COD orders (e.g., via <strong>bKash / Nagad</strong> or instant <strong>Store Credit</strong>).
-            </p>
-          </div>
-        </div>
-
         {/* Basic Information */}
         <div className="space-y-4 rounded-xl border border-line bg-surface p-5 shadow-2xs">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -247,7 +217,7 @@ export function ReturnsEditorDrawer({
               <Input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Return & Refund Policy"
+                placeholder="Return Policy"
               />
             </div>
             <div>
@@ -274,17 +244,17 @@ export function ReturnsEditorDrawer({
             <Input
               value={form.heading || ''}
               onChange={(e) => setForm({ ...form, heading: e.target.value })}
-              placeholder="e.g. Easy 7-day returns & Cash on Delivery refunds"
+              placeholder="e.g. Easy 7-day returns & doorstep size exchange"
             />
           </div>
         </div>
 
-        {/* Dynamic Policy Sections */}
+        {/* Dynamic Return Policy Sections */}
         <div className="space-y-4 rounded-xl border border-line bg-surface p-5 shadow-2xs">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
               <ShieldCheck className="h-4 w-4 text-ink-muted" />
-              Policy Sections ({form.sections.length})
+              Return Sections ({form.sections.length})
             </div>
             <Button
               variant="ghost"
@@ -328,14 +298,14 @@ export function ReturnsEditorDrawer({
                       onChange={(e) =>
                         handleSectionChange(idx, 'heading', e.target.value)
                       }
-                      placeholder="e.g. Cash on Delivery (COD) refunds"
+                      placeholder="e.g. Return window"
                       className="font-medium"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-ink mb-1">
-                      Section Terms & Details
+                      Section Details
                     </label>
                     <Textarea
                       rows={3}
@@ -343,46 +313,13 @@ export function ReturnsEditorDrawer({
                       onChange={(e) =>
                         handleSectionChange(idx, 'body', e.target.value)
                       }
-                      placeholder="Write the policy clauses and instructions for customers..."
+                      placeholder="Write the return terms, conditions and instructions for customers..."
                       className="text-sm leading-relaxed"
                     />
                   </div>
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* SEO Settings */}
-        <div className="space-y-4 rounded-xl border border-line bg-surface p-5 shadow-2xs">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            <Sparkles className="h-4 w-4 text-ink-muted" />
-            SEO & Search Preview
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">
-              SEO Meta Title
-            </label>
-            <Input
-              value={form.seoTitle || ''}
-              onChange={(e) => setForm({ ...form, seoTitle: e.target.value })}
-              placeholder="Return & Refund Policy | Store Name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">
-              SEO Meta Description
-            </label>
-            <Textarea
-              rows={2}
-              value={form.seoDescription || ''}
-              onChange={(e) =>
-                setForm({ ...form, seoDescription: e.target.value })
-              }
-              placeholder="Summary of return rules, delivery swap and refund timelines for search results..."
-            />
           </div>
         </div>
       </div>

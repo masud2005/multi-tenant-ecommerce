@@ -66,8 +66,8 @@ export class OwnerPageController {
 
   @Get('returns')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get Returns & Refund page content for editing' })
-  @ApiResponse({ status: 200, description: 'Returns page retrieved successfully' })
+  @ApiOperation({ summary: 'Get Return page content for editing' })
+  @ApiResponse({ status: 200, description: 'Return page retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async getReturnsPage(@CurrentUser() user?: any) {
@@ -76,8 +76,8 @@ export class OwnerPageController {
 
   @Put('returns')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update or save Returns & Refund page content' })
-  @ApiResponse({ status: 200, description: 'Returns page saved successfully' })
+  @ApiOperation({ summary: 'Update or save Return page content' })
+  @ApiResponse({ status: 200, description: 'Return page saved successfully' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
