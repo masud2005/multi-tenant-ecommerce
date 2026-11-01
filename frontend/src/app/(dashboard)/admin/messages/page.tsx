@@ -55,10 +55,14 @@ export default function AdminMessagesPage() {
   const [isSending, setIsSending] = useState(false);
   const [isCustomerOnline, setIsCustomerOnline] = useState(false);
   const [isCustomerTyping, setIsCustomerTyping] = useState(false);
+  const [onlineConvIds, setOnlineConvIds] = useState<Set<string>>(new Set());
 
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const selectedConvIdRef = useRef<string | null>(null);
+  selectedConvIdRef.current = selectedConvId;
+  const prevConvIdRef = useRef<string | null>(null);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConvId) || null;
 
@@ -127,7 +131,7 @@ export default function AdminMessagesPage() {
     }
   }, [selectedConvId, fetchMessages]);
 
-  // 3. Socket.IO Connection & Real-Time Sync
+  // 3. Socket.IO Connection & Real-Time Sync (Maintained continuously)
   useEffect(() => {
     const token = getAuthToken();
     const storedUser = getAuthUser();
@@ -152,18 +156,24 @@ export default function AdminMessagesPage() {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      if (selectedConvId) {
-        socket.emit('join_conversation', { conversationId: selectedConvId });
-        socket.emit('check_presence', { conversationId: selectedConvId }, (res: any) => {
-          if (res?.isOnline !== undefined) setIsCustomerOnline(res.isOnline);
+      const currentConvId = selectedConvIdRef.current;
+      if (currentConvId) {
+        socket.emit('join_conversation', { conversationId: currentConvId }, (res: any) => {
+          if (res?.isOtherPartyOnline !== undefined) setIsCustomerOnline(res.isOtherPartyOnline);
+        });
+        socket.emit('check_presence', { conversationId: currentConvId }, (res: any) => {
+          if (res?.isOnline !== undefined) {
+            setIsCustomerOnline(res.isOnline);
+            if (res.isOnline) setOnlineConvIds((prev) => new Set(prev).add(currentConvId));
+          }
         });
       }
     });
 
     // Handle incoming messages
     const handleIncomingMessage = (newMsg: ChatMessage) => {
-      // 1. If message belongs to currently open conversation, append to feed
-      if (newMsg.conversationId === selectedConvId) {
+      const currentConvId = selectedConvIdRef.current;
+      if (newMsg.conversationId === currentConvId) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
@@ -171,7 +181,6 @@ export default function AdminMessagesPage() {
         setIsCustomerTyping(false);
       }
 
-      // 2. Update conversation preview and unread count in inbox list
       setConversations((prev) => {
         const exists = prev.some((c) => c.id === newMsg.conversationId);
         if (!exists) {
@@ -180,7 +189,7 @@ export default function AdminMessagesPage() {
         }
         return prev.map((c) => {
           if (c.id === newMsg.conversationId) {
-            const isCurrent = c.id === selectedConvId;
+            const isCurrent = c.id === currentConvId;
             return {
               ...c,
               lastMessagePreview: newMsg.text,
@@ -204,26 +213,58 @@ export default function AdminMessagesPage() {
     });
 
     // Presence updates
-    socket.on('presence_status', (data: { isOnline: boolean; role: string }) => {
+    socket.on('presence_status', (data: { conversationId?: string; isOnline: boolean; role: string }) => {
       if (data.role === 'CUSTOMER') {
-        setIsCustomerOnline(data.isOnline);
+        if (data.conversationId) {
+          setOnlineConvIds((prev) => {
+            const next = new Set(prev);
+            if (data.isOnline) next.add(data.conversationId!);
+            else next.delete(data.conversationId!);
+            return next;
+          });
+          if (data.conversationId === selectedConvIdRef.current) {
+            setIsCustomerOnline(data.isOnline);
+          }
+        } else {
+          setIsCustomerOnline(data.isOnline);
+        }
       }
     });
 
     return () => {
-      if (selectedConvId) {
-        socket.emit('leave_conversation', { conversationId: selectedConvId });
+      if (selectedConvIdRef.current) {
+        socket.emit('leave_conversation', { conversationId: selectedConvIdRef.current });
       }
       socket.disconnect();
     };
-  }, [selectedConvId, fetchConversations]);
+  }, [fetchConversations]);
 
   // Switch conversation room when selected
   useEffect(() => {
-    if (socketRef.current?.connected && selectedConvId) {
-      socketRef.current.emit('join_conversation', { conversationId: selectedConvId });
+    if (!socketRef.current?.connected) return;
+
+    if (prevConvIdRef.current && prevConvIdRef.current !== selectedConvId) {
+      socketRef.current.emit('leave_conversation', { conversationId: prevConvIdRef.current });
+    }
+
+    if (selectedConvId) {
+      prevConvIdRef.current = selectedConvId;
+      socketRef.current.emit('join_conversation', { conversationId: selectedConvId }, (res: any) => {
+        if (res?.isOtherPartyOnline !== undefined) setIsCustomerOnline(res.isOtherPartyOnline);
+      });
       socketRef.current.emit('check_presence', { conversationId: selectedConvId }, (res: any) => {
-        if (res?.isOnline !== undefined) setIsCustomerOnline(res.isOnline);
+        if (res?.isOnline !== undefined) {
+          setIsCustomerOnline(res.isOnline);
+          if (res.isOnline) {
+            setOnlineConvIds((prev) => new Set(prev).add(selectedConvId));
+          } else {
+            setOnlineConvIds((prev) => {
+              const next = new Set(prev);
+              next.delete(selectedConvId);
+              return next;
+            });
+          }
+        }
       });
     }
   }, [selectedConvId]);
@@ -320,23 +361,8 @@ export default function AdminMessagesPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Live Customer Chat & Messages"
-        description="Encrypted real-time communication channel with active store customers"
-        actions={
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 rounded-lg text-xs font-medium">
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Socket.IO Live Connected
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => fetchConversations()}
-              className="gap-1.5 text-xs h-9 cursor-pointer"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh
-            </Button>
-          </div>
-        }
+        title="Support"
+        description="Live customer messaging and support management"
       />
 
       {/* 2-Column Split Chat Control Center */}
@@ -398,6 +424,7 @@ export default function AdminMessagesPage() {
               conversations.map((conv) => {
                 const isSelected = conv.id === selectedConvId;
                 const hasUnread = conv.unreadByOwner > 0;
+                const isOnline = onlineConvIds.has(conv.id);
 
                 return (
                   <div
@@ -416,8 +443,11 @@ export default function AdminMessagesPage() {
                       <div className="w-9 h-9 rounded-full bg-clay/10 text-clay font-bold text-xs flex items-center justify-center ring-1 ring-line">
                         {conv.customerName.charAt(0).toUpperCase()}
                       </div>
-                      {conv.status === 'active' && (
-                        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-surface" />
+                      {isOnline && (
+                        <span
+                          className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-surface"
+                          title="Customer Online"
+                        />
                       )}
                     </div>
 
@@ -470,9 +500,9 @@ export default function AdminMessagesPage() {
                     </div>
                     <span
                       className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-surface ${
-                        isCustomerOnline ? 'bg-emerald-500' : 'bg-slate-400'
+                        (isCustomerOnline || onlineConvIds.has(selectedConversation.id)) ? 'bg-emerald-500' : 'bg-slate-400'
                       }`}
-                      title={isCustomerOnline ? 'Customer Online' : 'Customer Away'}
+                      title={(isCustomerOnline || onlineConvIds.has(selectedConversation.id)) ? 'Customer Online' : 'Customer Offline'}
                     />
                   </div>
                   <div>
@@ -481,10 +511,10 @@ export default function AdminMessagesPage() {
                         {selectedConversation.customerName}
                       </h3>
                       <Badge
-                        tone={isCustomerOnline ? 'success' : 'neutral'}
+                        tone={(isCustomerOnline || onlineConvIds.has(selectedConversation.id)) ? 'success' : 'neutral'}
                         className="text-[10px] py-0 px-1.5"
                       >
-                        {isCustomerOnline ? 'Online' : 'Offline'}
+                        {(isCustomerOnline || onlineConvIds.has(selectedConversation.id)) ? 'Online' : 'Offline'}
                       </Badge>
                     </div>
                     <p className="text-xs text-ink-muted flex items-center gap-2 mt-0.5">
@@ -504,11 +534,6 @@ export default function AdminMessagesPage() {
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-2">
-                  <div className="hidden sm:flex items-center gap-1 text-[11px] text-ink-muted bg-surface px-2.5 py-1 rounded-full border border-line">
-                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>AES-256 Encrypted</span>
-                  </div>
-
                   <Button
                     variant="secondary"
                     onClick={handleToggleStatus}
@@ -525,7 +550,7 @@ export default function AdminMessagesPage() {
                 {isLoadingMessages ? (
                   <div className="h-full flex flex-col items-center justify-center text-ink-muted text-xs">
                     <Loader2 className="h-6 w-6 animate-spin text-clay mb-2" />
-                    Decrypting message history...
+                    Loading message history...
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center text-ink-muted text-xs">
@@ -535,12 +560,6 @@ export default function AdminMessagesPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="text-center my-1">
-                      <span className="text-[10px] text-ink-muted bg-surface px-3 py-1 rounded-full border border-line shadow-2xs">
-                        🔒 End-to-End Encrypted Session
-                      </span>
-                    </div>
-
                     {messages.map((msg) => {
                       const isOwner = msg.senderRole === 'OWNER' || msg.senderRole === 'STAFF';
 
@@ -610,8 +629,8 @@ export default function AdminMessagesPage() {
                 )}
               </div>
 
-              {/* Quick Canned Replies Bar */}
-              <div className="px-4 py-2 border-t border-line bg-canvas/30 flex items-center gap-1.5 overflow-x-auto">
+              {/* Quick Canned Replies Bar (Clean, no horizontal scrollbar track) */}
+              <div className="px-4 py-2 border-t border-line bg-canvas/30 flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 <span className="text-[11px] font-medium text-ink-muted shrink-0 flex items-center gap-1">
                   <Sparkles className="h-3 w-3 text-clay" /> Quick:
                 </span>
@@ -620,7 +639,7 @@ export default function AdminMessagesPage() {
                     key={idx}
                     type="button"
                     onClick={() => handleSendReply(reply)}
-                    className="text-[11px] whitespace-nowrap bg-surface hover:bg-clay/10 hover:text-clay hover:border-clay/30 border border-line px-2.5 py-1 rounded-full text-ink transition-all cursor-pointer shrink-0"
+                    className="text-[11px] whitespace-nowrap bg-surface hover:bg-clay/10 hover:text-clay hover:border-clay/30 border border-line px-2.5 py-1 rounded-full text-ink transition-all cursor-pointer shrink-0 shadow-2xs"
                   >
                     {reply}
                   </button>

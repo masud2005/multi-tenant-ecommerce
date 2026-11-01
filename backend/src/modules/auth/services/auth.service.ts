@@ -133,6 +133,39 @@ export class AuthService {
             metadata: { userId: user.id },
         });
 
+        // Track customer login event for conversion rate analytics
+        if (user.role === UserRole.CUSTOMER) {
+            try {
+                let targetTenantId: string | undefined = user.tenantMemberships?.[0]?.tenantId;
+                if (!targetTenantId) {
+                    const profile = await this.prisma.customerProfile.findFirst({
+                        where: { userId: user.id, deletedAt: null },
+                        select: { tenantId: true },
+                    });
+                    targetTenantId = profile?.tenantId;
+                }
+                if (!targetTenantId) {
+                    const defaultTenant = await this.prisma.tenant.findFirst({
+                        where: { deletedAt: null },
+                        orderBy: { createdAt: 'asc' },
+                        select: { id: true },
+                    });
+                    targetTenantId = defaultTenant?.id;
+                }
+                if (targetTenantId) {
+                    await this.prisma.customerLoginLog.create({
+                        data: {
+                            tenantId: targetTenantId,
+                            userId: user.id,
+                            email: user.email,
+                        },
+                    });
+                }
+            } catch {
+                // Non-blocking analytics log
+            }
+        }
+
         const membership = user.tenantMemberships?.[0];
         const tenantId = membership?.tenantId;
         const isOwner = Boolean(membership?.isOwner || user.role === UserRole.OWNER || (user.role as any) === 'SUPER_ADMIN');

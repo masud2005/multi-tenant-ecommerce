@@ -28,6 +28,7 @@ export interface WishlistProductData {
   images: WishlistProductImage[];
   coverImage: string | null;
   variantsCount: number;
+  variants?: any[];
   availableSizes: string[];
   availableColors: string[];
 }

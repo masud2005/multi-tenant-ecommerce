@@ -381,12 +381,6 @@ export default function AccountSupportPage() {
                 </p>
               </div>
             </div>
-
-            {/* End-to-End Encryption Badge */}
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-ink-muted bg-surface/80 border border-line px-2.5 py-1 rounded-full shadow-2xs">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>AES-256 Encrypted</span>
-            </div>
           </div>
 
           {/* Chat Messages Feed */}
@@ -394,7 +388,7 @@ export default function AccountSupportPage() {
             {chatLoading ? (
               <div className="h-full flex flex-col items-center justify-center text-ink-muted">
                 <Loader2 className="h-6 w-6 animate-spin text-clay mb-2" />
-                <p className="text-xs">Connecting to secure chat channel...</p>
+                <p className="text-xs">Connecting to chat support...</p>
               </div>
             ) : messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center px-4 py-8">
@@ -422,11 +416,6 @@ export default function AccountSupportPage() {
               </div>
             ) : (
               <>
-                <div className="text-center my-2">
-                  <span className="text-[11px] text-ink-muted bg-surface px-3 py-1 rounded-full border border-line shadow-2xs">
-                    🔒 Chat is encrypted and protected
-                  </span>
-                </div>
 
                 {messages.map((msg) => {
                   const isMe = msg.senderRole === 'CUSTOMER';

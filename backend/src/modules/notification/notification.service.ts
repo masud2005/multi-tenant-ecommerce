@@ -117,9 +117,9 @@ export class NotificationService {
   /**
    * ✅ Mark a specific notification as read
    */
-  async markAsRead(id: string, userId: string, tenantId: string) {
+  async markAsRead(id: string, userId: string, tenantId?: string) {
     const notification = await this.prisma.notification.findFirst({
-      where: { id, userId, tenantId },
+      where: { id, userId },
     });
 
     if (!notification) {
@@ -135,9 +135,9 @@ export class NotificationService {
   /**
    * 🧹 Mark all unread notifications as read for current user
    */
-  async markAllAsRead(userId: string, tenantId: string) {
+  async markAllAsRead(userId: string, tenantId?: string) {
     await this.prisma.notification.updateMany({
-      where: { userId, tenantId, isRead: false },
+      where: { userId, isRead: false },
       data: { isRead: true },
     });
 

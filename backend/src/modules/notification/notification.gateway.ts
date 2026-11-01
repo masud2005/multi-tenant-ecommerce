@@ -48,7 +48,10 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
       if (token) {
         try {
-          const secret = this.configService.get<string>('app.jwtSecret') || 'jwt-secret';
+          const secret =
+            this.configService.get<string>('jwt.accessSecret') ||
+            this.configService.get<string>('app.jwtSecret') ||
+            'jwt-secret';
           const payload = await this.jwtService.verifyAsync(token, { secret });
           client.userId = payload.sub || payload.id;
           client.tenantId = payload.tenantId || tenantId;

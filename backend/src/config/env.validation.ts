@@ -51,12 +51,6 @@ export class EnvironmentVariables {
   @IsOptional()
   REDIS_HOST_PORT: number;
 
-  @IsEmail()
-  ADMIN_EMAIL: string;
-
-  @IsString()
-  ADMIN_PASSWORD: string;
-
   @IsString()
   JWT_ACCESS_SECRET: string;
 

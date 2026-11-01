@@ -5,11 +5,22 @@ import { toast } from 'sonner';
 import type { CartItem } from '@/types/commerce';
 import { cartService } from '@/services';
 import type { User } from './types';
+import { loadCart } from './utils';
 
 export function useStoreCart(user?: User | null) {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // Initialize immediately from localStorage so cart never flashes empty on page refresh
+  const [cart, setCart] = useState<CartItem[]>(() => loadCart());
 
-  // Sync cart from backend when authenticated customer logs in or logs out
+  // Keep localStorage continuously in sync with current cart state
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tanti.cart', JSON.stringify(cart));
+      }
+    } catch {}
+  }, [cart]);
+
+  // Sync cart with backend database when authenticated customer logs in or refreshes
   useEffect(() => {
     let isMounted = true;
     if (user?.id) {
@@ -18,29 +29,20 @@ export function useStoreCart(user?: User | null) {
         .then((res) => {
           if (!isMounted) return;
           if (res?.data?.items && Array.isArray(res.data.items)) {
-            setCart(
-              res.data.items.map((item) => ({
-                key: `${item.variantId}-${item.id}`,
-                productId: item.productId,
-                variantId: item.variantId,
-                qty: item.qty,
-                savedForLater: item.savedForLater,
-              }))
-            );
-          } else {
-            setCart([]);
+            const serverItems = res.data.items.map((item) => ({
+              key: `${item.variantId}-${item.id}`,
+              productId: item.productId,
+              variantId: item.variantId,
+              qty: item.qty,
+              savedForLater: item.savedForLater,
+            }));
+            setCart(serverItems);
           }
         })
-        .catch(() => {
-          if (isMounted) setCart([]);
+        .catch((err) => {
+          console.warn('Could not sync cart from server on load:', err);
+          // Preserve optimistic/cached cart on transient network errors
         });
-    } else {
-      setCart([]);
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('tanti.cart');
-        }
-      } catch {}
     }
 
     return () => {

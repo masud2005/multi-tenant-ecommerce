@@ -72,6 +72,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       // Wishlist
       wishlist: wishlistState.wishlist,
+      wishlistProducts: wishlistState.wishlistProducts,
+      isWishlistLoading: wishlistState.isWishlistLoading,
+      refreshWishlist: wishlistState.loadWishlistFromBackend,
       toggleWishlist: wishlistState.toggleWishlist,
 
       // Auth & Customer

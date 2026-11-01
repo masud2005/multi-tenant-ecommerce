@@ -32,12 +32,16 @@ import {
   Package,
   Heart,
   MapPin,
+  Headphones,
+  LifeBuoy,
 } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard,
   ShoppingCart,
   RotateCcw,
+  Headphones,
+  LifeBuoy,
   CreditCard,
   Tag,
   FolderTree,
