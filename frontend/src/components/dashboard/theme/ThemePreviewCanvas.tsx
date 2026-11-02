@@ -59,6 +59,42 @@ function getThemeCssVars(t: TenantTheme): React.CSSProperties {
   if (inkRgb) vars['--ink'] = inkRgb;
   if (accentRgb) vars['--accent-rgb'] = accentRgb;
 
+  if (canvasRgb && t.canvasColor) {
+    const clean = t.canvasColor.replace('#', '').trim();
+    if (clean.length === 6) {
+      const r = parseInt(clean.substring(0, 2), 16);
+      const g = parseInt(clean.substring(2, 4), 16);
+      const b = parseInt(clean.substring(4, 6), 16);
+      const isDarkBg = (r * 0.299 + g * 0.587 + b * 0.114) < 140;
+
+      if (isDarkBg) {
+        vars['--subtle'] = `${Math.min(255, r + 18)} ${Math.min(255, g + 18)} ${Math.min(255, b + 26)}`;
+        vars['--line'] = `${Math.min(255, r + 36)} ${Math.min(255, g + 36)} ${Math.min(255, b + 48)}`;
+      } else {
+        vars['--subtle'] = `${Math.max(0, Math.round(r * 0.96))} ${Math.max(0, Math.round(g * 0.96))} ${Math.max(0, Math.round(g * 0.96))}`;
+        vars['--line'] = `${Math.max(0, Math.round(r * 0.91))} ${Math.max(0, Math.round(g * 0.91))} ${Math.max(0, Math.round(g * 0.91))}`;
+      }
+    }
+  }
+
+  if (inkRgb && t.inkColor) {
+    const clean = t.inkColor.replace('#', '').trim();
+    if (clean.length === 6) {
+      const r = parseInt(clean.substring(0, 2), 16);
+      const g = parseInt(clean.substring(2, 4), 16);
+      const b = parseInt(clean.substring(4, 6), 16);
+      const isLightText = (r * 0.299 + g * 0.587 + b * 0.114) > 140;
+
+      if (isLightText) {
+        vars['--ink-soft'] = `${Math.round(r * 0.85)} ${Math.round(g * 0.85)} ${Math.round(b * 0.85)}`;
+        vars['--ink-muted'] = `${Math.round(r * 0.65)} ${Math.round(g * 0.65)} ${Math.round(b * 0.65)}`;
+      } else {
+        vars['--ink-soft'] = `${Math.round(r * 0.7 + 255 * 0.3)} ${Math.round(g * 0.7 + 255 * 0.3)} ${Math.round(b * 0.7 + 255 * 0.3)}`;
+        vars['--ink-muted'] = `${Math.round(r * 0.45 + 255 * 0.55)} ${Math.round(g * 0.45 + 255 * 0.55)} ${Math.round(b * 0.45 + 255 * 0.55)}`;
+      }
+    }
+  }
+
   if (t.primaryColor) {
     const clean = t.primaryColor.replace('#', '').trim();
     if (clean.length === 6) {
@@ -199,6 +235,20 @@ export function ThemePreviewCanvas({ theme }: ThemePreviewCanvasProps) {
   useEffect(() => {
     setupIframe();
   }, [setupIframe]);
+
+  // Sync dark class on the iframe html document based on background brightness
+  useEffect(() => {
+    if (iframeRef.current?.contentDocument && theme.canvasColor) {
+      const clean = theme.canvasColor.replace('#', '').trim();
+      if (clean.length === 6) {
+        const r = parseInt(clean.substring(0, 2), 16);
+        const g = parseInt(clean.substring(2, 4), 16);
+        const b = parseInt(clean.substring(4, 6), 16);
+        const isDark = (r * 0.299 + g * 0.587 + b * 0.114) < 140;
+        iframeRef.current.contentDocument.documentElement.classList.toggle('dark', isDark);
+      }
+    }
+  }, [theme.canvasColor]);
 
   // Capture navigation clicks inside the preview so the admin doesn't navigate away
   const handlePreventNavigation = (e: React.MouseEvent) => {
