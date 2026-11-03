@@ -5,7 +5,7 @@ const all: PermissionAction[] = ['view', 'create', 'update', 'delete'];
 const allModules: AdminModule[] = [
   'dashboard', 'orders', 'returns', 'payments', 'products', 'categories', 'collections', 'brands', 'inventory',
   'customers', 'reviews', 'discounts', 'marketing', 'shipping', 'theme', 'content', 'media', 'analytics',
-  'reports', 'staff', 'notifications', 'settings', 'audit', 'billing', 'integrations', 'domains'
+  'reports', 'staff', 'notifications', 'settings', 'audit', 'billing'
 ];
 
 export const rolePermissions: Record<AdminRole, Partial<Record<AdminModule, PermissionAction[]>>> = {
@@ -124,13 +124,13 @@ export const auditLogs = [
   { id: 'l1', at: '2026-09-26T09:14:00', actor: 'Shahana Parvin', action: 'Changed role permissions', resource: 'Role · Store Manager', category: 'Security', before: 'payments: view', after: 'payments: view, refund' },
   { id: 'l2', at: '2026-09-26T08:52:00', actor: 'Farzana Yasmin', action: 'Updated product price', resource: 'Product · Sage Cotton Panjabi', category: 'Catalog', before: 'Sale price ৳2,890', after: 'Sale price ৳2,690' },
   { id: 'l3', at: '2026-09-26T08:30:00', actor: 'Rahim Uddin', action: 'Adjusted stock (+24, Received)', resource: 'Variant · TN-P03-SAG-L', category: 'Inventory', before: 'Available 0', after: 'Available 24' },
-  { id: 'l4', at: '2026-09-25T21:05:00', actor: 'System', action: 'Webhook delivery failed (retry 2/5)', resource: 'Webhook · order.created → ERP', category: 'Integrations', before: '', after: 'HTTP 503' },
+  { id: 'l4', at: '2026-09-25T21:05:00', actor: 'System', action: 'Webhook delivery failed (retry 2/5)', resource: 'Webhook · order.created → ERP', category: 'Settings', before: '', after: 'HTTP 503' },
   { id: 'l5', at: '2026-09-25T18:40:00', actor: 'Farzana Yasmin', action: 'Issued partial refund ৳600', resource: 'Order · TN-10480', category: 'Payments', before: 'Paid ৳2,890', after: 'Refunded ৳600' },
   { id: 'l6', at: '2026-09-25T17:02:00', actor: 'Shahana Parvin', action: 'Signed in from new device', resource: 'Session · Chrome on macOS, Dhaka', category: 'Security', before: '', after: '' },
   { id: 'l7', at: '2026-09-25T15:30:00', actor: 'Shahana Parvin', action: 'Updated bKash credentials', resource: 'Payment settings · bKash', category: 'Settings', before: 'App key ••••4F2A', after: 'App key ••••91BC' },
   { id: 'l8', at: '2026-09-25T12:10:00', actor: 'Farzana Yasmin', action: 'Exported customers (CSV)', resource: 'Export · 2,418 rows', category: 'Data export', before: '', after: '' },
   { id: 'l9', at: '2026-09-24T19:20:00', actor: 'Rahim Uddin', action: 'Changed order status', resource: 'Order · TN-10493', category: 'Orders', before: 'Packed', after: 'Shipped' },
-  { id: 'l10', at: '2026-09-24T11:00:00', actor: 'Shahana Parvin', action: 'Created API key', resource: 'API key · ERP sync (read:orders)', category: 'Integrations', before: '', after: '' },
+  { id: 'l10', at: '2026-09-24T11:00:00', actor: 'Shahana Parvin', action: 'Created API key', resource: 'API key · ERP sync (read:orders)', category: 'Settings', before: '', after: '' },
   { id: 'l11', at: '2026-09-23T08:15:00', actor: 'Unknown', action: '5 failed sign-in attempts — account locked 15 min', resource: 'Login · rahim@tanti.com.bd', category: 'Security', before: '', after: '' }
 ];
 
@@ -155,38 +155,6 @@ export const notificationLogs = [
   { id: 'nl3', at: '2026-09-26T08:41:00', channel: 'SMS', to: '01556-778899', event: 'Payment failed', status: 'failed' },
   { id: 'nl4', at: '2026-09-26T08:40:00', channel: 'Email', to: 'rafiq.h@gmail.com', event: 'Payment failed', status: 'delivered' },
   { id: 'nl5', at: '2026-09-25T20:15:00', channel: 'Push', to: 'Web · Chrome', event: 'Out for delivery', status: 'delivered' }
-];
-
-export const apiKeys = [
-  { id: 'k1', name: 'ERP sync', prefix: 'tk_live_8F2a', scopes: ['read:orders', 'read:products', 'write:inventory'], created: '2026-09-24', lastUsed: '2026-09-26T09:00:00' },
-  { id: 'k2', name: 'Facebook catalog feed', prefix: 'tk_live_3Bc9', scopes: ['read:products'], created: '2026-03-11', lastUsed: '2026-09-26T06:00:00' }
-];
-
-export const webhooks = [
-  { id: 'w1', url: 'https://erp.tanti.com.bd/hooks/orders', events: ['order.created', 'order.updated'], status: 'failing', successRate: 91.4 },
-  { id: 'w2', url: 'https://hooks.zapier.com/hooks/catch/71821/abc', events: ['customer.created'], status: 'healthy', successRate: 100 }
-];
-
-export const webhookLogs = [
-  { id: 'wl1', at: '2026-09-25T21:05:00', event: 'order.created', code: 503, attempt: '2/5', nextRetry: 'in 8 min' },
-  { id: 'wl2', at: '2026-09-25T20:58:00', event: 'order.created', code: 503, attempt: '1/5', nextRetry: '' },
-  { id: 'wl3', at: '2026-09-25T20:14:00', event: 'order.updated', code: 200, attempt: '1/5', nextRetry: '' },
-  { id: 'wl4', at: '2026-09-25T18:02:00', event: 'order.created', code: 200, attempt: '1/5', nextRetry: '' }
-];
-
-export const integrations = [
-  { id: 'i1', name: 'bKash', category: 'Payments', status: 'connected', detail: 'Tokenized checkout · Live' },
-  { id: 'i2', name: 'Nagad', category: 'Payments', status: 'connected', detail: 'Merchant API · Live' },
-  { id: 'i3', name: 'SSLCommerz', category: 'Payments', status: 'connected', detail: 'Store ID tanti_live · IPN verified' },
-  { id: 'i4', name: 'Stripe', category: 'Payments', status: 'connected', detail: 'Webhooks signed · USD settlement' },
-  { id: 'i5', name: 'Pathao Courier', category: 'Shipping', status: 'connected', detail: 'Auto-create parcels on pack' },
-  { id: 'i6', name: 'Steadfast', category: 'Shipping', status: 'connected', detail: 'Manual booking' },
-  { id: 'i7', name: 'RedX', category: 'Shipping', status: 'available', detail: '' },
-  { id: 'i8', name: 'Amazon SES', category: 'Email', status: 'connected', detail: 'noreply@tanti.com.bd' },
-  { id: 'i9', name: 'SSL Wireless SMS', category: 'SMS', status: 'connected', detail: 'Masking: TANTI · 12,400 credits' },
-  { id: 'i10', name: 'Google Analytics 4', category: 'Analytics', status: 'connected', detail: 'G-TNT82K1' },
-  { id: 'i11', name: 'Meta Pixel & CAPI', category: 'Analytics', status: 'connected', detail: 'Pixel 88213…' },
-  { id: 'i12', name: 'Tally ERP', category: 'Accounting', status: 'available', detail: '' }
 ];
 
 export const mediaAssets = [
@@ -217,13 +185,6 @@ export const menus = [
   { id: 'mn3', name: 'Footer — Company', location: 'Footer', items: ['About', 'Journal', 'Careers', 'Wholesale'] }
 ];
 
-
-export const domains = [
-  { id: 'dm1', host: 'tanti.com.bd', primary: true, status: 'connected', ssl: 'active', sslExpires: '2026-12-20' },
-  { id: 'dm2', host: 'www.tanti.com.bd', primary: false, status: 'connected', ssl: 'active', sslExpires: '2026-12-20', redirectsTo: 'tanti.com.bd' },
-  { id: 'dm3', host: 'tanti.myshopcloud.app', primary: false, status: 'connected', ssl: 'active', sslExpires: '2027-03-01' },
-  { id: 'dm4', host: 'shop.tanti.bd', primary: false, status: 'pending', ssl: 'pending', sslExpires: '' }
-];
 
 export const reportCatalog: { group: string; items: { name: string; description: string }[] }[] = [
   {

@@ -24,8 +24,10 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
     setSort,
     view,
     setView,
-    visible,
-    setVisible,
+    page,
+    setPage,
+    pageSize,
+    totalPages,
     mobileFilters,
     setMobileFilters,
     collection,
@@ -67,7 +69,7 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
               value={filters}
               onChange={(f) => {
                 setFilters(f);
-                setVisible(8);
+                setPage(1);
               }}
               facets={facets}
               hideCategory={mode === 'category'}
@@ -96,12 +98,17 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
           <ShopProductGrid
             products={results}
             totalResults={results.length}
-            visibleCount={visible}
+            currentPage={page}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            onPageChange={(p) => {
+              setPage(p);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             layout={view}
             bestsellers={bestsellers}
             activeChipsCount={activeChips.length}
             onClearFilters={() => setFilters(emptyFilters)}
-            onLoadMore={() => setVisible((v) => v + 8)}
             mode={mode}
             query={q}
             hasBaseProducts={base.length > 0}
