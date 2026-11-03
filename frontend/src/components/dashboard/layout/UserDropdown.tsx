@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { User, Settings, LogOut, ExternalLink } from 'lucide-react';
+import { User, Settings, LogOut, ExternalLink, Palette } from 'lucide-react';
 import type { UserInfo } from '@/types/user';
 import { authService } from '@/services/auth';
 
@@ -96,6 +96,14 @@ export function UserDropdown({ user: propUser }: UserDropdownProps) {
           </div>
 
           <div className="py-1">
+            <Link
+              href="/admin/theme"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs text-ink-soft hover:bg-subtle hover:text-ink transition-colors cursor-pointer"
+            >
+              <Palette className="h-3.5 w-3.5 text-ink-muted" />
+              <span>Theme & Ambience</span>
+            </Link>
             <Link
               href="/admin/settings"
               onClick={() => setOpen(false)}

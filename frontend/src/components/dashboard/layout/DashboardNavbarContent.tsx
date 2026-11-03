@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
+import { Search, Palette, Sun, Moon } from 'lucide-react';
 import { DashboardMobileSidebar } from './DashboardMobileSidebar';
 import { NotificationBell } from './NotificationBell';
 import { UserDropdown } from './UserDropdown';
 import { CommandPalette } from '@/components/dashboard/shared/CommandPalette';
+import { EcommerceThemeModal } from '@/components/dashboard/theme/EcommerceThemeModal';
+import { useTheme } from '@/contexts/ThemeContext';
 import type { NavItem } from '@/config/menu-items';
 import type { UserInfo } from '@/types/user';
 
@@ -20,6 +22,8 @@ export function DashboardNavbarContent({
   navItems,
 }: DashboardNavbarContentProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [themeModalOpen, setThemeModalOpen] = useState(false);
+  const { colorMode, toggleColorMode } = useTheme();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,8 +58,8 @@ export function DashboardNavbarContent({
           </button>
         </div>
 
-        {/* Right: Plan badge, Notifications, and User Profile */}
-        <div className="flex items-center gap-2">
+        {/* Right: Plan badge, Theme Studio button, Mode Toggle, Notifications, and User Profile */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Subscription Plan Badge */}
           <Link
             href="/admin/billing"
@@ -63,6 +67,28 @@ export function DashboardNavbarContent({
           >
             Growth plan
           </Link>
+
+          {/* Theme & Ambience Studio Button */}
+          <button
+            type="button"
+            onClick={() => setThemeModalOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-muted hover:bg-subtle hover:text-ink transition-colors cursor-pointer"
+            aria-label="Customize store theme atmosphere"
+            title="Theme & Ambience Studio"
+          >
+            <Palette className="h-4 w-4" />
+          </button>
+
+          {/* Daylight / Midnight Mode Quick Toggle */}
+          <button
+            type="button"
+            onClick={toggleColorMode}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-muted hover:bg-subtle hover:text-ink transition-colors cursor-pointer"
+            aria-label="Toggle dark mode"
+            title={colorMode === 'dark' ? 'Switch to Daylight' : 'Switch to Midnight'}
+          >
+            {colorMode === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
 
           {/* Notifications Popover */}
           <NotificationBell user={user} />
@@ -74,6 +100,9 @@ export function DashboardNavbarContent({
 
       {/* Global Command Palette */}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+
+      {/* Global Theme Studio Modal */}
+      <EcommerceThemeModal open={themeModalOpen} onOpenChange={setThemeModalOpen} />
     </>
   );
 }
