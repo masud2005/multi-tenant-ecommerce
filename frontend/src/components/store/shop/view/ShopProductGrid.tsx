@@ -5,18 +5,21 @@ import { SearchXIcon } from 'lucide-react';
 import { ProductCard } from '@/components/store/product/ProductCard';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Pagination } from '@/components/ui/Pagination';
 import type { Product } from '@/types';
 import { cn } from '@/utils/cn';
 
 export interface ShopProductGridProps {
   products: Product[];
   totalResults: number;
-  visibleCount: number;
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
   layout: 'grid' | 'list';
   bestsellers: Product[];
   activeChipsCount: number;
   onClearFilters: () => void;
-  onLoadMore: () => void;
   mode?: string;
   query?: string;
   hasBaseProducts: boolean;
@@ -25,12 +28,14 @@ export interface ShopProductGridProps {
 export function ShopProductGrid({
   products,
   totalResults,
-  visibleCount,
+  currentPage,
+  pageSize,
+  totalPages,
+  onPageChange,
   layout,
   bestsellers,
   activeChipsCount,
   onClearFilters,
-  onLoadMore,
   mode,
   query,
   hasBaseProducts,
@@ -81,7 +86,9 @@ export function ShopProductGrid({
     );
   }
 
-  const displayedProducts = products.slice(0, visibleCount);
+  // Slice products for the active page
+  const startIndex = (currentPage - 1) * pageSize;
+  const displayedProducts = products.slice(startIndex, startIndex + pageSize);
 
   return (
     <>
@@ -98,28 +105,13 @@ export function ShopProductGrid({
         ))}
       </div>
 
-      {visibleCount < totalResults && (
-        <div className="mt-12 flex flex-col items-center gap-3">
-          <p className="text-xs text-ink-muted">
-            Showing {Math.min(visibleCount, totalResults)} of {totalResults}
-          </p>
-          <div className="h-0.5 w-40 overflow-hidden rounded-full bg-line">
-            <div
-              className="h-full bg-ink transition-all duration-300 ease-out"
-              style={{
-                width: `${(visibleCount / totalResults) * 100}%`,
-              }}
-            />
-          </div>
-          <Button
-            variant="secondary"
-            onClick={onLoadMore}
-            className="cursor-pointer"
-          >
-            Load more
-          </Button>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        totalItems={totalResults}
+        pageSize={pageSize}
+      />
     </>
   );
 }

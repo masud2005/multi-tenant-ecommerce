@@ -165,13 +165,6 @@ export const adminNavItems: NavItem[] = [
     category: 'Online store',
     module: 'content',
   },
-  {
-    title: 'Domains',
-    href: '/admin/domains',
-    icon: 'Globe',
-    category: 'Online store',
-    module: 'domains',
-  },
   // Insights
   {
     title: 'Analytics',
@@ -201,13 +194,6 @@ export const adminNavItems: NavItem[] = [
     icon: 'Bell',
     category: 'Administration',
     module: 'notifications',
-  },
-  {
-    title: 'Integrations & API',
-    href: '/admin/integrations',
-    icon: 'Plug',
-    category: 'Administration',
-    module: 'integrations',
   },
   {
     title: 'Settings',

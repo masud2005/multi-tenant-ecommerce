@@ -200,8 +200,6 @@ export type AdminModule =
   | 'staff'
   | 'media'
   | 'notifications'
-  | 'integrations'
-  | 'domains'
   | 'settings'
   | 'audit'
   | 'billing';
