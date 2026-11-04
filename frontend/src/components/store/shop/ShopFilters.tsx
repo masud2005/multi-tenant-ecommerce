@@ -4,8 +4,6 @@ import React from 'react';
 import {
   CategoryFilter,
   PriceFilter,
-  SizeFilter,
-  ColorFilter,
   BrandFilter,
   RatingFilter,
   AvailabilityFilter,
@@ -46,8 +44,8 @@ export interface ShopFiltersProps {
   facets: {
     categories: { key: string; label: string; count: number }[];
     brands: { key: string; count: number }[];
-    sizes: (string | SizeFacetItem)[];
-    colors: { name: string; hex: string; count?: number }[];
+    sizes?: (string | SizeFacetItem)[];
+    colors?: { name: string; hex: string; count?: number }[];
     inStockCount?: number;
     onSaleCount?: number;
   };
@@ -84,34 +82,20 @@ export function ShopFilters({
         onChange={(minPrice, maxPrice) => set({ minPrice, maxPrice })}
       />
 
-      {/* 3. Size Filter */}
-      <SizeFilter
-        sizes={facets.sizes}
-        selected={value.sizes}
-        onToggle={(size) => set({ sizes: toggle(value.sizes, size) })}
-      />
-
-      {/* 4. Color Filter */}
-      <ColorFilter
-        colors={facets.colors}
-        selected={value.colors}
-        onToggle={(color) => set({ colors: toggle(value.colors, color) })}
-      />
-
-      {/* 5. Brand Filter */}
+      {/* 3. Brand Filter */}
       <BrandFilter
         brands={facets.brands}
         selected={value.brands}
         onToggle={(brand) => set({ brands: toggle(value.brands, brand) })}
       />
 
-      {/* 6. Rating Filter */}
+      {/* 4. Rating Filter */}
       <RatingFilter
         rating={value.minRating}
         onChange={(minRating) => set({ minRating })}
       />
 
-      {/* 7. Availability Filter */}
+      {/* 5. Availability Filter */}
       <AvailabilityFilter
         inStock={value.inStock}
         onSale={value.onSale}

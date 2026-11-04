@@ -17,7 +17,7 @@ import type { CollectionItem } from '@/types/collection';
 import type { BrandItem } from '@/types/brand';
 import type { CategoryItemData } from '@/types/commerce';
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 12;
 
 export type ShopMode = 'shop' | 'category' | 'collection' | 'brand' | 'search';
 
@@ -44,7 +44,8 @@ export function useShopProducts(mode: ShopMode = 'shop', slug?: string) {
     (searchParams.get('sort') as Sort) ?? (mode === 'search' ? 'relevance' : 'popular')
   );
   const [view, setView] = useState<'grid' | 'list'>('grid');
-  const [visible, setVisible] = useState(PAGE_SIZE);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [mobileFilters, setMobileFilters] = useState(false);
 
   // Reset filters on route/query change
@@ -54,7 +55,7 @@ export function useShopProducts(mode: ShopMode = 'shop', slug?: string) {
       categories: getInitialCategories(),
       onSale: searchParams.get('sale') === '1',
     });
-    setVisible(PAGE_SIZE);
+    setPage(1);
   }, [pathname, q, searchParams]);
 
   // Load detailed database metadata for category, collection, or brand
@@ -515,7 +516,7 @@ export function useShopProducts(mode: ShopMode = 'shop', slug?: string) {
     ...(filters.minRating
       ? [
         {
-          label: `${filters.minRating}★ & up`,
+          label: filters.minRating === 5 ? '5★' : `${filters.minRating}★ & up`,
           clear: () => setFilters((f) => ({ ...f, minRating: 0 })),
         },
       ]
@@ -558,8 +559,11 @@ export function useShopProducts(mode: ShopMode = 'shop', slug?: string) {
     setSort,
     view,
     setView,
-    visible,
-    setVisible,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages: Math.ceil(results.length / pageSize) || 1,
     mobileFilters,
     setMobileFilters,
     collection,

@@ -23,6 +23,7 @@ export const metadata: Metadata = {
 
 import { Toaster } from "sonner";
 import { TenantProvider } from "@/contexts/TenantContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { StoreThemeInjector } from "@/components/store/theme/StoreThemeInjector";
 
 export default function RootLayout({
@@ -34,12 +35,37 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${fraunces.variable} font-sans h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var s = localStorage.getItem('tanti_theme_settings');
+                if (s) {
+                  var p = JSON.parse(s);
+                  if (p.colorMode === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                  if (p.themeStyle) {
+                    document.documentElement.setAttribute('data-theme-style', p.themeStyle);
+                  }
+                }
+              } catch(e) {}
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-canvas text-ink font-sans text-base antialiased">
         <TenantProvider>
-          <StoreThemeInjector />
-          {children}
-          <Toaster position="bottom-center" />
+          <ThemeProvider>
+            <StoreThemeInjector />
+            {children}
+            <Toaster position="bottom-center" />
+          </ThemeProvider>
         </TenantProvider>
       </body>
     </html>
