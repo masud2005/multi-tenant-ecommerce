@@ -144,8 +144,8 @@ export default function AdminContentPage() {
     <ModuleGate module="content">
       <div className="w-full space-y-6">
         <PageHeader
-          title="Content"
-          description="Pages, journal, navigation, and FAQs."
+          title="Pages"
+          description="Edit the pages customers read: About, contact, journal, menus and FAQs."
           actions={
             tab === 'faq' ? (
               <GuardedButton

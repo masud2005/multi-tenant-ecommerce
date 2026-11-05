@@ -3,26 +3,22 @@
 import { useEffect } from 'react';
 import { themeService } from '@/services/theme-service';
 import {
-  getEcommerceThemePreset,
   applyEcommerceTheme,
   DEFAULT_LIGHT_THEME_ID,
-  findMatchingPresetId,
+  getEcommerceThemePreset,
 } from '@/components/dashboard/theme/ecommerce-themes';
-import { THEME_STORAGE_KEY, type ThemeSettingsState } from '@/contexts/ThemeContext';
+import { applyPublishedTheme, LIVE_THEME_CACHE_KEY, type LiveThemeRef } from '@/lib/live-theme';
 import type { TenantTheme } from '@/types/theme';
 
-function applyStoredTheme(): boolean {
+function readCachedLive(): LiveThemeRef | null {
   try {
-    const raw = localStorage.getItem(THEME_STORAGE_KEY);
-    if (!raw) return false;
-    const parsed = JSON.parse(raw) as Partial<ThemeSettingsState>;
-    if (!parsed?.themePresetId) return false;
-    const preset = getEcommerceThemePreset(parsed.themePresetId);
-    const style = parsed.themeStyle === 'gradient' ? 'gradient' : parsed.themeStyle === 'solid' ? 'solid' : preset.style;
-    applyEcommerceTheme(preset, style);
-    return true;
+    const raw = localStorage.getItem(LIVE_THEME_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LiveThemeRef;
+    if (!parsed?.updatedAt || !parsed.primaryColor) return null;
+    return parsed;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -30,47 +26,49 @@ export function StoreThemeInjector() {
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchAndApply() {
-      if (applyStoredTheme()) return;
-
+    async function syncLiveTheme() {
       try {
         const res = await themeService.getLiveTheme();
-        if (cancelled || applyStoredTheme()) return;
-        if (res && res.success && res.data) {
-          const matchedId = findMatchingPresetId(res.data.primaryColor, res.data.canvasColor);
-          const preset = getEcommerceThemePreset(matchedId);
-          applyEcommerceTheme(preset, 'solid');
+        if (cancelled) return;
+        if (res?.success && res.data?.primaryColor) {
+          const cached = readCachedLive();
+          if (!cached || cached.updatedAt !== res.data.updatedAt || cached.primaryColor !== res.data.primaryColor) {
+            applyPublishedTheme(res.data);
+          } else {
+            applyPublishedTheme(cached);
+          }
           return;
         }
       } catch {
-        if (cancelled || applyStoredTheme()) return;
-        applyEcommerceTheme(getEcommerceThemePreset(DEFAULT_LIGHT_THEME_ID), 'solid');
+        if (cancelled) return;
       }
+
+      const cached = readCachedLive();
+      if (cached) {
+        applyPublishedTheme(cached);
+        return;
+      }
+      applyEcommerceTheme(getEcommerceThemePreset(DEFAULT_LIGHT_THEME_ID), 'solid');
     }
 
-    fetchAndApply();
-
-    const onLocalChange = () => {
-      applyStoredTheme();
-    };
+    syncLiveTheme();
 
     const onPublished = (event: Event) => {
-      if (applyStoredTheme()) return;
       const detail = (event as CustomEvent<TenantTheme>).detail;
-      if (!detail) return;
-      const matchedId = findMatchingPresetId(detail.primaryColor, detail.canvasColor);
-      applyEcommerceTheme(getEcommerceThemePreset(matchedId), 'solid');
+      if (detail?.primaryColor) applyPublishedTheme(detail);
     };
 
-    window.addEventListener('tanti-theme-changed', onLocalChange);
-    window.addEventListener('storage', onLocalChange);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === LIVE_THEME_CACHE_KEY) syncLiveTheme();
+    };
+
     window.addEventListener('tanti-theme-published', onPublished);
+    window.addEventListener('storage', onStorage);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('tanti-theme-changed', onLocalChange);
-      window.removeEventListener('storage', onLocalChange);
       window.removeEventListener('tanti-theme-published', onPublished);
+      window.removeEventListener('storage', onStorage);
     };
   }, []);
 

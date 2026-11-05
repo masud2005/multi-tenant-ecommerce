@@ -27,6 +27,7 @@ import {
 } from './ecommerce-themes';
 import { EcommerceThemeModal } from './EcommerceThemeModal';
 import { useTheme } from '@/contexts/ThemeContext';
+import { applyPublishedTheme } from '@/lib/live-theme';
 import { cn } from '@/utils/cn';
 import type { TenantTheme } from '@/types/theme';
 
@@ -73,7 +74,15 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
     return findMatchingPresetId(theme.primaryColor, theme.canvasColor);
   }, [theme.primaryColor, theme.canvasColor]);
 
-  const activePreset = getEcommerceThemePreset(activePresetId);
+  const activePreset = useMemo(
+    () => getEcommerceThemePreset(activePresetId),
+    [activePresetId]
+  );
+
+  const applyFields = (fields: Partial<TenantTheme>) => {
+    onChange(fields);
+    applyPublishedTheme({ ...theme, ...fields, updatedAt: new Date().toISOString() });
+  };
 
   // 1-Click quick select from in-page palette cards
   const handleSelectPreset = (preset: EcommerceThemePreset) => {
@@ -320,13 +329,13 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
               <Select
                 label="Heading font"
                 value={theme.fontHeading || 'Fraunces'}
-                onChange={(e) => onChange({ fontHeading: e.target.value })}
+                onChange={(e) => applyFields({ fontHeading: e.target.value })}
                 options={FONT_HEADING_OPTIONS}
               />
               <Select
                 label="Body font"
                 value={theme.fontBody || 'Inter'}
-                onChange={(e) => onChange({ fontBody: e.target.value })}
+                onChange={(e) => applyFields({ fontBody: e.target.value })}
                 options={FONT_BODY_OPTIONS}
               />
             </div>
@@ -340,13 +349,13 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
               <Select
                 label="Card layout ratio"
                 value={theme.cardStyle || 'portrait-hover'}
-                onChange={(e) => onChange({ cardStyle: e.target.value })}
+                onChange={(e) => applyFields({ cardStyle: e.target.value })}
                 options={CARD_STYLE_OPTIONS}
               />
               <Select
                 label="Corner curvature"
                 value={theme.borderRadius || '0.5rem'}
-                onChange={(e) => onChange({ borderRadius: e.target.value })}
+                onChange={(e) => applyFields({ borderRadius: e.target.value })}
                 options={RADIUS_OPTIONS}
               />
             </div>
@@ -366,13 +375,13 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
                   <input
                     type="color"
                     value={theme.primaryColor}
-                    onChange={(e) => onChange({ primaryColor: e.target.value })}
+                    onChange={(e) => applyFields({ primaryColor: e.target.value, accentColor: e.target.value })}
                     className="h-6 w-6 cursor-pointer rounded-full border border-line p-0 bg-transparent"
                   />
                   <input
                     type="text"
                     value={theme.primaryColor}
-                    onChange={(e) => onChange({ primaryColor: e.target.value })}
+                    onChange={(e) => applyFields({ primaryColor: e.target.value, accentColor: e.target.value })}
                     className="w-18 rounded border border-line bg-surface px-1.5 py-0.5 text-xs font-mono uppercase text-ink text-center"
                   />
                 </div>
@@ -387,13 +396,13 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
                   <input
                     type="color"
                     value={theme.canvasColor}
-                    onChange={(e) => onChange({ canvasColor: e.target.value })}
+                    onChange={(e) => applyFields({ canvasColor: e.target.value })}
                     className="h-6 w-6 cursor-pointer rounded-full border border-line p-0 bg-transparent"
                   />
                   <input
                     type="text"
                     value={theme.canvasColor}
-                    onChange={(e) => onChange({ canvasColor: e.target.value })}
+                    onChange={(e) => applyFields({ canvasColor: e.target.value })}
                     className="w-18 rounded border border-line bg-surface px-1.5 py-0.5 text-xs font-mono uppercase text-ink text-center"
                   />
                 </div>

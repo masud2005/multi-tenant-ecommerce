@@ -62,8 +62,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Hydrate on mount from localStorage
+  // Hydrate admin preview state. The storefront follows the published theme, not this cache.
   useEffect(() => {
+    const onAdmin = window.location.pathname.startsWith('/admin');
     try {
       const raw = localStorage.getItem(THEME_STORAGE_KEY);
       if (raw) {
@@ -76,15 +77,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setThemeStyleState(validStyle);
         setThemePresetIdState(validPresetId);
 
-        const preset = getEcommerceThemePreset(validPresetId);
-        applyEcommerceTheme(preset, validStyle);
-      } else {
-        const defaultPreset = getEcommerceThemePreset(DEFAULT_LIGHT_THEME_ID);
-        applyEcommerceTheme(defaultPreset, 'solid');
+        if (onAdmin) {
+          applyEcommerceTheme(getEcommerceThemePreset(validPresetId), validStyle);
+        }
       }
     } catch {
-      const defaultPreset = getEcommerceThemePreset(DEFAULT_LIGHT_THEME_ID);
-      applyEcommerceTheme(defaultPreset, 'solid');
+      if (onAdmin) {
+        applyEcommerceTheme(getEcommerceThemePreset(DEFAULT_LIGHT_THEME_ID), 'solid');
+      }
     } finally {
       setIsHydrated(true);
     }
@@ -93,17 +93,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Sync across tabs
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === THEME_STORAGE_KEY && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue) as ThemeSettingsState;
-          setColorModeState(parsed.colorMode);
-          setThemePresetIdState(parsed.themePresetId);
-          setThemeStyleState(parsed.themeStyle);
-          const p = getEcommerceThemePreset(parsed.themePresetId);
-          applyEcommerceTheme(p, parsed.themeStyle);
-        } catch {
-          // ignore
-        }
+      if (e.key !== THEME_STORAGE_KEY || !e.newValue) return;
+      if (!window.location.pathname.startsWith('/admin')) return;
+      try {
+        const parsed = JSON.parse(e.newValue) as ThemeSettingsState;
+        setColorModeState(parsed.colorMode);
+        setThemePresetIdState(parsed.themePresetId);
+        setThemeStyleState(parsed.themeStyle);
+        const p = getEcommerceThemePreset(parsed.themePresetId);
+        applyEcommerceTheme(p, parsed.themeStyle);
+      } catch {
+        // ignore
       }
     };
     window.addEventListener('storage', handleStorage);

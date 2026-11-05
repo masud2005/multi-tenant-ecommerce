@@ -20,7 +20,7 @@ import { announcement } from '@/data/content';
 import { Drawer } from '@/components/ui/Drawer';
 import { cn } from '@/utils/cn';
 
-export function StoreHeader() {
+export function StoreHeader({ previewMode }: { previewMode?: 'overlay' | 'bar' }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategory = searchParams.get('category');
@@ -61,8 +61,8 @@ export function StoreHeader() {
     return () => observer.disconnect();
   }, [pathname]);
 
-  const pageHasOverlayHero = isHome && heroOverlay;
-  const overHero = pageHasOverlayHero && !scrolled;
+  const pageHasOverlayHero = previewMode ? previewMode === 'overlay' : isHome && heroOverlay;
+  const overHero = previewMode ? previewMode === 'overlay' : pageHasOverlayHero && !scrolled;
 
   const count = cart
     .filter((i) => !i.savedForLater)
@@ -77,21 +77,25 @@ export function StoreHeader() {
     <>
     <header
       className={cn(
-        'fixed inset-x-0 top-0 z-40 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-500 ease-out',
-        overHero
-          ? 'border-transparent bg-transparent shadow-none'
-          : 'border-line bg-canvas/95 shadow-sm backdrop-blur-md'
+        previewMode === 'overlay'
+          ? 'absolute inset-x-0 top-0 z-40'
+          : previewMode === 'bar'
+            ? 'sticky top-0 z-40'
+            : 'fixed inset-x-0 top-0 z-40'
       )}
     >
-      <div
-        className={cn(
-          'px-4 py-1.5 text-center text-xs font-medium tracking-wide transition-colors duration-500',
-          overHero ? 'bg-transparent text-ink' : 'bg-ink text-canvas'
-        )}
-      >
+      <div className="bg-ink px-4 py-1.5 text-center text-xs font-medium tracking-wide text-canvas">
         {announcement}
       </div>
 
+      <div
+        className={cn(
+          'border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-500 ease-out',
+          overHero
+            ? 'border-transparent bg-transparent shadow-none'
+            : 'border-line/70 bg-canvas/90 shadow-[0_10px_30px_rgba(28,26,23,0.08)] supports-[backdrop-filter]:border-white/40 supports-[backdrop-filter]:bg-canvas/55 supports-[backdrop-filter]:shadow-[0_8px_32px_rgba(28,26,23,0.06)] supports-[backdrop-filter]:backdrop-blur-2xl supports-[backdrop-filter]:backdrop-saturate-150'
+        )}
+      >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Mobile Menu Button */}
@@ -263,6 +267,7 @@ export function StoreHeader() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Mobile Menu Drawer */}
       <Drawer
@@ -358,7 +363,7 @@ export function StoreHeader() {
         </div>
       </Drawer>
     </header>
-    {!pageHasOverlayHero && <div aria-hidden className="h-[5.75rem]" />}
+    {!previewMode && !pageHasOverlayHero && <div aria-hidden className="h-[5.75rem]" />}
     </>
   );
 }
