@@ -377,7 +377,7 @@ export default function AdminContentPage() {
                     >
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="rounded bg-clay/10 px-2 py-0.5 text-[10px] font-semibold text-clay uppercase tracking-wider">
+                          <span className="rounded bg-clay/10 px-2 py-0.5 text-xs font-semibold text-clay uppercase tracking-wider">
                             {f.category}
                           </span>
                           <p className="font-semibold text-ink group-hover:text-clay transition-colors">

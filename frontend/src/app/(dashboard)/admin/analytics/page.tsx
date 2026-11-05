@@ -330,7 +330,7 @@ export default function AdminAnalyticsPage() {
                 {isReal && (
                   <span
                     title="Real database live data"
-                    className="inline-flex items-center text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+                    className="inline-flex items-center text-xs font-medium text-emerald-600 dark:text-emerald-400"
                   >
                     ● Real
                   </span>
@@ -341,7 +341,7 @@ export default function AdminAnalyticsPage() {
                 <span className="text-xs font-normal text-ink-muted">{d as string}</span>
               </dd>
               {extra && (
-                <p className="mt-0.5 text-[11px] text-ink-muted">{extra as string}</p>
+                <p className="mt-0.5 text-xs text-ink-muted">{extra as string}</p>
               )}
             </div>
           ))}

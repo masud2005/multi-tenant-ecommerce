@@ -33,14 +33,14 @@ export function CollectionCard({
         {/* Top Floating Badges (Left) */}
         <div className="absolute top-2.5 left-2.5 flex flex-wrap items-center gap-1.5 z-10">
           {collection.isFeatured && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-clay px-2 py-0.5 text-[11px] font-medium text-white shadow-xs">
+            <span className="inline-flex items-center gap-1 rounded-full bg-clay px-2 py-0.5 text-xs font-medium text-white shadow-xs">
               <Star className="h-3 w-3 fill-white" />
               <span>Featured</span>
             </span>
           )}
 
           {collection.isActive === false && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-ink/80 backdrop-blur-xs px-2 py-0.5 text-[11px] font-medium text-canvas">
+            <span className="inline-flex items-center gap-1 rounded-full bg-ink/80 backdrop-blur-xs px-2 py-0.5 text-xs font-medium text-canvas">
               <EyeOff className="h-3 w-3" />
               <span>Draft</span>
             </span>
@@ -90,7 +90,7 @@ export function CollectionCard({
 
         {/* Rule badge if Automated */}
         {collection.rule && (
-          <p className="mt-2.5 rounded bg-canvas/80 px-2 py-1 font-mono text-[11px] text-ink-soft border border-line/60 truncate">
+          <p className="mt-2.5 rounded bg-canvas/80 px-2 py-1 font-mono text-xs text-ink-soft border border-line/60 truncate">
             {collection.rule}
           </p>
         )}

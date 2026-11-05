@@ -72,6 +72,14 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Readable type scale: 16px body, 14px secondary. Nothing in the scale is under 14px. */
+@theme {
+  --text-xs: 0.875rem;
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.5rem;
+}
+
 :root {
   --canvas: 247 244 239;
   --surface: 255 255 255;
@@ -167,7 +175,7 @@
   }
 
   body {
-    @apply bg-canvas text-ink font-sans antialiased;
+    @apply bg-canvas text-ink font-sans text-base antialiased;
   }
 
   html {

@@ -113,12 +113,12 @@ export function DiscountRow({
             {isFreeShip && 'Free Shipping'}
           </span>
           {discount.maxDiscountAmount && (
-            <p className="text-[11px] text-ink-muted">
+            <p className="text-xs text-ink-muted">
               Max Cap: ৳{discount.maxDiscountAmount}
             </p>
           )}
           {discount.minSubtotal && (
-            <p className="text-[11px] text-ink-muted">
+            <p className="text-xs text-ink-muted">
               Min Order: ৳{discount.minSubtotal}
             </p>
           )}
@@ -134,7 +134,7 @@ export function DiscountRow({
               / {discount.usageLimit ? discount.usageLimit : '∞'} uses
             </span>
           </div>
-          <p className="text-[11px] text-ink-muted">
+          <p className="text-xs text-ink-muted">
             {discount.usageLimitPerUser}x per customer
           </p>
         </div>

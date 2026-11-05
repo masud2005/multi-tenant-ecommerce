@@ -180,7 +180,7 @@ export function NotificationBell({}: NotificationBellProps = {}) {
         <Bell className={`h-[18px] w-[18px] ${hasNewAlert ? 'text-clay animate-pulse' : ''}`} />
         {unreadCount > 0 && (
           <span
-            className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-clay text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-surface shadow-sm animate-in zoom-in-50 duration-150 ${
+            className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-clay text-white text-xs font-bold flex items-center justify-center ring-2 ring-surface shadow-sm animate-in zoom-in-50 duration-150 ${
               hasNewAlert ? 'animate-pulse scale-110' : ''
             }`}
             aria-hidden="true"
@@ -264,7 +264,7 @@ export function NotificationBell({}: NotificationBellProps = {}) {
                           <p className="mt-0.5 text-xs text-ink-muted leading-relaxed line-clamp-2">
                             {n.message}
                           </p>
-                          <span className="mt-1.5 block text-[11px] text-ink-muted/80">
+                          <span className="mt-1.5 block text-xs text-ink-muted/80">
                             {formatRelativeTime(n.createdAt)}
                           </span>
                         </div>

@@ -273,7 +273,7 @@ export function ReturnsEditorDrawer({
                 className="relative rounded-lg border border-line bg-canvas p-4 transition-colors focus-within:border-primary/50"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold text-ink-muted tracking-wide uppercase">
+                  <span className="text-xs font-semibold text-ink-muted tracking-wide uppercase">
                     Section {idx + 1}
                   </span>
                   {form.sections.length > 1 && (

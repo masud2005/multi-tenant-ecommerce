@@ -203,7 +203,7 @@ export function CustomerSidebarContent({
                           </span>
                         )}
                         {item.badge !== undefined && (
-                          <span className="rounded-full bg-ink px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-canvas leading-none">
+                          <span className="rounded-full bg-ink px-1.5 py-0.5 text-xs font-semibold tabular-nums text-canvas leading-none">
                             {item.badge}
                           </span>
                         )}

@@ -16,3 +16,4 @@ export {
 } from './ecommerce-themes';
 export { ThemeVersionHistory } from './ThemeVersionHistory';
 export { ThemePreviewCanvas } from './ThemePreviewCanvas';
+export { LandingTemplateStudio } from './LandingTemplateStudio';

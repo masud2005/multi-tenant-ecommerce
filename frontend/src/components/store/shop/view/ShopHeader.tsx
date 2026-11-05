@@ -85,7 +85,7 @@ export function ShopHeader({
             />
           </div>
           <div>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-clay">
+            <span className="text-xs font-semibold uppercase tracking-wider text-clay">
               Brand Showcase
             </span>
             <h1 className="font-display text-3xl sm:text-4xl text-ink font-semibold">

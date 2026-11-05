@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -37,6 +37,32 @@ export function StoreHeader() {
   } = useStore();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [heroOverlay, setHeroOverlay] = useState(false);
+  const isHome = pathname === '/';
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const sync = () => {
+      setHeroOverlay(document.documentElement.dataset.heroOverlay === 'true');
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-hero-overlay'],
+    });
+    return () => observer.disconnect();
+  }, [pathname]);
+
+  const pageHasOverlayHero = isHome && heroOverlay;
+  const overHero = pageHasOverlayHero && !scrolled;
 
   const count = cart
     .filter((i) => !i.savedForLater)
@@ -48,9 +74,21 @@ export function StoreHeader() {
   const dashboardHref = !user ? '/login' : (isOwnerOrAdmin ? '/admin' : '/account');
 
   return (
-    <header className="sticky top-0 z-30 bg-canvas/95 backdrop-blur-md border-b border-line">
-      {/* Announcement Bar */}
-      <div className="bg-ink text-canvas text-xs py-1.5 px-4 text-center font-medium tracking-wide">
+    <>
+    <header
+      className={cn(
+        'fixed inset-x-0 top-0 z-40 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-500 ease-out',
+        overHero
+          ? 'border-transparent bg-transparent shadow-none'
+          : 'border-line bg-canvas/95 shadow-sm backdrop-blur-md'
+      )}
+    >
+      <div
+        className={cn(
+          'px-4 py-1.5 text-center text-xs font-medium tracking-wide transition-colors duration-500',
+          overHero ? 'bg-transparent text-ink' : 'bg-ink text-canvas'
+        )}
+      >
         {announcement}
       </div>
 
@@ -186,7 +224,7 @@ export function StoreHeader() {
             >
               <HeartIcon className="h-5 w-5" />
               {wishlist.length > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-clay text-[10px] font-bold text-white">
+                <span className="absolute top-1 right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-clay px-1 text-xs font-bold text-white">
                   {wishlist.length}
                 </span>
               )}
@@ -213,7 +251,7 @@ export function StoreHeader() {
             >
               <ShoppingBagIcon className="h-5 w-5" />
               {count > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-ink text-[10px] font-bold text-canvas">
+                <span className="absolute top-1 right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-xs font-bold text-canvas">
                   {count}
                 </span>
               )}
@@ -236,7 +274,7 @@ export function StoreHeader() {
                 <p className="text-sm font-semibold text-ink">{user.name}</p>
                 <p className="text-xs text-ink-muted">{user.email}</p>
                 {isOwnerOrAdmin && (
-                  <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-clay/10 text-clay uppercase tracking-wider">
+                  <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-clay/10 text-clay uppercase tracking-wider">
                     {user.role}
                   </span>
                 )}
@@ -316,5 +354,7 @@ export function StoreHeader() {
         </div>
       </Drawer>
     </header>
+    {!pageHasOverlayHero && <div aria-hidden className="h-[5.75rem]" />}
+    </>
   );
 }

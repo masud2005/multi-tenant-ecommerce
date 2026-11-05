@@ -51,7 +51,7 @@ export function BrandCustomizer({ theme, onChange }: BrandCustomizerProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-ink">Primary brand color</p>
-              <p className="text-[11px] text-ink-muted">Buttons, badges, highlights</p>
+              <p className="text-xs text-ink-muted">Buttons, badges, highlights</p>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -73,7 +73,7 @@ export function BrandCustomizer({ theme, onChange }: BrandCustomizerProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-ink">Accent color</p>
-              <p className="text-[11px] text-ink-muted">Offers, sale tags, secondary actions</p>
+              <p className="text-xs text-ink-muted">Offers, sale tags, secondary actions</p>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -95,7 +95,7 @@ export function BrandCustomizer({ theme, onChange }: BrandCustomizerProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-ink">Background color</p>
-              <p className="text-[11px] text-ink-muted">Storefront canvas background</p>
+              <p className="text-xs text-ink-muted">Storefront canvas background</p>
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -117,7 +117,7 @@ export function BrandCustomizer({ theme, onChange }: BrandCustomizerProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-ink">Text color</p>
-              <p className="text-[11px] text-ink-muted">Primary text across storefront</p>
+              <p className="text-xs text-ink-muted">Primary text across storefront</p>
             </div>
             <div className="flex items-center gap-2">
               <input

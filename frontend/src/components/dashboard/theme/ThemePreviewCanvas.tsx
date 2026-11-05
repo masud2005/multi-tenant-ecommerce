@@ -19,9 +19,11 @@ import {
   Testimonials,
   Recommended,
 } from '@/components/store/home';
+import { LandingHome } from '@/components/store/landing';
 
 interface ThemePreviewCanvasProps {
   theme: TenantTheme;
+  focus?: 'landing' | 'sections';
 }
 
 // Converts hex color to space-separated RGB channels for CSS variables
@@ -133,7 +135,7 @@ function getThemeCssVars(t: TenantTheme): React.CSSProperties {
   } as React.CSSProperties;
 }
 
-export function ThemePreviewCanvas({ theme }: ThemePreviewCanvasProps) {
+export function ThemePreviewCanvas({ theme, focus = 'landing' }: ThemePreviewCanvasProps) {
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [mountNode, setMountNode] = useState<HTMLElement | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
@@ -358,7 +360,9 @@ export function ThemePreviewCanvas({ theme }: ThemePreviewCanvasProps) {
 
       {/* Landing page sections rendered in order */}
       <main className="transition-opacity duration-300">
-        {activeSections.length > 0 ? (
+        {focus === 'landing' ? (
+          <LandingHome />
+        ) : activeSections.length > 0 ? (
           activeSections.map((s) => renderSection(s.sectionType, s.id, s.label))
         ) : (
           <div className="flex min-h-[400px] flex-col items-center justify-center p-8 text-center">
@@ -386,7 +390,7 @@ export function ThemePreviewCanvas({ theme }: ThemePreviewCanvasProps) {
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <p className="text-xs font-semibold text-ink">Live Storefront Preview</p>
-          <span className="flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 text-[10px] font-medium text-success">
+          <span className="flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 text-xs font-medium text-success">
             <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             Live Sync
           </span>
@@ -467,11 +471,11 @@ export function ThemePreviewCanvas({ theme }: ThemePreviewCanvasProps) {
               <span className="h-2.5 w-2.5 rounded-full bg-warning/80" />
               <span className="h-2.5 w-2.5 rounded-full bg-success/80" />
             </div>
-            <div className="flex items-center gap-1.5 rounded bg-surface px-3 py-0.5 text-[11px] font-mono text-ink-soft border border-line/60">
+            <div className="flex items-center gap-1.5 rounded bg-surface px-3 py-0.5 text-xs font-mono text-ink-soft border border-line/60">
               <Lock className="h-2.5 w-2.5 text-success" />
               <span>https://store.orvio.test</span>
             </div>
-            <div className="text-[10px] text-ink-muted font-mono">100% responsive</div>
+            <div className="text-xs text-ink-muted font-mono">100% responsive</div>
           </div>
         ) : (
           <div className="flex items-center justify-center bg-ink/80 py-1.5">

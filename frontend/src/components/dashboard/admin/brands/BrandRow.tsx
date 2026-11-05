@@ -69,7 +69,7 @@ export function BrandRow({ brand, products, onEdit, onDelete }: BrandRowProps) {
               {brand.name}
             </p>
             {brand.isActive === false && (
-              <span className="rounded bg-subtle px-1.5 py-0.5 text-[10px] font-medium text-ink-muted border border-line">
+              <span className="rounded bg-subtle px-1.5 py-0.5 text-xs font-medium text-ink-muted border border-line">
                 Inactive
               </span>
             )}

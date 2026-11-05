@@ -565,7 +565,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
                           <div className="flex items-center gap-2">
                             <h4 className="text-sm font-semibold text-ink">{rev.author}</h4>
                             {rev.verified && (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                                 <BadgeCheck className="h-3.5 w-3.5" />
                                 Verified Buyer
                               </span>
@@ -648,13 +648,13 @@ export function ProductReviews({ product }: ProductReviewsProps) {
                       >
                         <ThumbsUp className={cn('h-3.5 w-3.5', isVoted && 'fill-emerald-600')} />
                         <span>Helpful ({rev.helpful})</span>
-                        {isVoted && <span className="text-[10px] font-bold">✓ Voted</span>}
+                        {isVoted && <span className="text-xs font-bold">✓ Voted</span>}
                       </button>
 
                       <button
                         type="button"
                         onClick={() => toast.info('Thank you! This review has been flagged for check.')}
-                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 hover:bg-subtle hover:text-ink transition-colors cursor-pointer text-[11px]"
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 hover:bg-subtle hover:text-ink transition-colors cursor-pointer text-xs"
                       >
                         <Flag className="h-3 w-3" />
                         <span>Report</span>
@@ -746,7 +746,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
               <button
                 type="button"
                 onClick={() => setShowUrlInput((prev) => !prev)}
-                className="text-[11px] font-semibold text-ink-muted hover:text-ink cursor-pointer"
+                className="text-xs font-semibold text-ink-muted hover:text-ink cursor-pointer"
               >
                 {showUrlInput ? 'Hide URL' : '+ Image Link'}
               </button>
@@ -755,7 +755,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
             <div className="flex flex-wrap items-center gap-2.5">
               <label className="flex h-16 w-16 flex-col items-center justify-center rounded-xl border-2 border-dashed border-line-strong hover:border-ink bg-subtle/30 text-ink-muted hover:text-ink cursor-pointer transition-colors shrink-0">
                 <Upload className="h-4 w-4 mb-0.5" />
-                <span className="text-[10px] font-bold">Photo</span>
+                <span className="text-xs font-bold">Photo</span>
                 <input
                   type="file"
                   accept="image/*"

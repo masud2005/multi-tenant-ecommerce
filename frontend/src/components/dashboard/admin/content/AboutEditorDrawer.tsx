@@ -471,7 +471,7 @@ export function AboutEditorDrawer({
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
-                <label className="block text-[11px] font-medium text-ink-muted mb-1">
+                <label className="block text-xs font-medium text-ink-muted mb-1">
                   Number / Value
                 </label>
                 <Input
@@ -482,7 +482,7 @@ export function AboutEditorDrawer({
                   placeholder="e.g. 1,200+"
                   className="font-bold text-base"
                 />
-                <label className="block text-[11px] font-medium text-ink-muted mt-2 mb-1">
+                <label className="block text-xs font-medium text-ink-muted mt-2 mb-1">
                   Label
                 </label>
                 <Input

@@ -387,7 +387,7 @@ export function DiscountsManager() {
         <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-line bg-subtle/50 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              <thead className="border-b border-line bg-subtle/50 text-xs font-semibold uppercase tracking-wider text-ink-muted">
                 <tr>
                   <th scope="col" className="px-5 py-3.5">
                     Discount / Code
