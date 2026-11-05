@@ -571,13 +571,13 @@ function CollectionForm({
 
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-medium text-ink">{p.title}</p>
-                      <p className="text-[11px] text-ink-muted capitalize">
+                      <p className="text-xs text-ink-muted capitalize">
                         {p.category} &bull; ৳{p.salePrice ?? p.price}
                       </p>
                     </div>
 
                     {isSelected && (
-                      <span className="shrink-0 text-[11px] font-medium text-clay">
+                      <span className="shrink-0 text-xs font-medium text-clay">
                         Added
                       </span>
                     )}
@@ -672,7 +672,7 @@ function CollectionForm({
                     alt={uploadedImage.name}
                     className="h-full w-full object-cover"
                   />
-                  <span className="absolute bottom-1 right-1 rounded bg-ink/75 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                  <span className="absolute bottom-1 right-1 rounded bg-ink/75 px-1.5 py-0.5 text-xs font-medium text-white">
                     Active Upload
                   </span>
                 </div>
@@ -683,7 +683,7 @@ function CollectionForm({
                       {uploadedImage.name}
                     </p>
                     {uploadedImage.size && (
-                      <p className="text-[11px] text-ink-muted mt-0.5">
+                      <p className="text-xs text-ink-muted mt-0.5">
                         Size: {uploadedImage.size} &bull; Ready to save
                       </p>
                     )}
@@ -733,7 +733,7 @@ function CollectionForm({
                 <p className="mt-3 text-xs font-semibold text-ink">
                   Click to browse or drag and drop image here
                 </p>
-                <p className="mt-1 text-[11px] text-ink-muted">
+                <p className="mt-1 text-xs text-ink-muted">
                   Supports PNG, JPG, WebP, AVIF up to 5MB (Recommended: 16:9 banner)
                 </p>
               </div>
@@ -752,7 +752,7 @@ function CollectionForm({
                   alt="URL Preview"
                   className="h-full w-full object-cover"
                 />
-                <span className="absolute bottom-1 right-1 rounded bg-ink/75 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                <span className="absolute bottom-1 right-1 rounded bg-ink/75 px-1.5 py-0.5 text-xs font-medium text-white">
                   {urlImage.trim() ? 'Active URL' : 'Default'}
                 </span>
               </div>
@@ -765,7 +765,7 @@ function CollectionForm({
                   onChange={(e) => setUrlImage(e.target.value)}
                   className="text-xs"
                 />
-                <p className="text-[11px] text-ink-muted">
+                <p className="text-xs text-ink-muted">
                   Paste any public image link. This URL will be used exclusively as the collection cover.
                 </p>
               </div>
@@ -784,7 +784,7 @@ function CollectionForm({
                   alt="Product Selected"
                   className="h-full w-full object-cover"
                 />
-                <span className="absolute bottom-1 right-1 rounded bg-clay px-1.5 py-0.5 text-[9px] font-medium text-white">
+                <span className="absolute bottom-1 right-1 rounded bg-clay px-1.5 py-0.5 text-xs font-medium text-white">
                   From Product
                 </span>
               </div>
@@ -832,7 +832,7 @@ function CollectionForm({
         )}
 
         {/* Active Source Indicator Pill */}
-        <div className="flex items-center justify-between border-t border-line/60 pt-2.5 text-[11px] text-ink-muted">
+        <div className="flex items-center justify-between border-t border-line/60 pt-2.5 text-xs text-ink-muted">
           <span>Active image source:</span>
           <span className="font-semibold text-ink capitalize flex items-center gap-1">
             {imageMode === 'upload' && <Upload className="h-3 w-3 text-clay" />}

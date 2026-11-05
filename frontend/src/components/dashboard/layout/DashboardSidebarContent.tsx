@@ -133,7 +133,7 @@ export function DashboardSidebarContent({
                       <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                       <span className="flex-1 truncate">{item.title}</span>
                       {item.badge !== undefined && (
-                        <span className="rounded-full bg-ink px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-canvas leading-none">
+                        <span className="rounded-full bg-ink px-1.5 py-0.5 text-xs font-semibold tabular-nums text-canvas leading-none">
                           {item.badge}
                         </span>
                       )}

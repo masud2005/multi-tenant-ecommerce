@@ -52,7 +52,7 @@ export function DashboardNavbarContent({
           >
             <Search className="h-4 w-4 text-ink-muted shrink-0" aria-hidden="true" />
             <span className="flex-1 truncate">Search orders, products, customers…</span>
-            <kbd className="hidden rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-muted sm:inline select-none">
+            <kbd className="hidden rounded border border-line bg-surface px-1.5 py-0.5 text-xs font-medium text-ink-muted sm:inline select-none">
               ⌘K
             </kbd>
           </button>

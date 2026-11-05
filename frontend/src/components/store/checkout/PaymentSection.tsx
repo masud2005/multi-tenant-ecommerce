@@ -22,7 +22,7 @@ export function PaymentSection({}: PaymentSectionProps) {
                 <p className="text-sm font-semibold text-ink">
                   Cash on Delivery (ক্যাশ অন ডেলিভারি)
                 </p>
-                <span className="text-[11px] font-medium text-clay bg-clay/10 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-medium text-clay bg-clay/10 px-2 py-0.5 rounded-full">
                   Active
                 </span>
               </div>

@@ -146,7 +146,7 @@ export function CommandPalette({
                 aria-label="Search"
                 className="h-12 flex-1 bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
               />
-              <kbd className="rounded border border-line px-1.5 py-0.5 text-[10px] text-ink-muted">ESC</kbd>
+              <kbd className="rounded border border-line px-1.5 py-0.5 text-xs text-ink-muted">ESC</kbd>
             </div>
             <ul className="max-h-80 overflow-y-auto p-2" role="listbox">
               {items.length === 0 && (

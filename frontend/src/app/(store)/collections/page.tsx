@@ -56,7 +56,7 @@ export default function CollectionsPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/60 via-ink/10 to-transparent" />
                 {col.isFeatured && (
-                  <span className="absolute top-3 right-3 rounded-full bg-clay px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-sm">
+                  <span className="absolute top-3 right-3 rounded-full bg-clay px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-sm">
                     Featured
                   </span>
                 )}

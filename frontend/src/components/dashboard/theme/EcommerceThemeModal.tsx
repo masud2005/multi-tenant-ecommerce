@@ -189,7 +189,7 @@ export function EcommerceThemeModal({
 
           {/* ================= STYLE SELECTION: GRADIENT VS SOLID ================= */}
           <div className="space-y-2">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted">
               Ambience Style
             </h4>
             <div className="grid grid-cols-2 gap-3">
@@ -211,7 +211,7 @@ export function EcommerceThemeModal({
                 />
                 <div>
                   <div className="text-xs font-semibold text-ink">Gradient</div>
-                  <div className="text-[11px] text-ink-muted leading-snug mt-0.5">
+                  <div className="text-xs text-ink-muted leading-snug mt-0.5">
                     Atmospheric glows with soft luminous depth
                   </div>
                 </div>
@@ -235,7 +235,7 @@ export function EcommerceThemeModal({
                 />
                 <div>
                   <div className="text-xs font-semibold text-ink">Solid</div>
-                  <div className="text-[11px] text-ink-muted leading-snug mt-0.5">
+                  <div className="text-xs text-ink-muted leading-snug mt-0.5">
                     Clean, editorial contrast for sharp retail
                   </div>
                 </div>
@@ -246,10 +246,10 @@ export function EcommerceThemeModal({
           {/* ================= E-COMMERCE CONCEPT PRESETS GRID ================= */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted">
                 Store Concept Presets
               </h4>
-              <span className="text-[11px] text-ink-muted">
+              <span className="text-xs text-ink-muted">
                 {displayedPresets.length} curated palettes
               </span>
             </div>
@@ -310,10 +310,10 @@ export function EcommerceThemeModal({
           {/* ================= HARMONIZED COLORS PREVIEW ================= */}
           <div className="space-y-2 pt-2 border-t border-line">
             <div className="flex items-center justify-between">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-ink-muted">
                 Active Theme Swatches
               </h4>
-              <span className="text-[11px] text-clay font-medium">
+              <span className="text-xs text-clay font-medium">
                 Auto-balanced for readability
               </span>
             </div>
@@ -325,8 +325,8 @@ export function EcommerceThemeModal({
                   style={{ backgroundColor: activePreset.colors.accent }}
                 />
                 <div className="min-w-0">
-                  <div className="text-[9px] uppercase font-bold text-ink-muted">Accent</div>
-                  <div className="text-[11px] font-mono truncate">{activePreset.colors.accent}</div>
+                  <div className="text-xs uppercase font-bold text-ink-muted">Accent</div>
+                  <div className="text-xs font-mono truncate">{activePreset.colors.accent}</div>
                 </div>
               </div>
 
@@ -336,8 +336,8 @@ export function EcommerceThemeModal({
                   style={{ backgroundColor: activePreset.colors.background }}
                 />
                 <div className="min-w-0">
-                  <div className="text-[9px] uppercase font-bold text-ink-muted">Canvas</div>
-                  <div className="text-[11px] font-mono truncate">{activePreset.colors.background}</div>
+                  <div className="text-xs uppercase font-bold text-ink-muted">Canvas</div>
+                  <div className="text-xs font-mono truncate">{activePreset.colors.background}</div>
                 </div>
               </div>
 
@@ -347,8 +347,8 @@ export function EcommerceThemeModal({
                   style={{ backgroundColor: activePreset.colors.card }}
                 />
                 <div className="min-w-0">
-                  <div className="text-[9px] uppercase font-bold text-ink-muted">Cards</div>
-                  <div className="text-[11px] font-mono truncate">{activePreset.colors.card}</div>
+                  <div className="text-xs uppercase font-bold text-ink-muted">Cards</div>
+                  <div className="text-xs font-mono truncate">{activePreset.colors.card}</div>
                 </div>
               </div>
 
@@ -358,8 +358,8 @@ export function EcommerceThemeModal({
                   style={{ backgroundColor: activePreset.colors.foreground }}
                 />
                 <div className="min-w-0">
-                  <div className="text-[9px] uppercase font-bold text-ink-muted">Text</div>
-                  <div className="text-[11px] font-mono truncate">{activePreset.colors.foreground}</div>
+                  <div className="text-xs uppercase font-bold text-ink-muted">Text</div>
+                  <div className="text-xs font-mono truncate">{activePreset.colors.foreground}</div>
                 </div>
               </div>
             </div>

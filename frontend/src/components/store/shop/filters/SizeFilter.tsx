@@ -26,7 +26,7 @@ export function SizeFilter({ sizes, selected, onToggle }: SizeFilterProps) {
       <div className="flex items-center justify-between mb-3">
         <legend className="text-sm font-medium text-ink">Size</legend>
         {selected.length > 0 && (
-          <span className="text-[11px] font-medium text-clay tabular-nums">
+          <span className="text-xs font-medium text-clay tabular-nums">
             {selected.length} selected
           </span>
         )}
@@ -58,7 +58,7 @@ export function SizeFilter({ sizes, selected, onToggle }: SizeFilterProps) {
               </span>
               <span
                 className={cn(
-                  'text-[10px] tabular-nums mt-0.5 font-normal',
+                  'text-xs tabular-nums mt-0.5 font-normal',
                   isSelected
                     ? 'text-canvas/80'
                     : isDisabled

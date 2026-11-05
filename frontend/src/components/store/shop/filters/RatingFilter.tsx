@@ -66,7 +66,7 @@ export function RatingFilter({ rating, onChange }: RatingFilterProps) {
                 </div>
 
                 {/* Rating Label */}
-                <span className="text-[12px] text-ink">
+                <span className="text-xs text-ink">
                   {label}
                 </span>
               </div>

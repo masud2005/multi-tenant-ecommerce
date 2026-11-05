@@ -189,7 +189,7 @@ export function CreateBrandModal({
         <div className="flex items-center justify-between rounded-lg border border-line bg-canvas/40 p-3">
           <div>
             <p className="text-xs font-semibold text-ink">Brand Status</p>
-            <p className="text-[11px] text-ink-muted">
+            <p className="text-xs text-ink-muted">
               Showcase this brand on your storefront and product filters
             </p>
           </div>

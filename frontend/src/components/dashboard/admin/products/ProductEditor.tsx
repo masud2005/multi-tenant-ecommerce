@@ -666,7 +666,7 @@ export function ProductEditor({ id }: { id?: string }) {
                   <p className="mt-3 text-xs font-semibold text-ink">
                     Click to browse or drag and drop product images here
                   </p>
-                  <p className="mt-1 text-[11px] text-ink-muted">
+                  <p className="mt-1 text-xs text-ink-muted">
                     Supports PNG, JPG, WebP, AVIF up to 5MB (Multiple photos supported)
                   </p>
                 </div>
@@ -684,7 +684,7 @@ export function ProductEditor({ id }: { id?: string }) {
                       alt="Preview"
                       className="h-full w-full object-cover"
                     />
-                    <span className="absolute bottom-1 right-1 rounded bg-ink/75 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                    <span className="absolute bottom-1 right-1 rounded bg-ink/75 px-1.5 py-0.5 text-xs font-medium text-white">
                       {inputImageUrl.trim() ? 'Live Preview' : 'Sample'}
                     </span>
                   </div>
@@ -716,7 +716,7 @@ export function ProductEditor({ id }: { id?: string }) {
                         <span>Add Image</span>
                       </button>
                     </div>
-                    <p className="text-[11px] text-ink-muted">
+                    <p className="text-xs text-ink-muted">
                       Paste any public image link and click &quot;Add Image&quot; to include it in the gallery.
                     </p>
                   </div>
@@ -729,7 +729,7 @@ export function ProductEditor({ id }: { id?: string }) {
               <div className="space-y-2 pt-2 border-t border-line/60">
                 <div className="flex items-center justify-between text-xs text-ink-muted">
                   <span className="font-medium text-ink">Gallery Photos ({p.images.length})</span>
-                  <span className="text-[11px]">Hover over an image to set as main cover or remove</span>
+                  <span className="text-xs">Hover over an image to set as main cover or remove</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5">
@@ -746,14 +746,14 @@ export function ProductEditor({ id }: { id?: string }) {
 
                       {/* Main Cover Badge */}
                       {i === 0 ? (
-                        <span className="absolute left-2 top-2 rounded bg-ink px-2 py-0.5 text-[10px] font-semibold text-canvas shadow-xs">
+                        <span className="absolute left-2 top-2 rounded bg-ink px-2 py-0.5 text-xs font-semibold text-canvas shadow-xs">
                           Main Cover
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => handleSetCover(i)}
-                          className="absolute left-2 top-2 rounded bg-surface/90 backdrop-blur-xs px-2 py-0.5 text-[10px] font-medium text-ink opacity-0 transition-opacity group-hover:opacity-100 hover:bg-clay hover:text-white cursor-pointer shadow-xs"
+                          className="absolute left-2 top-2 rounded bg-surface/90 backdrop-blur-xs px-2 py-0.5 text-xs font-medium text-ink opacity-0 transition-opacity group-hover:opacity-100 hover:bg-clay hover:text-white cursor-pointer shadow-xs"
                         >
                           Set as cover
                         </button>

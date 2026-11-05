@@ -165,7 +165,7 @@ export function NotificationTemplateDrawer({
               <Sparkles className="h-3.5 w-3.5 text-clay" />
               Available Dynamic Variables
             </span>
-            <span className="text-[11px] text-ink-muted">Click to insert into focused field</span>
+            <span className="text-xs text-ink-muted">Click to insert into focused field</span>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -240,7 +240,7 @@ export function NotificationTemplateDrawer({
                   <div>
                     <p className="text-xs font-semibold text-ink">{inAppTitle || 'Notification Title'}</p>
                     <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">{inAppMessage || 'Notification message description'}</p>
-                    <span className="text-[10px] text-ink-muted mt-1 block">Just now</span>
+                    <span className="text-xs text-ink-muted mt-1 block">Just now</span>
                   </div>
                 </div>
               </div>

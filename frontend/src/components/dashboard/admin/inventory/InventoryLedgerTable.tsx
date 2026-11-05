@@ -52,7 +52,7 @@ export function InventoryLedgerTable({ movements }: InventoryLedgerTableProps) {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-medium">{m.reason}</span>
                   {m.ref && (
-                    <span className="rounded bg-subtle px-1.5 py-0.5 font-mono text-[11px] text-ink-muted">
+                    <span className="rounded bg-subtle px-1.5 py-0.5 font-mono text-xs text-ink-muted">
                       {m.ref}
                     </span>
                   )}

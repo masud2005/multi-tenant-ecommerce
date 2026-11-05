@@ -132,7 +132,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
 
             <div className="flex items-center gap-1.5 shrink-0">
               <span
-                className="inline-flex items-center text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border shadow-xs"
+                className="inline-flex items-center text-xs font-semibold uppercase px-2 py-0.5 rounded-full border shadow-xs"
                 style={{
                   borderColor: activePreset.colors.border,
                   color: activePreset.colors.foreground,
@@ -142,7 +142,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
                 {activePreset.mode === 'dark' ? 'Midnight' : 'Daylight'}
               </span>
               <span
-                className="inline-flex items-center text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border shadow-xs"
+                className="inline-flex items-center text-xs font-semibold uppercase px-2 py-0.5 rounded-full border shadow-xs"
                 style={{
                   borderColor: activePreset.colors.border,
                   color: activePreset.colors.foreground,
@@ -165,7 +165,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-black/10 dark:border-white/10">
             <div className="flex items-center gap-1.5">
               <div
-                className="flex items-center gap-1 px-2 py-1 rounded-md border text-[10px]"
+                className="flex items-center gap-1 px-2 py-1 rounded-md border text-xs"
                 style={{
                   backgroundColor: 'rgba(0, 0, 0, 0.2)',
                   borderColor: activePreset.colors.border,
@@ -181,7 +181,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
               </div>
 
               <div
-                className="flex items-center gap-1 px-2 py-1 rounded-md border text-[10px]"
+                className="flex items-center gap-1 px-2 py-1 rounded-md border text-xs"
                 style={{
                   backgroundColor: 'rgba(0, 0, 0, 0.2)',
                   borderColor: activePreset.colors.border,
@@ -197,7 +197,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
               </div>
 
               <div
-                className="flex items-center gap-1 px-2 py-1 rounded-md border text-[10px]"
+                className="flex items-center gap-1 px-2 py-1 rounded-md border text-xs"
                 style={{
                   backgroundColor: 'rgba(0, 0, 0, 0.2)',
                   borderColor: activePreset.colors.border,
@@ -280,7 +280,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
                     <div className="truncate text-xs font-semibold text-ink">
                       {preset.name}
                     </div>
-                    <div className="truncate text-[10px] text-ink-muted">
+                    <div className="truncate text-xs text-ink-muted">
                       {preset.concept}
                     </div>
                   </div>
@@ -360,7 +360,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-ink">Primary brand color</p>
-                  <p className="text-[10px] text-ink-muted">Buttons, badges & active states</p>
+                  <p className="text-xs text-ink-muted">Buttons, badges & active states</p>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <input
@@ -373,7 +373,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
                     type="text"
                     value={theme.primaryColor}
                     onChange={(e) => onChange({ primaryColor: e.target.value })}
-                    className="w-18 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-mono uppercase text-ink text-center"
+                    className="w-18 rounded border border-line bg-surface px-1.5 py-0.5 text-xs font-mono uppercase text-ink text-center"
                   />
                 </div>
               </div>
@@ -381,7 +381,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-ink">Canvas background</p>
-                  <p className="text-[10px] text-ink-muted">Storefront canvas backdrop</p>
+                  <p className="text-xs text-ink-muted">Storefront canvas backdrop</p>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <input
@@ -394,7 +394,7 @@ export function BrandAmbienceStudio({ theme, onChange }: BrandAmbienceStudioProp
                     type="text"
                     value={theme.canvasColor}
                     onChange={(e) => onChange({ canvasColor: e.target.value })}
-                    className="w-18 rounded border border-line bg-surface px-1.5 py-0.5 text-[11px] font-mono uppercase text-ink text-center"
+                    className="w-18 rounded border border-line bg-surface px-1.5 py-0.5 text-xs font-mono uppercase text-ink text-center"
                   />
                 </div>
               </div>

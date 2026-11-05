@@ -371,7 +371,7 @@ export default function AccountSupportPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-ink">Store Customer Support</h3>
-                  <Badge tone={isAgentOnline ? 'success' : 'neutral'} className="text-[10px] py-0 px-1.5">
+                  <Badge tone={isAgentOnline ? 'success' : 'neutral'} className="text-xs py-0 px-1.5">
                     {isAgentOnline ? 'Online' : 'Away'}
                   </Badge>
                 </div>
@@ -426,7 +426,7 @@ export default function AccountSupportPage() {
                     >
                       <div className="flex items-end gap-2 max-w-[82%] sm:max-w-[70%]">
                         {!isMe && (
-                          <div className="w-7 h-7 rounded-full bg-clay/10 text-clay flex items-center justify-center text-[11px] font-bold shrink-0 ring-1 ring-line">
+                          <div className="w-7 h-7 rounded-full bg-clay/10 text-clay flex items-center justify-center text-xs font-bold shrink-0 ring-1 ring-line">
                             S
                           </div>
                         )}
@@ -438,7 +438,7 @@ export default function AccountSupportPage() {
                           }`}
                         >
                           {!isMe && (
-                            <p className="text-[10px] font-semibold text-clay mb-0.5">
+                            <p className="text-xs font-semibold text-clay mb-0.5">
                               {msg.senderName || 'Store Support'}
                             </p>
                           )}
@@ -447,7 +447,7 @@ export default function AccountSupportPage() {
                       </div>
 
                       <div
-                        className={`flex items-center gap-1 mt-1 text-[10px] text-ink-muted/80 px-1 ${
+                        className={`flex items-center gap-1 mt-1 text-xs text-ink-muted/80 px-1 ${
                           isMe ? 'pr-1' : 'pl-9'
                         }`}
                       >
@@ -461,7 +461,7 @@ export default function AccountSupportPage() {
                 {/* Typing Indicator */}
                 {isAgentTyping && (
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-clay/10 text-clay flex items-center justify-center text-[11px] font-bold shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-clay/10 text-clay flex items-center justify-center text-xs font-bold shrink-0">
                       S
                     </div>
                     <div className="bg-surface border border-line rounded-2xl rounded-bl-xs px-3.5 py-2 flex items-center gap-1.5 shadow-2xs">
@@ -486,7 +486,7 @@ export default function AccountSupportPage() {
               <button
                 type="button"
                 onClick={() => setAttachedOrder('')}
-                className="hover:underline text-[11px] cursor-pointer"
+                className="hover:underline text-xs cursor-pointer"
               >
                 Remove
               </button>
@@ -615,7 +615,7 @@ export default function AccountSupportPage() {
                         <p className="text-sm font-semibold text-ink group-hover:text-clay transition-colors">
                           {t.subject}
                         </p>
-                        <Badge tone={t.status === 'resolved' ? 'success' : 'info'} className="text-[10px]">
+                        <Badge tone={t.status === 'resolved' ? 'success' : 'info'} className="text-xs">
                           {t.status.toUpperCase()}
                         </Badge>
                       </div>

@@ -485,7 +485,7 @@ function CustomersContent() {
           active && (
             <div className="flex w-full items-center justify-between gap-3">
               <span className="text-xs text-ink-muted">
-                ID: <span className="font-mono text-[11px]">{active.id.slice(0, 8)}...</span>
+                ID: <span className="font-mono text-xs">{active.id.slice(0, 8)}...</span>
               </span>
               <GuardedButton
                 module="customers"
@@ -651,14 +651,14 @@ function CustomersContent() {
                               )}
 
                               {item.sku && (
-                                <span className="inline-flex items-center rounded-sm font-mono text-[11px] text-ink-muted px-1.5 py-0.5 bg-canvas border border-line">
+                                <span className="inline-flex items-center rounded-sm font-mono text-xs text-ink-muted px-1.5 py-0.5 bg-canvas border border-line">
                                   SKU: {item.sku}
                                 </span>
                               )}
                             </div>
 
                             {/* Order Ref & Date */}
-                            <div className="flex items-center gap-2 text-[11px] text-ink-muted pt-0.5">
+                            <div className="flex items-center gap-2 text-xs text-ink-muted pt-0.5">
                               {can('orders') ? (
                                 <Link
                                   href={`/admin/orders/${item.orderId}`}
@@ -682,7 +682,7 @@ function CustomersContent() {
                             <span className="font-bold text-ink text-sm">
                               {formatBDT(item.price * item.qty)}
                             </span>
-                            <span className="block text-[11px] text-ink-muted">
+                            <span className="block text-xs text-ink-muted">
                               {formatBDT(item.price)} × {item.qty} {item.qty > 1 ? 'units' : 'unit'}
                             </span>
                           </div>
@@ -806,7 +806,7 @@ function CustomersContent() {
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-ink">{addr.label || 'Delivery Address'}</span>
                             {addr.isDefaultShipping && (
-                              <span className="rounded-full bg-clay/10 text-clay px-2 py-0.2 text-[10px] font-semibold">
+                              <span className="rounded-full bg-clay/10 text-clay px-2 py-0.2 text-xs font-semibold">
                                 Default
                               </span>
                             )}

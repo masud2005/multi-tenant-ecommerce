@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Layers, Palette, History } from 'lucide-react';
+import { Layers, Palette, History, LayoutTemplate } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
@@ -15,6 +15,7 @@ import {
   BrandAmbienceStudio,
   ThemeVersionHistory,
   ThemePreviewCanvas,
+  LandingTemplateStudio,
   getEcommerceThemePreset,
   DEFAULT_LIGHT_THEME_ID,
   applyEcommerceTheme,
@@ -55,7 +56,7 @@ function createFallbackTheme(): TenantTheme {
 
 export default function AdminThemePage() {
   const [theme, setTheme] = useState<TenantTheme | null>(null);
-  const [activeTab, setActiveTab] = useState<'sections' | 'styling'>('styling');
+  const [activeTab, setActiveTab] = useState<'sections' | 'styling' | 'landing'>('landing');
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -276,7 +277,7 @@ export default function AdminThemePage() {
         {/* Page Header */}
         <PageHeader
           title="Theme & Ambience"
-          description="Manage landing page section priority, visibility, and brand styling. Changes are saved as draft until published."
+          description="Pick a design for each homepage section, edit the shared copy, and tune brand colours. Choices are stored in this browser for now."
           meta={
             <div className="flex items-center gap-2">
               <Badge tone={dirty ? 'warning' : 'success'} dot>
@@ -324,25 +325,38 @@ export default function AdminThemePage() {
         <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
           {/* Left: Tabs */}
           <div className="space-y-4">
-            <div className="flex rounded-lg border border-line bg-surface p-1 shadow-xs">
+            <div className="grid grid-cols-3 rounded-lg border border-line bg-surface p-1 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('landing')}
+                className={cn(
+                  'flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-semibold transition-all cursor-pointer',
+                  activeTab === 'landing'
+                    ? 'bg-subtle text-ink shadow-xs border border-line font-bold'
+                    : 'text-ink-muted hover:text-ink'
+                )}
+              >
+                <LayoutTemplate className="h-4 w-4" />
+                <span>Landing</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('styling')}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-xs font-semibold transition-all cursor-pointer',
+                  'flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-semibold transition-all cursor-pointer',
                   activeTab === 'styling'
                     ? 'bg-subtle text-ink shadow-xs border border-line font-bold'
                     : 'text-ink-muted hover:text-ink'
                 )}
               >
                 <Palette className="h-4 w-4" />
-                <span>Brand & Ambience</span>
+                <span>Brand</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('sections')}
                 className={cn(
-                  'flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-xs font-semibold transition-all cursor-pointer',
+                  'flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-semibold transition-all cursor-pointer',
                   activeTab === 'sections'
                     ? 'bg-subtle text-ink shadow-xs border border-line font-bold'
                     : 'text-ink-muted hover:text-ink'
@@ -364,10 +378,12 @@ export default function AdminThemePage() {
             {activeTab === 'styling' && (
               <BrandAmbienceStudio theme={theme} onChange={handleThemeChange} />
             )}
+
+            {activeTab === 'landing' && <LandingTemplateStudio />}
           </div>
 
           {/* Right: Live Preview */}
-          <ThemePreviewCanvas theme={theme} />
+          <ThemePreviewCanvas theme={theme} focus={activeTab === 'sections' ? 'sections' : 'landing'} />
         </div>
 
         {/* Version History Drawer */}

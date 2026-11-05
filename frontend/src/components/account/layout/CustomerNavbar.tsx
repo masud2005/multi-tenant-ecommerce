@@ -69,7 +69,7 @@ export function CustomerNavbar({
         >
           <Search className="h-4 w-4 text-ink-muted shrink-0" aria-hidden="true" />
           <span className="flex-1 truncate text-xs sm:text-sm">Search products, orders…</span>
-          <kbd className="hidden rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] font-medium text-ink-muted sm:inline select-none">
+          <kbd className="hidden rounded border border-line bg-surface px-1.5 py-0.5 text-xs font-medium text-ink-muted sm:inline select-none">
             ⌘K
           </kbd>
         </button>
@@ -112,7 +112,7 @@ export function CustomerNavbar({
         >
           <ShoppingBag className="h-[18px] w-[18px]" />
           {cartItemsCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-ink text-canvas text-[10px] font-bold flex items-center justify-center ring-2 ring-surface">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-ink text-canvas text-xs font-bold flex items-center justify-center ring-2 ring-surface">
               {cartItemsCount}
             </span>
           )}
