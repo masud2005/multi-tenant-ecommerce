@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { LockIcon, ChevronLeftIcon } from 'lucide-react';
+import { useTenant } from '@/contexts/TenantContext';
 import { useStore } from '@/contexts/StoreContext';
 import { useCartLines } from '@/hooks/useCartLines';
 import { shippingMethods } from '@/data/shipping';
@@ -23,7 +24,8 @@ type Errors = Partial<Record<string, string>>;
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user, addresses, storeCredit, placeOrder, saveAddress } = useStore();
+  const { tenant } = useTenant();
+  const { user, addresses, isAddressesLoading, storeCredit, placeOrder, saveAddress } = useStore();
   const { active, subtotal, hasIssues } = useCartLines();
   const defaultAddr = addresses.find((a) => a.isDefaultShipping) ?? addresses[0];
 
@@ -45,18 +47,8 @@ export default function CheckoutPage() {
   const [payment, setPayment] = useState<PaymentMethod>('cod');
   const [useCredit, setUseCredit] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [code, setCode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('tanti.coupon') ?? '';
-    }
-    return '';
-  });
-  const [applied, setApplied] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('tanti.coupon') ?? '';
-    }
-    return '';
-  });
+  const [code, setCode] = useState('');
+  const [applied, setApplied] = useState('');
   const [codeError, setCodeError] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [placing, setPlacing] = useState(false);
@@ -149,9 +141,6 @@ export default function CheckoutPage() {
       return setCodeError(`Requires a subtotal of ${formatBDT(c.minSubtotal)}`);
     setCodeError('');
     setApplied(c.code);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('tanti.coupon', c.code);
-    }
   };
 
   const handleSaveAddressExplicitly = async () => {
@@ -243,51 +232,52 @@ export default function CheckoutPage() {
     let finalAddress = address;
     if (addressId === 'new') {
       try {
-        const savedResult: any = await saveAddress({
+        const savedResult = await saveAddress({
           ...address,
           label: newAddr.label || 'Home',
           isDefaultShipping: addresses.length === 0,
         });
-        if (savedResult && typeof savedResult === 'object' && savedResult.id) {
-          finalAddress = {
-            ...address,
-            id: savedResult.id,
-            label: savedResult.label || newAddr.label || 'Home',
-          };
+        if (!savedResult?.id) {
+          throw new Error('Address was not saved.');
         }
+        finalAddress = {
+          ...address,
+          id: savedResult.id,
+          label: savedResult.label || newAddr.label || 'Home',
+        };
+        setAddressId(savedResult.id);
       } catch (err) {
         console.error('Failed to save address:', err);
-      }
-    } else {
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('tanti_last_delivery_address', JSON.stringify(finalAddress));
-        } catch {}
+        toast.error('Could not save this address. The order was not placed.');
+        submitting.current = false;
+        setPlacing(false);
+        return;
       }
     }
 
-    await new Promise((r) => setTimeout(r, 400));
-    const order = await placeOrder({
-      contact: {
-        name: finalAddress.name,
-        email: user?.email || '',
-        phone: finalAddress.phone,
-      },
-      address: finalAddress,
-      shippingMethod: method.name,
-      shippingCost: totals.shipping + totals.codFee,
-      paymentMethod: payment,
-      discount: totals.discount + totals.credit,
-      couponCode: coupon?.code,
-      subtotal,
-      total: totals.total,
-    });
-
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('tanti.coupon');
+    try {
+      const order = await placeOrder({
+        contact: {
+          name: finalAddress.name,
+          email: user?.email || '',
+          phone: finalAddress.phone,
+        },
+        address: finalAddress,
+        shippingMethod: method.name,
+        shippingCost: totals.shipping + totals.codFee,
+        paymentMethod: 'cod',
+        discount: totals.discount + totals.credit,
+        couponCode: coupon?.code,
+        subtotal,
+        total: totals.total,
+      });
+      router.replace(`/order-confirmation/${order.number || order.id}`);
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : 'Could not place the order. Please try again.');
+      submitting.current = false;
+      setPlacing(false);
     }
-    const targetId = order.number || order.id;
-    router.replace(payment === 'cod' ? `/order-confirmation/${targetId}` : `/pay/${targetId}`);
   };
 
   return (
@@ -296,7 +286,7 @@ export default function CheckoutPage() {
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="font-display text-2xl">
-            Tanti
+            {tenant.name}
           </Link>
           <span className="flex items-center gap-1.5 text-sm text-ink-muted">
             <LockIcon className="h-3.5 w-3.5" aria-hidden /> Secure checkout
@@ -332,6 +322,7 @@ export default function CheckoutPage() {
             }
             onSaveAddress={handleSaveAddressExplicitly}
             isSavingAddress={savingAddress}
+            isLoading={!!isAddressesLoading}
           />
 
           {/* Step 2: Delivery Method */}

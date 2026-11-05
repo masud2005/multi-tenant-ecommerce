@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckIcon } from 'lucide-react';
+import { CheckIcon, PlusIcon } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ interface AddressSectionProps {
   onClearError: (field: string) => void;
   onSaveAddress: () => void | Promise<void>;
   isSavingAddress: boolean;
+  isLoading?: boolean;
 }
 
 export function AddressSection({
@@ -42,9 +43,14 @@ export function AddressSection({
   onClearError,
   onSaveAddress,
   isSavingAddress,
+  isLoading = false,
 }: AddressSectionProps) {
   return (
     <Section step={1} title="Delivery address">
+      {isLoading && (
+        <p className="text-sm text-ink-muted">Loading your saved addresses...</p>
+      )}
+
       {addresses.length > 0 && (
         <div
           className="grid gap-3 sm:grid-cols-2"
@@ -59,15 +65,11 @@ export function AddressSection({
                 checked={isSelected}
                 onSelect={() => onSelectAddressId(a.id)}
               >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-ink">{a.label || 'Saved Address'}</p>
-                  {a.isDefaultShipping ? (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-ink">{a.label || 'Saved address'}</p>
+                  {a.isDefaultShipping && (
                     <span className="rounded bg-clay/10 px-2 py-0.5 text-xs font-medium text-clay">
                       Default
-                    </span>
-                  ) : (
-                    <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-ink-muted">
-                      Previous Address
                     </span>
                   )}
                 </div>
@@ -80,18 +82,18 @@ export function AddressSection({
               </RadioCard>
             );
           })}
-          <RadioCard
-            checked={selectedAddressId === 'new'}
-            onSelect={() => onSelectAddressId('new')}
-          >
-            <p className="text-sm font-medium text-brand flex items-center gap-1.5">
-              + Use a new address
-            </p>
-            <p className="text-xs text-ink-muted mt-1">
-              Enter a different recipient or delivery location
-            </p>
-          </RadioCard>
         </div>
+      )}
+
+      {selectedAddressId !== 'new' && (
+        <button
+          type="button"
+          onClick={() => onSelectAddressId('new')}
+          className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm font-medium text-ink hover:border-clay hover:text-clay"
+        >
+          <PlusIcon className="h-4 w-4" aria-hidden />
+          Add new address
+        </button>
       )}
 
       {selectedAddressId === 'new' && (

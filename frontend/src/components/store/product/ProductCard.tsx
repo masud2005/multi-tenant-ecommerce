@@ -10,6 +10,7 @@ import type { Product } from '@/types/commerce';
 import { discountPercent, productPrice, variantStockState } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { Rating } from '@/components/ui/Rating';
 import { analyticsService } from '@/services/analytics-service';
 
 export function ProductCard({
@@ -61,7 +62,7 @@ export function ProductCard({
           'grid grid-cols-[160px_1fr] gap-5 sm:grid-cols-[200px_1fr]'
       )}
     >
-      <div className="relative overflow-hidden rounded-md bg-subtle">
+      <div className="relative overflow-hidden rounded-lg bg-subtle">
         <Link
           href={`/products/${product.slug}`}
           onClick={handleProductClick}
@@ -183,6 +184,12 @@ export function ProductCard({
             </span>
           )}
         </div>
+        {product.reviewCount > 0 && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <Rating value={product.rating || 0} />
+            <span className="text-xs text-ink-muted">({product.reviewCount})</span>
+          </div>
+        )}
         {product.colors.length > 1 && (
           <div
             className="mt-2 flex gap-1"

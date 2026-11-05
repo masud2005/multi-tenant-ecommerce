@@ -20,6 +20,7 @@ import { variantPrice } from '@/utils/pricing';
 import { now, returnEventLabel } from './utils';
 import type { PlaceOrderInput, User } from './types';
 import { orderService, CreateOrderPayload } from '@/services/order-service';
+import { cartService } from '@/services/cart-service';
 
 // Helper to transform backend order response to frontend Order interface
 function mapBackendOrderToFrontend(item: any): Order {
@@ -161,9 +162,6 @@ export function useStoreOrders(
         };
       });
 
-      const isCod = input.paymentMethod === 'cod';
-
-      // 1. Prepare backend creation payload
       const payload: CreateOrderPayload = {
         shippingAddress: {
           name: input.address.name,
@@ -188,8 +186,8 @@ export function useStoreOrders(
         subtotal: input.subtotal,
         total: input.total,
         discount: input.discount,
-        paymentMethod: input.paymentMethod.toUpperCase(),
-        paymentStatus: isCod ? 'PENDING' : 'PENDING',
+        paymentMethod: 'COD',
+        paymentStatus: 'PENDING',
         customerName: input.contact.name || input.address.name,
         phone: input.contact.phone || input.address.phone,
         email: input.contact.email,
@@ -197,52 +195,15 @@ export function useStoreOrders(
         customerNote: input.customerNote,
       };
 
-      let finalOrder: Order;
-
-      try {
-        const res = await orderService.createOrder(payload);
-        if (res?.data) {
-          finalOrder = mapBackendOrderToFrontend(res.data);
-        } else {
-          throw new Error(res?.message || 'Server did not return created order');
-        }
-      } catch (err) {
-        console.warn('Backend order placement failed, falling back to local order:', err);
-        const nextSeq = 10500 + orders.length;
-        finalOrder = {
-          id: `o${nextSeq}`,
-          number: `TN-${nextSeq}`,
-          customerId: user?.id ?? 'guest',
-          customerName: input.contact.name || input.address.name,
-          email: input.contact.email,
-          phone: input.contact.phone || input.address.phone,
-          createdAt: now(),
-          items,
-          subtotal: input.subtotal,
-          discount: input.discount,
-          shipping: input.shippingCost,
-          tax: 0,
-          total: input.total,
-          refunded: 0,
-          couponCode: input.couponCode,
-          paymentMethod: input.paymentMethod,
-          paymentStatus: 'pending',
-          status: isCod ? 'confirmed' : 'pending_payment',
-          fulfillmentStatus: 'unfulfilled',
-          shippingAddress: input.address,
-          shippingMethod: input.shippingMethod,
-          timeline: isCod
-            ? [
-                { at: now(), label: 'Order confirmed (Cash on delivery)', by: 'System' },
-                { at: now(), label: 'Order placed', by: 'Customer' },
-              ]
-            : [{ at: now(), label: 'Order placed — awaiting payment', by: 'Customer' }],
-          attempts: [],
-          notes: [],
-          channel: 'online',
-          customerNote: input.customerNote,
-        };
+      const res = await orderService.createOrder(payload);
+      if (!res?.data) {
+        throw new Error(res?.message || 'Server did not return the created order');
       }
+      const finalOrder = mapBackendOrderToFrontend(res.data);
+
+      await Promise.all(
+        lines.map((line) => cartService.removeItem(line.variantId).catch(() => undefined))
+      );
 
       setOrders((prev) => [finalOrder, ...prev.filter((o) => o.id !== finalOrder.id && o.number !== finalOrder.number)]);
       lines.forEach((l) => adjustStock(l.productId, l.variantId, -l.qty));

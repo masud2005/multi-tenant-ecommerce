@@ -114,8 +114,10 @@ export function StoreHeader() {
             <Link
               href="/shop"
               className={cn(
-                'text-sm font-medium transition-colors hover:text-clay',
-                pathname === '/shop' && !currentCategory ? 'text-clay' : 'text-ink'
+                'border-b-2 py-2 text-sm font-medium transition-colors hover:text-clay',
+                pathname === '/shop' && !currentCategory
+                  ? 'border-clay text-clay'
+                  : 'border-transparent text-ink'
               )}
             >
               All Products
@@ -130,10 +132,10 @@ export function StoreHeader() {
                 <Link
                   href={`/shop?category=${cat.key}`}
                   className={cn(
-                    'text-sm font-medium transition-colors hover:text-clay py-2 inline-block',
+                    'inline-block border-b-2 py-2 text-sm font-medium transition-colors hover:text-clay',
                     pathname === '/shop' && currentCategory === cat.key
-                      ? 'text-clay'
-                      : 'text-ink'
+                      ? 'border-clay text-clay'
+                      : 'border-transparent text-ink'
                   )}
                 >
                   {cat.name}
@@ -175,8 +177,10 @@ export function StoreHeader() {
               <Link
                 href="/collections"
                 className={cn(
-                  'text-sm font-medium transition-colors hover:text-clay py-2 inline-block',
-                  pathname.startsWith('/collections') ? 'text-clay' : 'text-ink'
+                  'inline-block border-b-2 py-2 text-sm font-medium transition-colors hover:text-clay',
+                  pathname.startsWith('/collections')
+                    ? 'border-clay text-clay'
+                    : 'border-transparent text-ink'
                 )}
               >
                 Collections
@@ -211,7 +215,7 @@ export function StoreHeader() {
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="p-2 text-ink hover:text-clay cursor-pointer transition-colors"
+              className="p-2 text-ink transition-colors hover:text-clay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay rounded-lg"
               aria-label="Search"
             >
               <SearchIcon className="h-5 w-5" />

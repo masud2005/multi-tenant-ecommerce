@@ -6,8 +6,27 @@ import { authService } from '@/services/auth';
 import { addressService } from '@/services/address-service';
 import type { User } from './types';
 
-const LOCAL_STORAGE_SAVED_ADDRESSES = 'tanti_saved_delivery_addresses';
-const LOCAL_STORAGE_LAST_ADDRESS = 'tanti_last_delivery_address';
+const mapAddress = (item: {
+  id: string;
+  label: string;
+  name: string;
+  phone: string;
+  line1: string;
+  district: string;
+  area: string;
+  isDefaultShipping?: boolean;
+  isDefaultBilling?: boolean;
+}): Address => ({
+  id: item.id,
+  label: item.label,
+  name: item.name,
+  phone: item.phone,
+  line1: item.line1,
+  district: item.district,
+  area: item.area,
+  isDefaultShipping: !!item.isDefaultShipping,
+  isDefaultBilling: !!item.isDefaultBilling,
+});
 
 export function useStoreAuth() {
   const [user, setUser] = useState<User | null>(() => {
@@ -25,17 +44,7 @@ export function useStoreAuth() {
     return null;
   });
 
-  const [addresses, setAddresses] = useState<Address[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const stored = localStorage.getItem(LOCAL_STORAGE_SAVED_ADDRESSES);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  });
+  const [addresses, setAddresses] = useState<Address[]>([]);
 
   const [isAddressesLoading, setIsAddressesLoading] = useState<boolean>(false);
   const [storeCredit] = useState(0);
@@ -43,18 +52,8 @@ export function useStoreAuth() {
 
   // Helper to load addresses from backend database for authenticated users
   const loadAddressesFromBackend = useCallback(async () => {
-    const token = authService.getStoredUser();
-    if (!token) {
-      // Guest: Load from localStorage
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = localStorage.getItem(LOCAL_STORAGE_SAVED_ADDRESSES);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) setAddresses(parsed);
-          }
-        } catch {}
-      }
+    if (!authService.getStoredUser()) {
+      setAddresses([]);
       return;
     }
 
@@ -62,24 +61,13 @@ export function useStoreAuth() {
       setIsAddressesLoading(true);
       const res = await addressService.getAddresses();
       if (res?.data && Array.isArray(res.data)) {
-        const mappedAddresses: Address[] = res.data.map((item) => ({
-          id: item.id,
-          label: item.label,
-          name: item.name,
-          phone: item.phone,
-          line1: item.line1,
-          district: item.district,
-          area: item.area,
-          isDefaultShipping: !!item.isDefaultShipping,
-          isDefaultBilling: !!item.isDefaultBilling,
-        }));
-        setAddresses(mappedAddresses);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(LOCAL_STORAGE_SAVED_ADDRESSES, JSON.stringify(mappedAddresses));
-        }
+        setAddresses(res.data.map(mapAddress));
+      } else {
+        setAddresses([]);
       }
     } catch (err) {
       console.warn('Could not load customer addresses from backend:', err);
+      setAddresses([]);
     } finally {
       setIsAddressesLoading(false);
     }
@@ -121,16 +109,7 @@ export function useStoreAuth() {
       });
       loadAddressesFromBackend();
     } else {
-      // Load saved addresses from localStorage for guests
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = localStorage.getItem(LOCAL_STORAGE_SAVED_ADDRESSES);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) setAddresses(parsed);
-          }
-        } catch {}
-      }
+      setAddresses([]);
     }
 
     return () => {
@@ -172,150 +151,57 @@ export function useStoreAuth() {
     authService.logout();
     setUser(null);
     setAddresses([]);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem('tanti.cart');
-        localStorage.removeItem('tanti.wishlist');
-        localStorage.removeItem(LOCAL_STORAGE_SAVED_ADDRESSES);
-        localStorage.removeItem(LOCAL_STORAGE_LAST_ADDRESS);
-      } catch {}
-    }
   }, []);
 
   const saveAddress = useCallback(async (a: Address) => {
-    // 1. Optimistic local state update and localStorage sync
-    let updatedAddresses: Address[] = [];
-    setAddresses((prev) => {
-      const exists = prev.some((x) => x.id === a.id);
-      let next = exists ? prev.map((x) => (x.id === a.id ? a : x)) : [a, ...prev];
-      if (a.isDefaultShipping) {
-        next = next.map((x) => ({ ...x, isDefaultShipping: x.id === a.id }));
-      }
-      updatedAddresses = next;
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(LOCAL_STORAGE_SAVED_ADDRESSES, JSON.stringify(next));
-          localStorage.setItem(LOCAL_STORAGE_LAST_ADDRESS, JSON.stringify(a));
-        } catch {}
-      }
-      return next;
-    });
-
-    // 2. Persist to Backend if logged in
-    const stored = authService.getStoredUser();
-    if (stored) {
-      try {
-        const isExistingInDb = a.id && !a.id.startsWith('a') && a.id.length > 10;
-        if (isExistingInDb) {
-          const res = await addressService.updateAddress(a.id, {
-            label: a.label,
-            name: a.name,
-            phone: a.phone,
-            line1: a.line1,
-            district: a.district,
-            area: a.area,
-            isDefaultShipping: a.isDefaultShipping,
-            isDefaultBilling: a.isDefaultBilling,
-          });
-          if (res?.data) {
-            setAddresses((prev) => {
-              const synced = prev.map((item) => (item.id === a.id ? { ...item, ...res.data } : item));
-              if (typeof window !== 'undefined') {
-                localStorage.setItem(LOCAL_STORAGE_SAVED_ADDRESSES, JSON.stringify(synced));
-              }
-              return synced;
-            });
-          }
-        } else {
-          const res = await addressService.saveAddress({
-            label: a.label || 'Home',
-            name: a.name,
-            phone: a.phone,
-            line1: a.line1,
-            district: a.district,
-            area: a.area,
-            isDefaultShipping: a.isDefaultShipping,
-            isDefaultBilling: a.isDefaultBilling,
-          });
-          if (res?.data) {
-            // Replace temporary optimistic ID with database generated UUID
-            setAddresses((prev) => {
-              const filtered = prev.filter((item) => item.id !== a.id);
-              const mapped: Address = {
-                id: res.data.id,
-                label: res.data.label,
-                name: res.data.name,
-                phone: res.data.phone,
-                line1: res.data.line1,
-                district: res.data.district,
-                area: res.data.area,
-                isDefaultShipping: !!res.data.isDefaultShipping,
-                isDefaultBilling: !!res.data.isDefaultBilling,
-              };
-              let next = [mapped, ...filtered];
-              if (mapped.isDefaultShipping) {
-                next = next.map((x) => ({ ...x, isDefaultShipping: x.id === mapped.id }));
-              }
-              if (typeof window !== 'undefined') {
-                localStorage.setItem(LOCAL_STORAGE_SAVED_ADDRESSES, JSON.stringify(next));
-                localStorage.setItem(LOCAL_STORAGE_LAST_ADDRESS, JSON.stringify(mapped));
-              }
-              return next;
-            });
-            return res.data;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to persist address to backend:', error);
-      }
+    if (!authService.getStoredUser()) {
+      throw new Error('Please log in to save an address.');
     }
-    return a;
+
+    const isExisting = Boolean(a.id && !a.id.startsWith('a') && a.id.length > 10);
+    const payload = {
+      label: a.label || 'Home',
+      name: a.name,
+      phone: a.phone,
+      line1: a.line1,
+      district: a.district,
+      area: a.area,
+      isDefaultShipping: a.isDefaultShipping,
+      isDefaultBilling: a.isDefaultBilling,
+    };
+
+    const res = isExisting
+      ? await addressService.updateAddress(a.id, payload)
+      : await addressService.saveAddress(payload);
+
+    if (!res?.data?.id) {
+      throw new Error('Could not save address.');
+    }
+
+    const mapped = mapAddress(res.data);
+    setAddresses((prev) => {
+      const rest = prev.filter((item) => item.id !== a.id && item.id !== mapped.id);
+      const next = [mapped, ...rest];
+      if (!mapped.isDefaultShipping) return next;
+      return next.map((item) => ({ ...item, isDefaultShipping: item.id === mapped.id }));
+    });
+    return mapped;
   }, []);
 
   const deleteAddress = useCallback(async (id: string) => {
-    // 1. Optimistic local deletion & localStorage sync
-    setAddresses((prev) => {
-      const next = prev.filter((a) => a.id !== id);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(LOCAL_STORAGE_SAVED_ADDRESSES, JSON.stringify(next));
-        } catch {}
-      }
-      return next;
-    });
-
-    // 2. Persist to backend
-    const stored = authService.getStoredUser();
-    if (stored && id && !id.startsWith('a') && id.length > 10) {
-      try {
-        await addressService.deleteAddress(id);
-      } catch (error) {
-        console.error('Failed to delete address from backend:', error);
-      }
-    }
+    await addressService.deleteAddress(id);
+    setAddresses((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
   const setDefaultAddress = useCallback(async (id: string) => {
-    // 1. Optimistic local update
-    setAddresses((prev) => {
-      const next = prev.map((a) => ({ ...a, isDefaultShipping: a.id === id }));
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(LOCAL_STORAGE_SAVED_ADDRESSES, JSON.stringify(next));
-        } catch {}
-      }
-      return next;
-    });
-
-    // 2. Persist to backend
-    const stored = authService.getStoredUser();
-    if (stored && id && !id.startsWith('a') && id.length > 10) {
-      try {
-        await addressService.updateAddress(id, { isDefaultShipping: true });
-      } catch (error) {
-        console.error('Failed to update default address on backend:', error);
-      }
-    }
+    const res = await addressService.updateAddress(id, { isDefaultShipping: true });
+    if (!res?.data) throw new Error('Could not update the default address.');
+    setAddresses((prev) =>
+      prev.map((a) => ({
+        ...a,
+        isDefaultShipping: a.id === id,
+      }))
+    );
   }, []);
 
   const toggleCustomerStatus = useCallback((id: string) => {

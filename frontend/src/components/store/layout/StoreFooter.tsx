@@ -33,8 +33,7 @@ const columns = [
     links: [
       ['/about', 'Our story'],
       ['/journal', 'Journal'],
-      ['/brands/tanti-loom', 'Featured Brands'],
-      ['/admin', 'Merchant login'],
+      ['/contact', 'Contact us'],
     ],
   },
 ];
@@ -52,7 +51,7 @@ export function StoreFooter() {
     }
     setError('');
     setEmail('');
-    toast.success('You’re on the list — check your inbox for 10% off.');
+    toast.success('You are on the list. We will write when something new lands.');
   };
 
   return (
@@ -61,12 +60,12 @@ export function StoreFooter() {
         <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <p className="font-display text-3xl">{tenant.name}</p>
-            <p className="mt-3 max-w-sm text-sm text-canvas/70">
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-canvas/70">
               {tenant.tagline}
             </p>
             <form onSubmit={subscribe} className="mt-8 max-w-sm" noValidate>
               <label htmlFor="newsletter" className="text-sm font-medium">
-                Get 10% off your first order
+                New arrivals and private offers
               </label>
               <div className="mt-2 flex">
                 <input
@@ -128,6 +127,9 @@ export function StoreFooter() {
             </Link>
             <Link href="/policies/cookies" className="hover:text-canvas">
               Cookies
+            </Link>
+            <Link href="/admin" className="hover:text-canvas">
+              Staff
             </Link>
           </div>
         </div>

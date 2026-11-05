@@ -84,8 +84,8 @@ export default function CartPage() {
         <EmptyState
           icon={ShoppingBagIcon}
           title="Your bag is empty"
-          description="Browse our new Eid collection or pick up where you left off."
-          action={<Button href="/collections/eid-2026">Shop Eid 2026</Button>}
+          description="When you are ready, the full collection is in the shop."
+          action={<Button href="/shop">Continue shopping</Button>}
         />
       </div>
     );
@@ -105,7 +105,7 @@ export default function CartPage() {
             <Link href="/login?next=/cart" className="font-medium underline">
               Sign in
             </Link>{' '}
-            to save your bag across devices — items here will be merged with your account.
+            to check out. Cash on delivery uses a saved address from your account.
           </span>
         </div>
       )}
