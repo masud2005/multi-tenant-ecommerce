@@ -216,7 +216,7 @@ export function ReviewDetailDrawer({
                 <span>Official Public Store Reply</span>
               </label>
               {review.reply && (
-                <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
                   ✓ Replied
                 </span>
               )}
@@ -236,7 +236,7 @@ export function ReviewDetailDrawer({
             />
 
             <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-ink-muted">
+              <span className="text-xs text-ink-muted">
                 {replyText.length} characters (min 5)
               </span>
               <Button

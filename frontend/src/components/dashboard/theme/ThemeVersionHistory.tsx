@@ -39,7 +39,7 @@ export function ThemeVersionHistory({
                   <span className="font-semibold text-ink">{v.version}</span>
                   <span className="text-xs text-ink-muted truncate">{v.label}</span>
                 </div>
-                <p className="text-[11px] text-ink-muted">
+                <p className="text-xs text-ink-muted">
                   {formatDateTime(v.createdAt)} · {v.publishedBy || 'Owner'}
                 </p>
               </div>

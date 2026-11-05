@@ -175,7 +175,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
             <span className="text-3xl sm:text-4xl font-extrabold text-ink tracking-tight">
               {totalCount}
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
               <ShieldCheck className="h-3 w-3" /> 100% Live
             </span>
           </div>
@@ -200,7 +200,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
           </div>
           <div className="mt-1.5 flex items-center gap-2">
             <Rating value={avgRating} size="sm" />
-            <span className="text-[11px] text-ink-muted">from {totalCount} ratings</span>
+            <span className="text-xs text-ink-muted">from {totalCount} ratings</span>
           </div>
         </div>
 
@@ -245,7 +245,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
               {pendingCount}
             </span>
             {pendingCount > 0 ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 dark:bg-rose-950/80 px-2 py-0.5 text-[11px] font-bold text-rose-700 dark:text-rose-300 animate-pulse">
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 dark:bg-rose-950/80 px-2 py-0.5 text-xs font-bold text-rose-700 dark:text-rose-300 animate-pulse">
                 Needs Attention
               </span>
             ) : (
@@ -292,7 +292,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
               <Flame className="h-3.5 w-3.5" />
               <span>Needs Reply</span>
               {pendingCount > 0 && (
-                <span className="rounded-full bg-rose-100 dark:bg-rose-950/80 px-1.5 py-0.2 text-[10px] text-rose-700 dark:text-rose-300 font-bold">
+                <span className="rounded-full bg-rose-100 dark:bg-rose-950/80 px-1.5 py-0.2 text-xs text-rose-700 dark:text-rose-300 font-bold">
                   {pendingCount}
                 </span>
               )}
@@ -496,7 +496,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                             {review.author}
                           </h3>
                         </div>
-                        <p className="text-[11px] text-ink-muted">
+                        <p className="text-xs text-ink-muted">
                           {formatDate(review.date || review.createdAt || new Date().toISOString())}
                         </p>
                       </div>
@@ -509,7 +509,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                         <span>{review.rating}.0</span>
                       </div>
                       {review.verified && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        <span className="inline-flex items-center gap-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                           <BadgeCheck className="h-3 w-3" /> Verified Buyer
                         </span>
                       )}
@@ -525,14 +525,14 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                       className="h-12 w-11 rounded-lg object-cover border border-line shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-ink-muted uppercase tracking-wider">
+                      <p className="text-xs font-medium text-ink-muted uppercase tracking-wider">
                         Product
                       </p>
                       <h4 className="text-xs font-semibold text-ink truncate">
                         {productTitle}
                       </h4>
                       {review.product?.price && (
-                        <p className="text-[11px] font-bold text-ink-soft">
+                        <p className="text-xs font-bold text-ink-soft">
                           ৳{review.product.price.toLocaleString()}
                         </p>
                       )}
@@ -562,7 +562,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
 
                   {/* Sizing & Fit Badge if available */}
                   {review.size && (
-                    <div className="inline-flex items-center gap-1 rounded-md bg-subtle px-2 py-0.5 text-[11px] font-medium text-ink-soft">
+                    <div className="inline-flex items-center gap-1 rounded-md bg-subtle px-2 py-0.5 text-xs font-medium text-ink-soft">
                       <Tag className="h-3 w-3 text-ink-muted" />
                       <span>{review.size}</span>
                     </div>
@@ -603,7 +603,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                         <button
                           type="button"
                           onClick={() => handleOpenDrawer(review)}
-                          className="text-[11px] underline hover:text-emerald-950 cursor-pointer"
+                          className="text-xs underline hover:text-emerald-950 cursor-pointer"
                         >
                           Edit
                         </button>
@@ -681,7 +681,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                       <span className="text-xs font-bold text-ink">{review.rating}.0</span>
                     </div>
                     <h4 className="text-xs font-bold text-ink truncate">{productTitle}</h4>
-                    <p className="text-[11px] text-ink-muted truncate">
+                    <p className="text-xs text-ink-muted truncate">
                       by <strong className="text-ink">{review.author}</strong> ·{' '}
                       {formatDate(review.date || review.createdAt || new Date().toISOString())}
                     </p>

@@ -42,19 +42,29 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                var s = localStorage.getItem('tanti_theme_settings');
-                if (s) {
-                  var p = JSON.parse(s);
-                  if (p.colorMode === 'dark') {
-                    document.documentElement.classList.add('dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
+                var css = localStorage.getItem('tanti_theme_css');
+                if (css) {
+                  var snap = JSON.parse(css);
+                  var root = document.documentElement;
+                  if (snap.dark) root.classList.add('dark');
+                  else root.classList.remove('dark');
+                  if (snap.style) root.setAttribute('data-theme-style', snap.style);
+                  if (snap.card) root.setAttribute('data-card-style', snap.card);
+                  if (snap.vars) {
+                    Object.keys(snap.vars).forEach(function (key) {
+                      root.style.setProperty(key, snap.vars[key]);
+                    });
                   }
-                  if (p.themeStyle) {
-                    document.documentElement.setAttribute('data-theme-style', p.themeStyle);
+                } else {
+                  var s = localStorage.getItem('tanti_theme_settings');
+                  if (s) {
+                    var p = JSON.parse(s);
+                    if (p.colorMode === 'dark') document.documentElement.classList.add('dark');
+                    else document.documentElement.classList.remove('dark');
+                    if (p.themeStyle) document.documentElement.setAttribute('data-theme-style', p.themeStyle);
                   }
                 }
-              } catch(e) {}
+              } catch (e) {}
             `,
           }}
         />

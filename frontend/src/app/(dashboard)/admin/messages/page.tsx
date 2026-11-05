@@ -398,7 +398,7 @@ export default function AdminMessagesPage() {
                 </button>
               ))}
               {totalUnread > 0 && (
-                <span className="ml-auto text-[11px] font-semibold bg-clay/10 text-clay px-2 py-0.5 rounded-full">
+                <span className="ml-auto text-xs font-semibold bg-clay/10 text-clay px-2 py-0.5 rounded-full">
                   {totalUnread} unread
                 </span>
               )}
@@ -416,7 +416,7 @@ export default function AdminMessagesPage() {
               <div className="p-8 text-center text-ink-muted text-xs">
                 <MessageSquare className="h-7 w-7 text-ink-muted/40 mx-auto mb-2" />
                 <p className="font-medium text-ink">No conversations found</p>
-                <p className="text-[11px] text-ink-muted mt-0.5">
+                <p className="text-xs text-ink-muted mt-0.5">
                   When customers send messages from storefront or account, they will appear here.
                 </p>
               </div>
@@ -457,24 +457,24 @@ export default function AdminMessagesPage() {
                         <p className={`text-xs truncate ${hasUnread ? 'font-bold text-ink' : 'font-medium text-ink'}`}>
                           {conv.customerName}
                         </p>
-                        <span className="text-[10px] text-ink-muted shrink-0">
+                        <span className="text-xs text-ink-muted shrink-0">
                           {timeAgo(conv.lastMessageAt)}
                         </span>
                       </div>
 
-                      <p className="text-[11px] text-ink-muted truncate leading-relaxed">
+                      <p className="text-xs text-ink-muted truncate leading-relaxed">
                         {conv.lastMessagePreview || 'No messages yet'}
                       </p>
 
                       <div className="flex items-center gap-1.5 mt-1.5">
                         <Badge
                           tone={conv.status === 'resolved' ? 'success' : 'info'}
-                          className="text-[9px] py-0 px-1"
+                          className="text-xs py-0 px-1"
                         >
                           {conv.status}
                         </Badge>
                         {hasUnread && (
-                          <span className="h-4 min-w-[16px] px-1 rounded-full bg-clay text-white text-[9px] font-bold flex items-center justify-center">
+                          <span className="h-4 min-w-[16px] px-1 rounded-full bg-clay text-white text-xs font-bold flex items-center justify-center">
                             {conv.unreadByOwner}
                           </span>
                         )}
@@ -512,7 +512,7 @@ export default function AdminMessagesPage() {
                       </h3>
                       <Badge
                         tone={(isCustomerOnline || onlineConvIds.has(selectedConversation.id)) ? 'success' : 'neutral'}
-                        className="text-[10px] py-0 px-1.5"
+                        className="text-xs py-0 px-1.5"
                       >
                         {(isCustomerOnline || onlineConvIds.has(selectedConversation.id)) ? 'Online' : 'Offline'}
                       </Badge>
@@ -570,7 +570,7 @@ export default function AdminMessagesPage() {
                         >
                           <div className="flex items-end gap-2 max-w-[80%] sm:max-w-[70%]">
                             {!isOwner && (
-                              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0">
+                              <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
                                 {msg.senderName.charAt(0).toUpperCase()}
                               </div>
                             )}
@@ -584,7 +584,7 @@ export default function AdminMessagesPage() {
                             >
                               <div className="flex items-center justify-between gap-2 mb-0.5">
                                 <span
-                                  className={`text-[10px] font-semibold ${
+                                  className={`text-xs font-semibold ${
                                     isOwner ? 'text-white/80' : 'text-clay'
                                   }`}
                                 >
@@ -596,7 +596,7 @@ export default function AdminMessagesPage() {
                           </div>
 
                           <div
-                            className={`flex items-center gap-1 mt-1 text-[10px] text-ink-muted/80 px-1 ${
+                            className={`flex items-center gap-1 mt-1 text-xs text-ink-muted/80 px-1 ${
                               isOwner ? 'pr-1' : 'pl-9'
                             }`}
                           >
@@ -610,7 +610,7 @@ export default function AdminMessagesPage() {
                     {/* Typing Indicator */}
                     {isCustomerTyping && (
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
                           {selectedConversation.customerName.charAt(0).toUpperCase()}
                         </div>
                         <div className="bg-surface border border-line rounded-2xl rounded-bl-xs px-3.5 py-2 flex items-center gap-1.5 shadow-2xs">
@@ -631,7 +631,7 @@ export default function AdminMessagesPage() {
 
               {/* Quick Canned Replies Bar (Clean, no horizontal scrollbar track) */}
               <div className="px-4 py-2 border-t border-line bg-canvas/30 flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                <span className="text-[11px] font-medium text-ink-muted shrink-0 flex items-center gap-1">
+                <span className="text-xs font-medium text-ink-muted shrink-0 flex items-center gap-1">
                   <Sparkles className="h-3 w-3 text-clay" /> Quick:
                 </span>
                 {quickReplies.map((reply, idx) => (
@@ -639,7 +639,7 @@ export default function AdminMessagesPage() {
                     key={idx}
                     type="button"
                     onClick={() => handleSendReply(reply)}
-                    className="text-[11px] whitespace-nowrap bg-surface hover:bg-clay/10 hover:text-clay hover:border-clay/30 border border-line px-2.5 py-1 rounded-full text-ink transition-all cursor-pointer shrink-0 shadow-2xs"
+                    className="text-xs whitespace-nowrap bg-surface hover:bg-clay/10 hover:text-clay hover:border-clay/30 border border-line px-2.5 py-1 rounded-full text-ink transition-all cursor-pointer shrink-0 shadow-2xs"
                   >
                     {reply}
                   </button>

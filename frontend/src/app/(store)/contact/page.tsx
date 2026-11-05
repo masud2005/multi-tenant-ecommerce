@@ -314,7 +314,7 @@ export default function ContactPage() {
                   <label className="text-xs font-semibold text-ink">
                     Type Your Message *
                   </label>
-                  <span className="text-[11px] text-ink-muted">
+                  <span className="text-xs text-ink-muted">
                     {form.message.length} characters
                   </span>
                 </div>

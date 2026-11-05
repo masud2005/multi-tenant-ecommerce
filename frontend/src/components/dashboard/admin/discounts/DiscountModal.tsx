@@ -278,7 +278,7 @@ export function DiscountModal({
                     )}
                   </div>
                   <span className="mt-1 text-sm font-semibold text-ink">{item.title}</span>
-                  <span className="text-[11px] text-ink-muted leading-tight">{item.desc}</span>
+                  <span className="text-xs text-ink-muted leading-tight">{item.desc}</span>
                 </button>
               );
             })}
@@ -336,7 +336,7 @@ export function DiscountModal({
           ) : (
             <div className="flex flex-col justify-center rounded-lg border border-line bg-subtle/50 p-3">
               <span className="text-xs font-medium text-ink">Free Shipping Active</span>
-              <span className="text-[11px] text-ink-muted">
+              <span className="text-xs text-ink-muted">
                 100% standard delivery fee will be waived automatically at checkout.
               </span>
             </div>

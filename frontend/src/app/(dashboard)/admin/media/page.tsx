@@ -107,7 +107,7 @@ export default function AdminMediaPage() {
                     className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
                   />
                   {!a.alt && (
-                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                    <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
                       <AlertTriangle className="h-3 w-3" aria-hidden /> No alt
                     </span>
                   )}

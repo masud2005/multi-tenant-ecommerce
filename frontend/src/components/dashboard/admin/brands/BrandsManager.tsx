@@ -230,7 +230,7 @@ export function BrandsManager({
           <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
             {stats.totalBrands}
           </p>
-          <span className="text-[11px] text-ink-muted mt-0.5">Registered labels</span>
+          <span className="text-xs text-ink-muted mt-0.5">Registered labels</span>
         </div>
 
         <div className="flex flex-col rounded-2xl border border-line bg-surface p-4 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
@@ -243,7 +243,7 @@ export function BrandsManager({
           <p className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
             {stats.activeBrands}
           </p>
-          <span className="text-[11px] text-ink-muted mt-0.5">Live on storefront</span>
+          <span className="text-xs text-ink-muted mt-0.5">Live on storefront</span>
         </div>
 
         <div className="flex flex-col rounded-2xl border border-line bg-surface p-4 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
@@ -256,7 +256,7 @@ export function BrandsManager({
           <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
             {stats.totalAssignedProducts}
           </p>
-          <span className="text-[11px] text-ink-muted mt-0.5">Catalog items</span>
+          <span className="text-xs text-ink-muted mt-0.5">Catalog items</span>
         </div>
 
         <div className="flex flex-col rounded-2xl border border-line bg-surface p-4 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
@@ -269,7 +269,7 @@ export function BrandsManager({
           <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
             {formatBDT(stats.totalRevenue)}
           </p>
-          <span className="text-[11px] text-ink-muted mt-0.5">Volume generated</span>
+          <span className="text-xs text-ink-muted mt-0.5">Volume generated</span>
         </div>
       </div>
 

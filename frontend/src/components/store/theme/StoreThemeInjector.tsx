@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { themeService } from '@/services/theme-service';
 import {
   getEcommerceThemePreset,
@@ -8,68 +8,69 @@ import {
   DEFAULT_LIGHT_THEME_ID,
   findMatchingPresetId,
 } from '@/components/dashboard/theme/ecommerce-themes';
+import { THEME_STORAGE_KEY, type ThemeSettingsState } from '@/contexts/ThemeContext';
 import type { TenantTheme } from '@/types/theme';
 
-export function StoreThemeInjector() {
-  const lastThemeIdRef = useRef<string | null>(null);
+function applyStoredTheme(): boolean {
+  try {
+    const raw = localStorage.getItem(THEME_STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw) as Partial<ThemeSettingsState>;
+    if (!parsed?.themePresetId) return false;
+    const preset = getEcommerceThemePreset(parsed.themePresetId);
+    const style = parsed.themeStyle === 'gradient' ? 'gradient' : parsed.themeStyle === 'solid' ? 'solid' : preset.style;
+    applyEcommerceTheme(preset, style);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
+export function StoreThemeInjector() {
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
 
     async function fetchAndApply() {
-      // 1. First check if user has local customized theme settings
-      try {
-        const raw = localStorage.getItem('tanti_theme_settings');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && parsed.themePresetId) {
-            const p = getEcommerceThemePreset(parsed.themePresetId);
-            applyEcommerceTheme(p, parsed.themeStyle);
-            return;
-          }
-        }
-      } catch {
-        // ignore
-      }
+      if (applyStoredTheme()) return;
 
-      // 2. Otherwise fetch live theme from backend
       try {
         const res = await themeService.getLiveTheme();
-        if (!isMounted) return;
+        if (cancelled || applyStoredTheme()) return;
         if (res && res.success && res.data) {
           const matchedId = findMatchingPresetId(res.data.primaryColor, res.data.canvasColor);
-          const p = getEcommerceThemePreset(matchedId);
-          applyEcommerceTheme(p, 'solid');
-          lastThemeIdRef.current = res.data.id;
+          const preset = getEcommerceThemePreset(matchedId);
+          applyEcommerceTheme(preset, 'solid');
+          return;
         }
       } catch {
-        // Fallback gracefully to default preset
-        const defaultPreset = getEcommerceThemePreset(DEFAULT_LIGHT_THEME_ID);
-        applyEcommerceTheme(defaultPreset, 'solid');
+        if (cancelled || applyStoredTheme()) return;
+        applyEcommerceTheme(getEcommerceThemePreset(DEFAULT_LIGHT_THEME_ID), 'solid');
       }
     }
 
     fetchAndApply();
 
-    const handleThemePublished = (e: Event) => {
-      const customEvent = e as CustomEvent<TenantTheme>;
-      if (customEvent.detail) {
-        const matchedId = findMatchingPresetId(
-          customEvent.detail.primaryColor,
-          customEvent.detail.canvasColor
-        );
-        const p = getEcommerceThemePreset(matchedId);
-        applyEcommerceTheme(p, 'solid');
-      } else {
-        fetchAndApply();
-      }
+    const onLocalChange = () => {
+      applyStoredTheme();
     };
 
-    window.addEventListener('tanti-theme-published', handleThemePublished);
+    const onPublished = (event: Event) => {
+      if (applyStoredTheme()) return;
+      const detail = (event as CustomEvent<TenantTheme>).detail;
+      if (!detail) return;
+      const matchedId = findMatchingPresetId(detail.primaryColor, detail.canvasColor);
+      applyEcommerceTheme(getEcommerceThemePreset(matchedId), 'solid');
+    };
+
+    window.addEventListener('tanti-theme-changed', onLocalChange);
+    window.addEventListener('storage', onLocalChange);
+    window.addEventListener('tanti-theme-published', onPublished);
 
     return () => {
-      isMounted = false;
-      window.removeEventListener('tanti-theme-published', handleThemePublished);
+      cancelled = true;
+      window.removeEventListener('tanti-theme-changed', onLocalChange);
+      window.removeEventListener('storage', onLocalChange);
+      window.removeEventListener('tanti-theme-published', onPublished);
     };
   }, []);
 

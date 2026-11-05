@@ -179,7 +179,7 @@ function ReturnsContent() {
                 className="h-9 w-7 rounded object-cover border border-line"
               />
             ) : (
-              <div className="h-9 w-7 rounded bg-canvas border border-line flex items-center justify-center text-[10px] text-ink-muted">
+              <div className="h-9 w-7 rounded bg-canvas border border-line flex items-center justify-center text-xs text-ink-muted">
                 No img
               </div>
             )}
@@ -449,7 +449,7 @@ function ReturnsContent() {
                         className="h-12 w-10 rounded object-cover border border-line"
                       />
                     ) : (
-                      <div className="h-12 w-10 rounded bg-canvas border border-line flex items-center justify-center text-[10px] text-ink-muted">
+                      <div className="h-12 w-10 rounded bg-canvas border border-line flex items-center justify-center text-xs text-ink-muted">
                         No img
                       </div>
                     )}

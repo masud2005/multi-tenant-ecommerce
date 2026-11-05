@@ -82,7 +82,7 @@ export function DeliveryMethodSection({
                     {isPickup ? 'Store pickup' : 'Home delivery'}
                   </p>
                   {isSelected && (
-                    <span className="rounded bg-clay/10 px-2 py-0.5 text-[11px] font-medium text-clay">
+                    <span className="rounded bg-clay/10 px-2 py-0.5 text-xs font-medium text-clay">
                       Selected
                     </span>
                   )}
@@ -110,7 +110,7 @@ export function DeliveryMethodSection({
                       </span>
                       <span className="text-ink-muted">(3–5 days)</span>
                       {!isDhaka && district && (
-                        <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
+                        <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs font-semibold text-emerald-600">
                           Applied for {district}
                         </span>
                       )}
@@ -136,7 +136,7 @@ export function DeliveryMethodSection({
                       </span>
                       <span className="text-ink-muted">(1–2 days)</span>
                       {isDhaka && (
-                        <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">
+                        <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-xs font-semibold text-emerald-600">
                           Applied for Dhaka
                         </span>
                       )}
@@ -148,7 +148,7 @@ export function DeliveryMethodSection({
                       Collect directly from our store / showroom
                     </p>
                     <div className="flex items-center gap-2 pt-0.5">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-700">
                         <Clock className="h-3 w-3" />
                         Ready today · Free pickup
                       </span>
@@ -168,7 +168,7 @@ export function DeliveryMethodSection({
                     <span className="text-base font-semibold text-ink tabular-nums leading-tight">
                       {formatBDT(price)}
                     </span>
-                    <span className="text-[11px] text-ink-muted">
+                    <span className="text-xs text-ink-muted">
                       {isDhaka ? 'Inside Dhaka' : 'Outside Dhaka'}
                     </span>
                   </div>

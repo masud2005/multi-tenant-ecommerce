@@ -485,7 +485,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                   {order.notes.map((n, idx) => (
                     <div key={idx} className="rounded-md border border-line bg-canvas p-3 text-xs">
                       <p className="text-ink">{n.text}</p>
-                      <p className="mt-1 text-[11px] text-ink-muted">
+                      <p className="mt-1 text-xs text-ink-muted">
                         {n.by || 'Admin'} · {formatDateTime(n.at)}
                       </p>
                     </div>

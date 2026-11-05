@@ -544,6 +544,79 @@ export function presetToTenantTokens(
   };
 }
 
+export const THEME_CSS_STORAGE_KEY = "tanti_theme_css";
+
+const THEME_CSS_KEYS = [
+  "--primary",
+  "--primary-foreground",
+  "--primary-soft",
+  "--ring",
+  "--background",
+  "--foreground",
+  "--card",
+  "--card-foreground",
+  "--popover",
+  "--popover-foreground",
+  "--border",
+  "--input",
+  "--muted",
+  "--muted-foreground",
+  "--sidebar",
+  "--sidebar-foreground",
+  "--sidebar-border",
+  "--sidebar-primary",
+  "--sidebar-accent",
+  "--radius",
+  "--clay",
+  "--clay-dark",
+  "--clay-soft",
+  "--canvas",
+  "--subtle",
+  "--line",
+  "--line-strong",
+  "--surface",
+  "--ink",
+  "--ink-soft",
+  "--ink-muted",
+  "--font-display",
+  "--font-heading",
+  "--font-sans",
+];
+
+function ensureThemeFonts(...families: Array<string | undefined>) {
+  families.forEach((family) => {
+    if (!family || family === "Inter" || family === "Fraunces") return;
+    const id = `theme-font-${family.replace(/\s+/g, "-").toLowerCase()}`;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@400;500;600;700&display=swap`;
+    document.head.appendChild(link);
+  });
+}
+
+function snapshotThemeCss(root: HTMLElement) {
+  try {
+    const vars: Record<string, string> = {};
+    THEME_CSS_KEYS.forEach((key) => {
+      const value = root.style.getPropertyValue(key).trim();
+      if (value) vars[key] = value;
+    });
+    localStorage.setItem(
+      THEME_CSS_STORAGE_KEY,
+      JSON.stringify({
+        dark: root.classList.contains("dark"),
+        style: root.getAttribute("data-theme-style") || "solid",
+        card: root.getAttribute("data-card-style") || "",
+        vars,
+      })
+    );
+  } catch {
+    // ignore quota or private-mode errors
+  }
+}
+
 /**
  * Applies all CSS variables of the given theme preset into the document root.
  * Sets standard Tailwind/shadcn tokens, background gradients, and space-separated RGB tokens.
@@ -682,7 +755,18 @@ export function applyEcommerceTheme(
     }
   }
 
-  // 7. Typography
+  const line = root.style.getPropertyValue("--line");
+  if (line) {
+    const parts = line.trim().split(/\s+/).map((n) => Number(n));
+    if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+      const [r, g, b] = parts;
+      const strong = isDark
+        ? [r, g, b].map((n) => Math.min(255, Math.round(n + 18)))
+        : [r, g, b].map((n) => Math.max(0, Math.round(n * 0.92)));
+      root.style.setProperty("--line-strong", strong.join(" "));
+    }
+  }
+
   if (preset.fontHeading) {
     root.style.setProperty("--font-display", `'${preset.fontHeading}', 'Fraunces', Georgia, serif`);
     root.style.setProperty("--font-heading", `'${preset.fontHeading}', 'Fraunces', Georgia, serif`);
@@ -690,4 +774,7 @@ export function applyEcommerceTheme(
   if (preset.fontBody) {
     root.style.setProperty("--font-sans", `'${preset.fontBody}', 'Inter', system-ui, sans-serif`);
   }
+
+  ensureThemeFonts(preset.fontHeading, preset.fontBody);
+  snapshotThemeCss(root);
 }

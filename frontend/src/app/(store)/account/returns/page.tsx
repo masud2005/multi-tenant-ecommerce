@@ -167,7 +167,7 @@ export default function AccountReturnsPage() {
                         ) : (
                           <div
                             key={idx}
-                            className="h-14 w-11 rounded-md bg-canvas border-2 border-surface flex items-center justify-center text-[10px] text-ink-muted"
+                            className="h-14 w-11 rounded-md bg-canvas border-2 border-surface flex items-center justify-center text-xs text-ink-muted"
                           >
                             <Package className="h-4 w-4" />
                           </div>
@@ -221,7 +221,7 @@ export default function AccountReturnsPage() {
                             />
                             <span
                               className={cn(
-                                'text-[11px] truncate',
+                                'text-xs truncate',
                                 isCurrent
                                   ? 'font-bold text-clay'
                                   : isDone
@@ -291,7 +291,7 @@ export default function AccountReturnsPage() {
                         <li key={tIdx} className="relative">
                           <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full border-2 border-surface bg-clay" />
                           <p className="font-semibold text-ink">{event.label}</p>
-                          <p className="text-[11px] text-ink-muted">
+                          <p className="text-xs text-ink-muted">
                             {formatDateTime(event.at)} {event.by && `· by ${event.by}`}
                           </p>
                           {event.note && (
