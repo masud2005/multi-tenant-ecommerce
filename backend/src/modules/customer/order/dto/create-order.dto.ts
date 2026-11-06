@@ -269,4 +269,20 @@ export class CreateOrderDto {
   @IsString()
   @IsOptional()
   customerNote?: string;
+
+  @ApiPropertyOptional({
+    description: 'Sender mobile number for manual bKash or Nagad payment',
+    example: '01712345678',
+  })
+  @IsString()
+  @IsOptional()
+  senderPhone?: string;
+
+  @ApiPropertyOptional({
+    description: 'Transaction ID (TrxID) for manual bKash or Nagad payment',
+    example: '8N7A6B5C4D',
+  })
+  @IsString()
+  @IsOptional()
+  transactionId?: string;
 }

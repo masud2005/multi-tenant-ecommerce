@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useStore } from '@/contexts/StoreContext';
+import { authService } from '@/services/auth';
 import { AccountHeader } from '@/components/account/AccountHeader';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -10,25 +11,41 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
 
 export default function AccountProfilePage() {
-  const { user } = useStore();
+  const { user, setUser } = useStore();
   const [form, setForm] = useState({
     name: user?.name ?? '',
     email: user?.email ?? '',
     phone: user?.phone ?? '',
+    district: '',
     birthday: '',
     gender: '',
   });
 
   useEffect(() => {
-    if (user) {
-      setForm((prev) => ({
-        ...prev,
-        name: user.name || prev.name,
-        email: user.email || prev.email,
-        phone: user.phone || prev.phone,
-      }));
+    if (authService.isAuthenticated()) {
+      authService
+        .getMe()
+        .then((res) => {
+          if (res?.data) {
+            setForm((prev) => ({
+              ...prev,
+              name: res.data.name || prev.name,
+              email: res.data.email || prev.email,
+              phone: res.data.phone || prev.phone,
+              district: (res.data as any).district || prev.district,
+            }));
+            setUser((prev: any) => ({
+              ...prev,
+              name: res.data.name,
+              email: res.data.email,
+              phone: res.data.phone,
+            }));
+          }
+        })
+        .catch(() => {});
     }
-  }, [user]);
+  }, [setUser]);
+
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const set = (patch: Partial<typeof form>) => {
@@ -39,10 +56,26 @@ export default function AccountProfilePage() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setSaving(false);
-    setDirty(false);
-    toast.success('Profile updated');
+    try {
+      const res = await authService.updateProfile({
+        name: form.name,
+        phone: form.phone,
+        district: form.district,
+      });
+      if (res?.data) {
+        setUser((prev: any) => ({
+          ...prev,
+          name: res.data.name,
+          phone: res.data.phone,
+        }));
+      }
+      setDirty(false);
+      toast.success('Profile updated successfully');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -77,6 +110,12 @@ export default function AccountProfilePage() {
               Verified
             </Badge>
           </div>
+          <Input
+            label="District / City"
+            value={form.district}
+            onChange={(e) => set({ district: e.target.value })}
+            placeholder="e.g. Dhaka, Chittagong"
+          />
           <Input
             label="Birthday"
             type="date"

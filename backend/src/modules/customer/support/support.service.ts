@@ -111,4 +111,91 @@ export class CustomerSupportService {
       'Your message has been received. Our support team will get back to you shortly.',
     );
   }
+
+  // 2. Get all support tickets submitted by this customer
+  async getCustomerTickets(tenantId?: string, user?: any) {
+    const targetTenantId = await this.resolveTenantId(tenantId);
+    const userId = user?.id || user?.sub;
+    const email = user?.email?.toLowerCase();
+
+    if (!userId && !email) {
+      return ResponseHelper.success([], 'No customer identity available');
+    }
+
+    const customers = await this.prisma.customerProfile.findMany({
+      where: {
+        tenantId: targetTenantId,
+        OR: [
+          ...(userId ? [{ userId }] : []),
+          ...(email ? [{ email }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (customers.length === 0) {
+      return ResponseHelper.success([], 'No tickets found');
+    }
+
+    const customerIds = customers.map((c) => c.id);
+
+    const tickets = await this.prisma.supportTicket.findMany({
+      where: {
+        tenantId: targetTenantId,
+        customerId: { in: customerIds },
+      },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return ResponseHelper.success(tickets, 'Customer tickets retrieved successfully');
+  }
+
+  // 3. Customer replies to an existing ticket
+  async replyCustomerTicket(ticketId: string, replyText: string, tenantId?: string, user?: any) {
+    const targetTenantId = await this.resolveTenantId(tenantId);
+    const userId = user?.id || user?.sub;
+    const customerName = user?.name || 'Customer';
+
+    const ticket = await this.prisma.supportTicket.findFirst({
+      where: {
+        id: ticketId,
+        tenantId: targetTenantId,
+      },
+      include: {
+        customer: true,
+      },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Support ticket with id "${ticketId}" not found`);
+    }
+
+    if (ticket.customer?.userId && userId && ticket.customer.userId !== userId) {
+      throw new NotFoundException('You do not have access to this ticket');
+    }
+
+    const newMessage = await this.prisma.ticketMessage.create({
+      data: {
+        ticketId: ticket.id,
+        from: 'customer',
+        name: customerName,
+        text: replyText.trim(),
+      },
+    });
+
+    await this.prisma.supportTicket.update({
+      where: { id: ticket.id },
+      data: {
+        status: 'open',
+        updatedAt: new Date(),
+      },
+    });
+
+    return ResponseHelper.created(newMessage, 'Reply submitted successfully');
+  }
 }

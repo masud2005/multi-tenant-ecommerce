@@ -98,9 +98,17 @@ export default function AdminSettingsPage() {
   const [pm, setPm] = useState<Record<string, boolean>>({
     bkash: true,
     nagad: true,
-    sslcommerz: true,
-    stripe: true,
     cod: true,
+  });
+
+  const [paymentConfig, setPaymentConfig] = useState({
+    bkashNumber: '01700-000000',
+    bkashType: 'Personal',
+    bkashEnabled: true,
+    nagadNumber: '01800-000000',
+    nagadType: 'Personal',
+    nagadEnabled: true,
+    codEnabled: true,
   });
 
   // 5. Flags State
@@ -172,6 +180,13 @@ export default function AdminSettingsPage() {
               instagram: d.socials.instagram || prev.instagram,
             }));
           }
+
+          if (d.settings?.payment) {
+            setPaymentConfig((prev) => ({
+              ...prev,
+              ...d.settings.payment,
+            }));
+          }
         }
       } catch (err) {
         console.error('Failed to load store settings:', err);
@@ -209,6 +224,7 @@ export default function AdminSettingsPage() {
           orderNumberFormat: storeForm.orderNumberFormat,
           flags,
           pm,
+          payment: paymentConfig,
         },
       };
 
@@ -468,33 +484,134 @@ export default function AdminSettingsPage() {
 
             {/* 4. PAYMENTS TAB */}
             {section === 'Payments' && (
-              <Panel title="Configured Payment Methods" flush>
-                <ul className="divide-y divide-line">
-                  {paymentMethods.map((m) => (
-                    <li
-                      key={m.id}
-                      className="flex items-center gap-3 px-5 py-4 hover:bg-subtle/30"
-                    >
-                      <PaymentMark method={m.id} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-ink">
-                          {m.name}
-                        </p>
-                        <p className="text-xs text-ink-muted">{m.description}</p>
+              <div className="space-y-6">
+                <Panel
+                  title="Direct Mobile Financial Services (MFS)"
+                  description="Configure store numbers where customers send money directly and submit their Transaction ID (TrxID) for manual owner verification."
+                >
+                  <div className="space-y-6">
+                    {/* bKash Configuration */}
+                    <div className="rounded-lg border border-line bg-canvas p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <PaymentMark method="bkash" />
+                          <div>
+                            <p className="text-sm font-semibold text-ink">bKash Send Money</p>
+                            <p className="text-xs text-ink-muted">Customers send money to this number</p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={paymentConfig.bkashEnabled}
+                          onChange={(v) =>
+                            setPaymentConfig({ ...paymentConfig, bkashEnabled: v })
+                          }
+                          label="Enable bKash"
+                          hideLabel
+                        />
                       </div>
-                      <Switch
-                        checked={!!pm[m.id]}
-                        onChange={(v) => setPm({ ...pm, [m.id]: v })}
-                        label={`Enable ${m.name}`}
-                        hideLabel
-                      />
-                    </li>
-                  ))}
-                </ul>
-                <p className="border-t border-line px-5 py-3.5 text-xs text-ink-muted bg-subtle/20">
-                  Gateway API credentials and merchant secrets are encrypted at rest in your tenant keystore.
-                </p>
-              </Panel>
+                      {paymentConfig.bkashEnabled && (
+                        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-line">
+                          <Input
+                            label="bKash Number"
+                            value={paymentConfig.bkashNumber}
+                            onChange={(e) =>
+                              setPaymentConfig({
+                                ...paymentConfig,
+                                bkashNumber: e.target.value,
+                              })
+                            }
+                            placeholder="01700-000000"
+                          />
+                          <Select
+                            label="Account Type"
+                            value={paymentConfig.bkashType}
+                            onChange={(e) =>
+                              setPaymentConfig({
+                                ...paymentConfig,
+                                bkashType: e.target.value,
+                              })
+                            }
+                            options={['Personal', 'Merchant', 'Agent']}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Nagad Configuration */}
+                    <div className="rounded-lg border border-line bg-canvas p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <PaymentMark method="nagad" />
+                          <div>
+                            <p className="text-sm font-semibold text-ink">Nagad Send Money</p>
+                            <p className="text-xs text-ink-muted">Customers send money to this number</p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={paymentConfig.nagadEnabled}
+                          onChange={(v) =>
+                            setPaymentConfig({ ...paymentConfig, nagadEnabled: v })
+                          }
+                          label="Enable Nagad"
+                          hideLabel
+                        />
+                      </div>
+                      {paymentConfig.nagadEnabled && (
+                        <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-line">
+                          <Input
+                            label="Nagad Number"
+                            value={paymentConfig.nagadNumber}
+                            onChange={(e) =>
+                              setPaymentConfig({
+                                ...paymentConfig,
+                                nagadNumber: e.target.value,
+                              })
+                            }
+                            placeholder="01800-000000"
+                          />
+                          <Select
+                            label="Account Type"
+                            value={paymentConfig.nagadType}
+                            onChange={(e) =>
+                              setPaymentConfig({
+                                ...paymentConfig,
+                                nagadType: e.target.value,
+                              })
+                            }
+                            options={['Personal', 'Merchant', 'Agent']}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Panel>
+
+                {/* Cash on Delivery Configuration */}
+                <Panel
+                  title="Cash on Delivery (COD)"
+                  description="Allow customers across Bangladesh to pay in cash upon package delivery."
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <PaymentMark method="cod" />
+                      <div>
+                        <p className="text-sm font-semibold text-ink">Cash on Delivery</p>
+                        <p className="text-xs text-ink-muted">
+                          Collected directly by the courier delivery agent
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={paymentConfig.codEnabled}
+                      onChange={(v) =>
+                        setPaymentConfig({ ...paymentConfig, codEnabled: v })
+                      }
+                      label="Enable COD"
+                      hideLabel
+                    />
+                  </div>
+                </Panel>
+              </div>
             )}
 
             {/* 5. TAXES TAB */}

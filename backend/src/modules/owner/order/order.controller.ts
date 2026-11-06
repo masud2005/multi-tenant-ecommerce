@@ -99,4 +99,20 @@ export class OrderController {
     const tenantId = tenantHeader || user?.tenantId;
     return this.orderService.addOrderNote(id, dto, tenantId, user);
   }
+
+  // Verify or reject customer manual bKash or Nagad payment
+  @Patch(':id/verify-payment')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify or reject manual bKash/Nagad payment' })
+  @ApiResponse({ status: 200, description: 'Payment verification status updated successfully' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async verifyPayment(
+    @Param('id') id: string,
+    @Body() dto: { approved: boolean; note?: string },
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.orderService.verifyManualPayment(id, dto.approved, dto.note, tenantId, user);
+  }
 }

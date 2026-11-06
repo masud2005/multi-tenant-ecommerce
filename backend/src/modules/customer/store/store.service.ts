@@ -70,6 +70,7 @@ export class StoreService {
       announcementEnabled: tenant.announcementEnabled,
       theme: tenant.theme,
       modules: tenant.modules,
+      settings: tenant.settings,
     };
 
     return ResponseHelper.success(

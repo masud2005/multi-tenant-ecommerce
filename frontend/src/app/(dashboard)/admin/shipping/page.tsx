@@ -1,92 +1,207 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Truck } from 'lucide-react';
-import { shippingZones, couriers, FREE_SHIPPING_THRESHOLD } from '@/data/shipping';
+import { Truck, Save, Loader2, RefreshCw, CheckCircle2, ShieldCheck, MapPin } from 'lucide-react';
+import { couriers } from '@/data/shipping';
+import { storeService } from '@/services/store-service';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
 import { Badge } from '@/components/ui/Badge';
 import { Switch } from '@/components/ui/Switch';
-import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/button';
 import { formatBDT } from '@/utils/format';
 
 export default function AdminShippingPage() {
-  const [rateOpen, setRateOpen] = useState(false);
-  const [pickup, setPickup] = useState(true);
-  const [rto, setRto] = useState(true);
-  const [rule, setRule] = useState('Flat rate');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Dynamic Shipping Configuration
+  const [shippingConfig, setShippingConfig] = useState({
+    insideDhaka: 60,
+    outsideDhaka: 120,
+    freeDeliveryThreshold: 3000,
+    insideDhakaEst: '1–2 business days',
+    outsideDhakaEst: '2–4 business days',
+    pickup: true,
+    rto: true,
+  });
+
+  // Fetch store shipping configuration
+  const loadShippingSettings = async () => {
+    try {
+      setIsLoading(true);
+      const res = await storeService.getOwnerSettings();
+      if (res?.data?.settings?.shipping) {
+        const sh = res.data.settings.shipping;
+        setShippingConfig((prev) => ({
+          ...prev,
+          insideDhaka: typeof sh.insideDhaka === 'number' ? sh.insideDhaka : prev.insideDhaka,
+          outsideDhaka: typeof sh.outsideDhaka === 'number' ? sh.outsideDhaka : prev.outsideDhaka,
+          freeDeliveryThreshold: typeof sh.freeDeliveryThreshold === 'number' ? sh.freeDeliveryThreshold : prev.freeDeliveryThreshold,
+          insideDhakaEst: sh.insideDhakaEst || prev.insideDhakaEst,
+          outsideDhakaEst: sh.outsideDhakaEst || prev.outsideDhakaEst,
+          pickup: sh.pickup !== undefined ? !!sh.pickup : prev.pickup,
+          rto: sh.rto !== undefined ? !!sh.rto : prev.rto,
+        }));
+      }
+    } catch (err: any) {
+      console.warn('Could not load shipping settings:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadShippingSettings();
+  }, []);
+
+  // Save changes to backend
+  const handleSaveShipping = async () => {
+    try {
+      setIsSaving(true);
+      await storeService.updateOwnerSettings({
+        settings: {
+          shipping: {
+            insideDhaka: Number(shippingConfig.insideDhaka) || 0,
+            outsideDhaka: Number(shippingConfig.outsideDhaka) || 0,
+            freeDeliveryThreshold: Number(shippingConfig.freeDeliveryThreshold) || 0,
+            insideDhakaEst: shippingConfig.insideDhakaEst,
+            outsideDhakaEst: shippingConfig.outsideDhakaEst,
+            pickup: shippingConfig.pickup,
+            rto: shippingConfig.rto,
+          },
+        },
+      });
+      toast.success('Shipping delivery charges saved successfully!');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err.message || 'Failed to save shipping settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <ModuleGate module="shipping">
       <div className="w-full space-y-6">
         <PageHeader
-          title="Shipping & delivery"
-          description="Zones, rates and couriers. Customers see the right options for their district at checkout."
+          title="Shipping & Delivery Charges"
+          description="Configure dynamic delivery charges for Inside Dhaka and Outside Dhaka. Charges apply automatically during customer checkout."
           actions={
-            <GuardedButton
-              module="shipping"
-              action="update"
-              size="sm"
-              onClick={() => setRateOpen(true)}
-            >
-              <Plus className="h-4 w-4" aria-hidden /> Add rate
-            </GuardedButton>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={loadShippingSettings}
+                disabled={isLoading}
+                className="cursor-pointer"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
+              </Button>
+              <GuardedButton
+                module="shipping"
+                action="update"
+                size="sm"
+                onClick={handleSaveShipping}
+                disabled={isSaving}
+                className="cursor-pointer"
+              >
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                Save Shipping Rates
+              </GuardedButton>
+            </div>
           }
         />
+
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
+            {/* Delivery Charge Configuration (Dhaka vs Outside Dhaka) */}
             <Panel
-              title="Shipping zones"
-              description="Districts are grouped into zones; each zone has its own rates."
-              flush
+              title="Regional Delivery Rates"
+              description="Set flat delivery rates for Dhaka city and all other 63 districts."
             >
-              <ul className="divide-y divide-line">
-                {shippingZones.map((z) => (
-                  <li key={z.id} className="px-5 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium text-ink">{z.name}</p>
-                        <p className="text-xs text-ink-muted">
-                          {z.districts.join(', ')}
-                        </p>
-                      </div>
-                      <GuardedButton
-                        module="shipping"
-                        action="update"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setRateOpen(true)}
-                      >
-                        Edit
-                      </GuardedButton>
+              <div className="grid gap-6 sm:grid-cols-2">
+                {/* Inside Dhaka */}
+                <div className="rounded-lg border border-line bg-canvas p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-emerald-600" />
+                      <p className="font-semibold text-sm text-ink">Inside Dhaka (ঢাকার মধ্যে)</p>
                     </div>
-                    <table className="mt-3 w-full text-sm">
-                      <tbody className="divide-y divide-line">
-                        {z.rates.map((r) => (
-                          <tr key={r.name}>
-                            <td className="py-2 font-medium text-ink">{r.name}</td>
-                            <td className="py-2 text-ink-muted">{r.rule}</td>
-                            <td className="py-2 text-right tabular-nums text-ink font-medium">
-                              {r.price ? formatBDT(r.price) : 'Free'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </li>
-                ))}
-              </ul>
+                    <Badge tone="success">Primary Zone</Badge>
+                  </div>
+                  <p className="text-xs text-ink-muted">
+                    Applies when customer selects Dhaka district during checkout.
+                  </p>
+                  <div className="space-y-2 pt-1">
+                    <label className="text-xs font-medium text-ink">Delivery Charge (৳)</label>
+                    <Input
+                      type="number"
+                      prefix="৳"
+                      value={shippingConfig.insideDhaka}
+                      onChange={(e) =>
+                        setShippingConfig({ ...shippingConfig, insideDhaka: Number(e.target.value) })
+                      }
+                      placeholder="60"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-ink">Estimated Delivery Time</label>
+                    <Input
+                      value={shippingConfig.insideDhakaEst}
+                      onChange={(e) =>
+                        setShippingConfig({ ...shippingConfig, insideDhakaEst: e.target.value })
+                      }
+                      placeholder="1–2 business days"
+                    />
+                  </div>
+                </div>
+
+                {/* Outside Dhaka */}
+                <div className="rounded-lg border border-line bg-canvas p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-blue-600" />
+                      <p className="font-semibold text-sm text-ink">Outside Dhaka (ঢাকার বাইরে)</p>
+                    </div>
+                    <Badge tone="neutral">All 63 Districts</Badge>
+                  </div>
+                  <p className="text-xs text-ink-muted">
+                    Applies for Chittagong, Sylhet, Rajshahi, Khulna, Barisal, Rangpur, Mymensingh, etc.
+                  </p>
+                  <div className="space-y-2 pt-1">
+                    <label className="text-xs font-medium text-ink">Delivery Charge (৳)</label>
+                    <Input
+                      type="number"
+                      prefix="৳"
+                      value={shippingConfig.outsideDhaka}
+                      onChange={(e) =>
+                        setShippingConfig({ ...shippingConfig, outsideDhaka: Number(e.target.value) })
+                      }
+                      placeholder="120"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-ink">Estimated Delivery Time</label>
+                    <Input
+                      value={shippingConfig.outsideDhakaEst}
+                      onChange={(e) =>
+                        setShippingConfig({ ...shippingConfig, outsideDhakaEst: e.target.value })
+                      }
+                      placeholder="2–4 business days"
+                    />
+                  </div>
+                </div>
+              </div>
             </Panel>
 
+            {/* Courier Partners */}
             <Panel
-              title="Couriers"
-              description="Parcels are created automatically when an order is packed."
+              title="Integrated Couriers"
+              description="Parcels are dispatched with integrated logistics partners across Bangladesh."
               flush
             >
               <ul className="divide-y divide-line">
@@ -104,21 +219,9 @@ export default function AdminShippingPage() {
                         {c.coverage} · avg {c.avgDays} days · {c.successRate}% delivered
                       </p>
                     </div>
-                    {c.status === 'connected' ? (
-                      <Badge tone="success" dot>
-                        Connected
-                      </Badge>
-                    ) : (
-                      <GuardedButton
-                        module="shipping"
-                        action="update"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => toast.success(`${c.name} connected`)}
-                      >
-                        Connect
-                      </GuardedButton>
-                    )}
+                    <Badge tone="success" dot>
+                      Active
+                    </Badge>
                   </li>
                 ))}
               </ul>
@@ -126,28 +229,50 @@ export default function AdminShippingPage() {
           </div>
 
           <div className="space-y-6">
-            <Panel title="Free delivery">
-              <p className="text-sm text-ink-soft">
-                Inside Dhaka on orders over{' '}
-                <b className="text-ink">{formatBDT(FREE_SHIPPING_THRESHOLD)}</b>. Shown
-                as a progress bar in the cart.
-              </p>
+            {/* Free Delivery Threshold */}
+            <Panel title="Free Delivery Waiver">
+              <div className="space-y-3">
+                <p className="text-xs text-ink-muted">
+                  Offer free delivery to customers when their order subtotal exceeds this amount.
+                </p>
+                <div>
+                  <label className="text-xs font-medium text-ink">Minimum Subtotal for Free Delivery</label>
+                  <Input
+                    type="number"
+                    prefix="৳"
+                    value={shippingConfig.freeDeliveryThreshold}
+                    onChange={(e) =>
+                      setShippingConfig({ ...shippingConfig, freeDeliveryThreshold: Number(e.target.value) })
+                    }
+                    placeholder="3000"
+                    className="mt-1"
+                  />
+                </div>
+                <p className="text-xs text-ink-soft">
+                  Current rule: Free delivery on orders over{' '}
+                  <b className="text-ink">{formatBDT(shippingConfig.freeDeliveryThreshold)}</b>.
+                </p>
+              </div>
             </Panel>
-            <Panel title="Delivery options">
+
+            {/* Delivery Options */}
+            <Panel title="Fulfillment Options">
               <div className="space-y-4">
                 <Switch
-                  checked={pickup}
-                  onChange={setPickup}
-                  label="Store pickup (Dhanmondi 27)"
+                  checked={shippingConfig.pickup}
+                  onChange={(v) => setShippingConfig({ ...shippingConfig, pickup: v })}
+                  label="Allow in-store customer pickup"
                 />
                 <Switch
-                  checked={rto}
-                  onChange={setRto}
-                  label="Auto-restock on return-to-origin"
+                  checked={shippingConfig.rto}
+                  onChange={(v) => setShippingConfig({ ...shippingConfig, rto: v })}
+                  label="Auto-restock returned shipments (RTO)"
                 />
               </div>
             </Panel>
-            <Panel title="Delivery performance · 30d">
+
+            {/* Performance Overview */}
+            <Panel title="Logistics Overview">
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <dt className="text-xs text-ink-muted">Delivered</dt>
@@ -169,57 +294,6 @@ export default function AdminShippingPage() {
             </Panel>
           </div>
         </div>
-
-        <Modal
-          open={rateOpen}
-          onClose={() => setRateOpen(false)}
-          title="Shipping rate"
-          footer={
-            <>
-              <Button variant="ghost" onClick={() => setRateOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  setRateOpen(false);
-                  toast.success('Rate saved');
-                }}
-              >
-                Save rate
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            <Select label="Zone" options={shippingZones.map((z) => z.name)} />
-            <Input
-              label="Rate name"
-              defaultValue="Standard"
-              hint="Shown to customers at checkout"
-            />
-            <Select
-              label="Condition"
-              value={rule}
-              onChange={(e) => setRule(e.target.value)}
-              options={[
-                'Flat rate',
-                'Based on order weight',
-                'Based on order price',
-                'Based on item quantity',
-              ]}
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Price" prefix="৳" defaultValue="130" />
-              {rule !== 'Flat rate' && (
-                <Input
-                  label={rule.includes('weight') ? 'Per extra kg' : 'Minimum'}
-                  prefix={rule.includes('weight') ? '৳' : undefined}
-                  defaultValue={rule.includes('weight') ? '20' : '0'}
-                />
-              )}
-            </div>
-          </div>
-        </Modal>
       </div>
     </ModuleGate>
   );

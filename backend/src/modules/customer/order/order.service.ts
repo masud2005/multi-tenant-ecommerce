@@ -234,6 +234,14 @@ export class OrderService {
               },
               ...(isCod
                 ? [{ label: 'Order confirmed (Cash on delivery)', by: 'System' }]
+                : (dto.paymentMethod === PaymentMethod.BKASH || dto.paymentMethod === PaymentMethod.NAGAD)
+                ? [
+                    {
+                      label: `Manual ${dto.paymentMethod} Payment Submitted`,
+                      note: `Sender Phone: ${dto.senderPhone || 'N/A'}, TrxID: ${dto.transactionId || 'N/A'} (Awaiting Owner Verification)`,
+                      by: 'Customer',
+                    },
+                  ]
                 : dto.paymentStatus === PaymentStatus.PAID
                 ? [{ label: 'Payment verified with gateway', by: 'System' }]
                 : []),
@@ -246,6 +254,22 @@ export class OrderService {
           timeline: true,
         },
       });
+
+      // Record manual payment attempt if bKash or Nagad was selected
+      if (dto.paymentMethod === PaymentMethod.BKASH || dto.paymentMethod === PaymentMethod.NAGAD) {
+        await tx.paymentAttempt.create({
+          data: {
+            orderId: order.id,
+            method: dto.paymentMethod,
+            amount: dto.total,
+            status: PaymentStatus.PENDING,
+            gatewayRef: JSON.stringify({
+              senderPhone: dto.senderPhone || '',
+              transactionId: dto.transactionId || '',
+            }),
+          },
+        });
+      }
 
       // 5.2: Decrement inventory stock for each purchased variant if valid in database
       for (const item of dto.items) {

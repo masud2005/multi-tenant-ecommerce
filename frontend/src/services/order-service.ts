@@ -42,6 +42,8 @@ export interface CreateOrderPayload {
   email?: string;
   couponCode?: string;
   customerNote?: string;
+  senderPhone?: string;
+  transactionId?: string;
   tenantId?: string;
 }
 
@@ -153,14 +155,29 @@ export function mapBackendOrderToFrontend(item: any): Order {
       by: t.by || undefined,
       note: t.note || undefined,
     })),
-    attempts: (item.attempts || []).map((a: any) => ({
-      id: a.id,
-      method: (a.method?.toLowerCase() || 'cod') as any,
-      amount: Number(a.amount) || 0,
-      status: (a.status?.toLowerCase() || 'pending') as any,
-      ref: a.gatewayRef || '',
-      at: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString(),
-    })),
+    attempts: (item.attempts || []).map((a: any) => {
+      let senderPhone = '';
+      let transactionId = '';
+      if (a.gatewayRef) {
+        try {
+          const parsed = JSON.parse(a.gatewayRef);
+          senderPhone = parsed.senderPhone || '';
+          transactionId = parsed.transactionId || '';
+        } catch {
+          transactionId = a.gatewayRef;
+        }
+      }
+      return {
+        id: a.id,
+        method: (a.method?.toLowerCase() || 'cod') as any,
+        amount: Number(a.amount) || 0,
+        status: (a.status?.toLowerCase() || 'pending') as any,
+        ref: a.gatewayRef || '',
+        senderPhone,
+        transactionId,
+        at: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString(),
+      };
+    }),
     notes: (item.notes || []).map((n: any) => ({
       text: n.text,
       internal: !!n.internal,
@@ -308,6 +325,27 @@ export const orderService = {
     return res;
   },
 
+  // 7. Verify or reject customer manual bKash/Nagad payment (Owner)
+  async verifyPayment(
+    id: string,
+    approved: boolean,
+    note?: string,
+    tenantId?: string,
+  ): Promise<ApiResponse<Order>> {
+    const endpoint = tenantId
+      ? `/owner/orders/${encodeURIComponent(id)}/verify-payment?tenantId=${encodeURIComponent(tenantId)}`
+      : `/owner/orders/${encodeURIComponent(id)}/verify-payment`;
+
+    const res = await apiClient.patch<ApiResponse<any>>(endpoint, { approved, note });
+    if (res?.data) {
+      return {
+        ...res,
+        data: mapBackendOrderToFrontend(res.data),
+      };
+    }
+    return res;
+  },
+
   // 7. Add an internal or customer note to the order (Owner)
   async addOwnerOrderNote(
     id: string,
@@ -318,6 +356,19 @@ export const orderService = {
       ? `/owner/orders/${encodeURIComponent(id)}/notes?tenantId=${encodeURIComponent(tenantId)}`
       : `/owner/orders/${encodeURIComponent(id)}/notes`;
     return await apiClient.post<ApiResponse<any>>(endpoint, payload);
+  },
+
+  // 8. Verify or reject customer manual bKash or Nagad payment (Owner)
+  async verifyPayment(
+    id: string,
+    approved: boolean,
+    note?: string,
+    tenantId?: string,
+  ): Promise<ApiResponse<any>> {
+    const endpoint = tenantId
+      ? `/owner/orders/${encodeURIComponent(id)}/verify-payment?tenantId=${encodeURIComponent(tenantId)}`
+      : `/owner/orders/${encodeURIComponent(id)}/verify-payment`;
+    return await apiClient.patch<ApiResponse<any>>(endpoint, { approved, note });
   },
 
 

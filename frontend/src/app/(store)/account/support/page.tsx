@@ -28,7 +28,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { formatDateTime, timeAgo } from '@/utils/format';
 import { getAuthToken, getAuthUser } from '@/services/auth';
 import { chatService, ChatMessage, Conversation } from '@/services/chat-service';
-import { supportTickets } from '@/data/customers';
+import { supportService } from '@/services/support-service';
 import type { SupportTicket } from '@/types/commerce';
 
 const quickPrompts = [
@@ -57,11 +57,46 @@ export default function AccountSupportPage() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- Formal Tickets State ---
-  const [tickets, setTickets] = useState<SupportTicket[]>(supportTickets);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
+  const [isReplyingTicket, setIsReplyingTicket] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [ticketReply, setTicketReply] = useState('');
   const [creatingTicket, setCreatingTicket] = useState(false);
   const [ticketDraft, setTicketDraft] = useState({ subject: '', order: '', message: '' });
+
+  // Fetch real tickets from backend
+  const fetchCustomerTickets = useCallback(async () => {
+    try {
+      setTicketsLoading(true);
+      const res = await supportService.getCustomerTickets();
+      if (res?.data) {
+        const mapped: SupportTicket[] = res.data.map((t) => ({
+          id: t.id,
+          subject: t.subject,
+          orderNumber: t.orderNumber || undefined,
+          status: (t.status || 'open') as any,
+          updatedAt: t.updatedAt,
+          messages: (t.messages || []).map((m) => ({
+            from: m.from,
+            name: m.name,
+            text: m.text,
+            at: m.createdAt,
+          })),
+        }));
+        setTickets(mapped);
+      }
+    } catch (err: any) {
+      console.warn('Could not load customer tickets:', err);
+    } finally {
+      setTicketsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCustomerTickets();
+  }, [fetchCustomerTickets]);
 
   const activeTicket = tickets.find((t) => t.id === activeTicketId);
   const myOrders = orders.filter((o) => o.customerId === user?.id);
@@ -264,56 +299,55 @@ export default function AccountSupportPage() {
   };
 
   // --- Formal Ticket Actions ---
-  const sendTicketReply = () => {
+  const sendTicketReply = async () => {
     if (!ticketReply.trim() || !activeTicket) return;
-    setTickets((ts) =>
-      ts.map((t) =>
-        t.id === activeTicket.id
-          ? {
-              ...t,
-              status: 'open',
-              updatedAt: new Date().toISOString(),
-              messages: [
-                ...t.messages,
-                {
-                  from: 'customer',
-                  name: user?.name ?? 'You',
-                  text: ticketReply,
-                  at: new Date().toISOString(),
-                },
-              ],
-            }
-          : t
-      )
-    );
-    setTicketReply('');
-    toast.success('Reply submitted');
+    try {
+      setIsReplyingTicket(true);
+      await supportService.replyCustomerTicket(activeTicket.id, ticketReply.trim());
+      setTicketReply('');
+      toast.success('Reply submitted successfully');
+      await fetchCustomerTickets();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err.message || 'Failed to submit reply');
+    } finally {
+      setIsReplyingTicket(false);
+    }
   };
 
-  const createNewTicket = () => {
+  const createNewTicket = async () => {
     if (ticketDraft.subject.trim().length < 4 || ticketDraft.message.trim().length < 10) {
       return toast.error('Please provide a descriptive subject and message');
     }
-    const t: SupportTicket = {
-      id: `T-${2042 + tickets.length}`,
-      subject: ticketDraft.subject,
-      orderNumber: ticketDraft.order || undefined,
-      status: 'open',
-      updatedAt: new Date().toISOString(),
-      messages: [
-        {
-          from: 'customer',
-          name: user?.name ?? 'You',
-          text: ticketDraft.message,
-          at: new Date().toISOString(),
-        },
-      ],
-    };
-    setTickets([t, ...tickets]);
-    setCreatingTicket(false);
-    setTicketDraft({ subject: '', order: '', message: '' });
-    setActiveTicketId(t.id);
-    toast.success('Support ticket created — we usually reply within 4 hours');
+    try {
+      setIsSubmittingTicket(true);
+      const storedUser = getAuthUser();
+      const name = user?.name || storedUser?.name || 'Customer';
+      const email = user?.email || storedUser?.email || 'customer@store.local';
+      const phone = user?.phone || storedUser?.phone || '';
+
+      const res = await supportService.sendContactMessage({
+        name,
+        email,
+        phone,
+        topic: ticketDraft.subject.trim(),
+        orderNumber: ticketDraft.order?.trim() || undefined,
+        message: ticketDraft.message.trim(),
+      });
+
+      if (res?.data) {
+        toast.success('Support ticket created — our team will reply shortly');
+        setCreatingTicket(false);
+        setTicketDraft({ subject: '', order: '', message: '' });
+        await fetchCustomerTickets();
+        if (res.data.ticketId) {
+          setActiveTicketId(res.data.ticketId);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err.message || 'Failed to create support ticket');
+    } finally {
+      setIsSubmittingTicket(false);
+    }
   };
 
   return (

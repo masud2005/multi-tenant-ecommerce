@@ -6,6 +6,7 @@ import * as bcrypt from 'bcrypt';
 import { RegisterDto } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 import {
     UserRole,
     UserStatus,
@@ -522,5 +523,125 @@ export class AuthService {
         }
 
         return '/admin';
+    }
+
+    async getProfile(userId: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                role: true,
+                status: true,
+                lastLoginAt: true,
+                createdAt: true,
+                customerProfiles: {
+                    where: { deletedAt: null },
+                    take: 1,
+                    select: {
+                        id: true,
+                        tenantId: true,
+                        district: true,
+                        avatar: true,
+                        ordersCount: true,
+                        totalSpent: true,
+                        storeCredit: true,
+                        segment: true,
+                    },
+                },
+                tenantMemberships: {
+                    select: {
+                        tenantId: true,
+                        isOwner: true,
+                        role: {
+                            select: {
+                                id: true,
+                                name: true,
+                                permissions: true,
+                            },
+                        },
+                        tenant: {
+                            select: {
+                                id: true,
+                                name: true,
+                                slug: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        const profile = user.customerProfiles?.[0];
+        const membership = user.tenantMemberships?.[0];
+        const isOwner = Boolean(membership?.isOwner || user.role === UserRole.OWNER || (user.role as any) === 'SUPER_ADMIN');
+        const isStaff = Boolean(membership && !isOwner);
+
+        return ResponseHelper.success({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: isOwner ? 'OWNER' : (isStaff ? 'STAFF' : user.role),
+            isOwner,
+            staffRole: isOwner ? 'Owner' : (isStaff ? membership?.role?.name : undefined),
+            permissions: (membership?.role?.permissions as Record<string, string[]>) || (isOwner ? { all: ['*'] } : {}),
+            district: profile?.district || null,
+            avatar: profile?.avatar || null,
+            ordersCount: profile?.ordersCount || 0,
+            totalSpent: Number(profile?.totalSpent || 0),
+            storeCredit: Number(profile?.storeCredit || 0),
+            tenantId: membership?.tenantId || profile?.tenantId || null,
+            store: membership?.tenant ? {
+                id: membership.tenant.id,
+                name: membership.tenant.name,
+                slug: membership.tenant.slug,
+            } : null,
+        }, 'Profile fetched successfully');
+    }
+
+    async updateProfile(userId: string, dto: UpdateProfileDto) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        if (dto.phone && dto.phone !== user.phone) {
+            const existingPhone = await this.prisma.user.findUnique({
+                where: { phone: dto.phone },
+            });
+            if (existingPhone && existingPhone.id !== userId) {
+                throw new ConflictException('This phone number is already registered to another account');
+            }
+        }
+
+        const updatedUser = await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                name: dto.name !== undefined ? dto.name : user.name,
+                phone: dto.phone !== undefined ? dto.phone : user.phone,
+            },
+        });
+
+        await this.prisma.customerProfile.updateMany({
+            where: { userId: user.id, deletedAt: null },
+            data: {
+                name: updatedUser.name || 'Customer',
+                phone: updatedUser.phone,
+                ...(dto.district ? { district: dto.district } : {}),
+                ...(dto.avatar ? { avatar: dto.avatar } : {}),
+            },
+        });
+
+        return this.getProfile(userId);
     }
 }

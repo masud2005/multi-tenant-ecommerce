@@ -16,6 +16,8 @@ import { OwnerAnalyticsModule } from './analytics/analytics.module';
 import { OwnerFaqModule } from './faq/faq.module';
 import { StaffModule } from './staff/staff.module';
 import { OwnerPageModule } from './page/page.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { OwnerPageModule } from './page/page.module';
     OwnerFaqModule,
     StaffModule,
     OwnerPageModule,
+    AuditLogModule,
+    MediaModule,
   ],
   exports: [
     CategoryModule,
@@ -55,6 +59,8 @@ import { OwnerPageModule } from './page/page.module';
     OwnerFaqModule,
     StaffModule,
     OwnerPageModule,
+    AuditLogModule,
+    MediaModule,
   ],
 })
 export class OwnerModule {}

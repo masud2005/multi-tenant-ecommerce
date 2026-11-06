@@ -63,6 +63,22 @@ export const supportService = {
     return await apiClient.post<ApiResponse<any>>('/customer/contact', payload);
   },
 
+  // 1b. Fetch all tickets submitted by authenticated customer
+  async getCustomerTickets(): Promise<ApiResponse<SupportTicketItem[]>> {
+    return await apiClient.get<ApiResponse<SupportTicketItem[]>>('/customer/contact/tickets');
+  },
+
+  // 1c. Customer replies to an existing ticket
+  async replyCustomerTicket(
+    ticketId: string,
+    text: string,
+  ): Promise<ApiResponse<TicketMessage>> {
+    return await apiClient.post<ApiResponse<TicketMessage>>(
+      `/customer/contact/tickets/${encodeURIComponent(ticketId)}/reply`,
+      { text },
+    );
+  },
+
   // 2. Get all support tickets & customer messages (Admin)
   async getTickets(query?: {
     status?: string;

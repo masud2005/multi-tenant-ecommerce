@@ -86,6 +86,8 @@ export interface PaymentAttempt {
   amount: number;
   status: PaymentStatus;
   ref: string;
+  senderPhone?: string;
+  transactionId?: string;
   at: string;
 }
 
@@ -218,7 +220,7 @@ export interface SupportTicket {
   id: string;
   subject: string;
   orderNumber?: string;
-  status: 'open' | 'awaiting' | 'resolved';
+  status: 'open' | 'awaiting' | 'resolved' | 'closed' | 'pending';
   updatedAt: string;
   messages: { from: 'customer' | 'agent'; name: string; text: string; at: string }[];
 }

@@ -18,7 +18,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
-import { categories as seedCategories } from '@/data/products';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { DataTable, type Column } from '@/components/dashboard/shared/DataTable';
 import { BulkBar } from '@/components/dashboard/shared/BulkBar';

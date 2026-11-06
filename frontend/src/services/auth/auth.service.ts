@@ -126,6 +126,34 @@ class AuthService {
   async refreshToken(): Promise<string | null> {
     return apiClient.refreshToken();
   }
+
+  async getMe(): Promise<ApiResponse<StoredUser>> {
+    const res = await apiClient.get<ApiResponse<StoredUser>>('/auth/me');
+    if (res.data) {
+      const currentToken = getAuthToken() || '';
+      const currentRefresh = getRefreshToken() || '';
+      setAuthSession({
+        accessToken: currentToken,
+        refreshToken: currentRefresh,
+        user: res.data,
+      });
+    }
+    return res;
+  }
+
+  async updateProfile(data: { name?: string; phone?: string; district?: string; avatar?: string }): Promise<ApiResponse<StoredUser>> {
+    const res = await apiClient.patch<ApiResponse<StoredUser>>('/auth/profile', data);
+    if (res.data) {
+      const currentToken = getAuthToken() || '';
+      const currentRefresh = getRefreshToken() || '';
+      setAuthSession({
+        accessToken: currentToken,
+        refreshToken: currentRefresh,
+        user: res.data,
+      });
+    }
+    return res;
+  }
 }
 
 export const authService = new AuthService();

@@ -29,6 +29,26 @@ export class OrderService {
     private readonly notificationService: NotificationService,
   ) {}
 
+  private async resolveTenantId(tenantId?: string): Promise<string> {
+    if (tenantId && tenantId.length > 10) {
+      const exists = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+      });
+      if (exists) return exists.id;
+    }
+
+    const defaultTenant = await this.prisma.tenant.findFirst({
+      where: { deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (!defaultTenant) {
+      throw new NotFoundException('Store tenant context not found');
+    }
+
+    return defaultTenant.id;
+  }
+
   // Fetch all orders for tenant with filtering, search, pagination, and status counters
   async getOrders(query: OrderQueryDto, tenantId?: string) {
     let targetTenantId = tenantId;
@@ -172,6 +192,7 @@ export class OrderService {
         include: {
           items: true,
           shippingAddress: true,
+          attempts: true,
           timeline: {
             orderBy: { createdAt: 'asc' },
           },
@@ -398,6 +419,7 @@ export class OrderService {
         include: {
           items: true,
           shippingAddress: true,
+          attempts: true,
           timeline: {
             orderBy: { createdAt: 'asc' },
           },
@@ -481,6 +503,102 @@ export class OrderService {
     });
 
     return ResponseHelper.created(note, 'Order note added successfully');
+  }
+
+  // Verify or reject manual customer bKash/Nagad payment
+  async verifyManualPayment(
+    id: string,
+    approved: boolean,
+    note?: string,
+    tenantId?: string,
+    user?: any,
+  ) {
+    const targetTenantId = await this.resolveTenantId(tenantId);
+    const order = await this.prisma.order.findFirst({
+      where: {
+        OR: [{ id }, { number: id }],
+        ...(targetTenantId ? { tenantId: targetTenantId } : {}),
+        deletedAt: null,
+      },
+      include: { attempts: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with identifier "${id}" not found`);
+    }
+
+    const actorName = user?.name || user?.email || 'Store Owner';
+
+    if (approved) {
+      const updated = await this.prisma.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus: PaymentStatus.PAID,
+          status:
+            order.status === OrderStatus.PENDING_PAYMENT
+              ? OrderStatus.CONFIRMED
+              : order.status,
+          timeline: {
+            create: {
+              label: 'Manual Payment Verified & Approved',
+              note: note || `Payment verified by ${actorName}`,
+              by: actorName,
+            },
+          },
+        },
+        include: {
+          items: true,
+          shippingAddress: true,
+          timeline: { orderBy: { createdAt: 'asc' } },
+          attempts: true,
+        },
+      });
+
+      if (order.attempts.length > 0) {
+        await this.prisma.paymentAttempt.update({
+          where: { id: order.attempts[0].id },
+          data: { status: PaymentStatus.PAID },
+        });
+      }
+
+      return ResponseHelper.success(
+        updated,
+        'Payment verified and order updated to PAID successfully',
+      );
+    } else {
+      const updated = await this.prisma.order.update({
+        where: { id: order.id },
+        data: {
+          paymentStatus: PaymentStatus.FAILED,
+          status: OrderStatus.FAILED,
+          timeline: {
+            create: {
+              label: 'Manual Payment Rejected / Invalid TrxID',
+              note: note || `Rejected by ${actorName}`,
+              by: actorName,
+            },
+          },
+        },
+        include: {
+          items: true,
+          shippingAddress: true,
+          timeline: { orderBy: { createdAt: 'asc' } },
+          attempts: true,
+        },
+      });
+
+      if (order.attempts.length > 0) {
+        await this.prisma.paymentAttempt.update({
+          where: { id: order.attempts[0].id },
+          data: { status: PaymentStatus.FAILED },
+        });
+      }
+
+      return ResponseHelper.success(
+        updated,
+        'Payment marked as rejected/failed',
+      );
+    }
   }
 }
 

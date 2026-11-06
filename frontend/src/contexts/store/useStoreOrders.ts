@@ -195,6 +195,8 @@ export function useStoreOrders(
         email: input.contact.email,
         couponCode: input.couponCode,
         customerNote: input.customerNote,
+        senderPhone: input.senderPhone,
+        transactionId: input.transactionId,
       };
 
       let finalOrder: Order;

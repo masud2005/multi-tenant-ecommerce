@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -24,6 +25,7 @@ import { RegisterDto } from '../dto/register.dto';
 import { AuthService } from '../services/auth.service';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
 import { AcceptStaffInviteDto } from '../dto/accept-staff-invite.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 
@@ -93,4 +95,24 @@ export class AuthController {
   async acceptStaffInvite(@Body() dto: AcceptStaffInviteDto) {
     return this.authService.acceptStaffInvite(dto);
   }
-}
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile and session info' })
+  @ApiResponse({ status: 200, description: 'Profile returned successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getProfile(@CurrentUser() user: any) {
+    return this.authService.getProfile(user.id);
+  }
+
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(@CurrentUser() user: any, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(user.id, dto);
+  }
+}

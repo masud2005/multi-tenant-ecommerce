@@ -1,13 +1,11 @@
-import { Metadata } from 'next';
-import { products } from '@/data/products';
+'use client';
+
+import React from 'react';
+import { useStore } from '@/contexts/StoreContext';
 import { BrandsManager } from '@/components/dashboard/admin/brands';
 
-export const metadata: Metadata = {
-  title: 'Brands | Admin Dashboard',
-  description: 'Each brand gets its own storefront page, product showcase, and filter.',
-};
-
 export default function AdminBrandsPage() {
+  const { products } = useStore();
   return (
     <div className="w-full">
       <BrandsManager initialBrands={[]} products={products} />

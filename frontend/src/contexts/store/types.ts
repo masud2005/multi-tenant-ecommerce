@@ -31,6 +31,8 @@ export interface PlaceOrderInput {
   discount: number;
   couponCode?: string;
   customerNote?: string;
+  senderPhone?: string;
+  transactionId?: string;
   subtotal: number;
   total: number;
 }

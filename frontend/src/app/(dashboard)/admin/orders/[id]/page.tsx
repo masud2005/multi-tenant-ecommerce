@@ -85,6 +85,31 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [refundError, setRefundError] = useState('');
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reauth, setReauth] = useState('');
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+
+  // Manual payment verification (bKash / Nagad / COD)
+  const handleVerifyPayment = async (approved: boolean, noteText?: string) => {
+    try {
+      setIsVerifyingPayment(true);
+      await orderService.verifyPayment(order.id, approved, noteText);
+      toast.success(
+        approved
+          ? 'Manual payment verified & order confirmed!'
+          : 'Payment verification marked as rejected',
+      );
+      setRejectOpen(false);
+      setRejectReason('');
+      await fetchOrderDetail();
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message || err.message || 'Payment verification failed',
+      );
+    } finally {
+      setIsVerifyingPayment(false);
+    }
+  };
 
   // Fetch live order from backend
   const fetchOrderDetail = useCallback(async () => {
@@ -431,14 +456,118 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             title="Payment"
             description={`${paymentMethodLabel[order.paymentMethod] || order.paymentMethod} · ${paymentStatusMeta[order.paymentStatus]?.label || order.paymentStatus}`}
           >
+            {/* Manual bKash / Nagad Verification Card */}
+            {(order.paymentMethod === 'bkash' || order.paymentMethod === 'nagad') && (
+              <div className="mb-4 rounded-lg border border-line bg-subtle/30 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-ink capitalize">
+                      {order.paymentMethod} Send Money
+                    </span>
+                    <Badge tone={paymentStatusMeta[order.paymentStatus]?.tone || 'neutral'}>
+                      {paymentStatusMeta[order.paymentStatus]?.label || order.paymentStatus}
+                    </Badge>
+                  </div>
+                  <span className="text-xs text-ink-muted">Manual verification</span>
+                </div>
+
+                {(() => {
+                  const attempt = order.attempts?.[0];
+                  const senderPhone = attempt?.senderPhone || 'Not provided';
+                  const trxId = attempt?.transactionId || attempt?.ref || 'Not provided';
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-canvas rounded-md p-3 border border-line">
+                      <div>
+                        <span className="text-ink-muted block mb-0.5">Customer Sender Number:</span>
+                        <span className="font-mono font-medium text-ink text-sm">{senderPhone}</span>
+                      </div>
+                      <div>
+                        <span className="text-ink-muted block mb-0.5">Transaction ID (TrxID):</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-ink text-sm bg-subtle px-1.5 py-0.5 rounded">
+                            {trxId}
+                          </span>
+                          {trxId !== 'Not provided' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(trxId);
+                                toast.success('Transaction ID copied to clipboard');
+                              }}
+                              className="text-ink-muted hover:text-ink cursor-pointer"
+                              title="Copy TrxID"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Owner manual payment action buttons */}
+                {canUpdate && order.paymentStatus !== 'paid' && (
+                  <div className="pt-2 flex flex-wrap items-center gap-2 justify-end">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setRejectOpen(true)}
+                      disabled={isVerifyingPayment || isUpdating}
+                      className="cursor-pointer text-danger hover:bg-danger/10 border-danger/20"
+                    >
+                      <XCircle className="h-3.5 w-3.5 mr-1" />
+                      Reject Payment
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        handleVerifyPayment(
+                          true,
+                          'Payment verified and approved by store owner',
+                        )
+                      }
+                      disabled={isVerifyingPayment || isUpdating}
+                      className="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      {isVerifyingPayment ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Verify & Approve Payment
+                    </Button>
+                  </div>
+                )}
+
+                {order.paymentStatus === 'paid' && (
+                  <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 p-2.5 rounded-md border border-emerald-200 dark:border-emerald-900">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>Payment verified and confirmed by store owner</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Standard payment attempts history */}
             {order.attempts && order.attempts.length > 0 ? (
               <ul className="divide-y divide-line text-xs">
                 {order.attempts.map((a) => (
                   <li key={a.id} className="flex items-center justify-between py-2">
-                    <span className="font-mono text-ink-muted">{a.ref || 'Direct / COD'}</span>
-                    <Badge tone={paymentStatusMeta[a.status]?.tone || 'neutral'}>{a.status}</Badge>
-                    <span className="font-medium text-ink tabular-nums">{formatBDT(a.amount)}</span>
-                    <span className="text-ink-muted">{formatDateTime(a.at)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-ink-muted">
+                        {a.transactionId ? `TrxID: ${a.transactionId}` : a.ref || 'Direct / COD'}
+                      </span>
+                      {a.senderPhone && (
+                        <span className="text-ink-soft">({a.senderPhone})</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge tone={paymentStatusMeta[a.status]?.tone || 'neutral'}>{a.status}</Badge>
+                      <span className="font-medium text-ink tabular-nums">{formatBDT(a.amount)}</span>
+                      <span className="text-ink-muted">{formatDateTime(a.at)}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -447,11 +576,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 Payment method: <span className="font-medium text-ink uppercase">{order.paymentMethod}</span> ({order.paymentStatus})
               </p>
             )}
-            {order.paymentStatus === 'pending' && canUpdate && (
+
+            {order.paymentMethod === 'cod' && order.paymentStatus === 'pending' && canUpdate && (
               <div className="mt-3 pt-3 border-t border-line flex items-center justify-between">
-                <span className="text-xs text-ink-muted">Awaiting customer payment confirmation.</span>
+                <span className="text-xs text-ink-muted">Cash on delivery pending collection from customer.</span>
                 <Button size="sm" variant="secondary" onClick={handleMarkPaid} disabled={isUpdating} className="cursor-pointer">
-                  <Banknote className="h-3.5 w-3.5" aria-hidden /> Mark as Paid
+                  <Banknote className="h-3.5 w-3.5 mr-1" /> Mark as Paid
                 </Button>
               </div>
             )}
@@ -626,6 +756,37 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </Button>
             <Button variant="danger" onClick={doRefund}>
               Confirm refund
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reject Payment Modal */}
+      <Modal open={rejectOpen} onClose={() => setRejectOpen(false)} title="Reject manual payment">
+        <div className="space-y-4 py-2">
+          <p className="text-xs text-ink-muted">
+            Mark this bKash/Nagad transaction as invalid or unverified. The order payment status will be marked as Failed.
+          </p>
+          <div>
+            <label className="text-xs font-medium text-ink">Rejection Reason</label>
+            <input
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. Transaction ID not found in bKash statement"
+              className="mt-1 h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setRejectOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              disabled={isVerifyingPayment}
+              onClick={() => handleVerifyPayment(false, rejectReason || 'Transaction ID not verified')}
+            >
+              {isVerifyingPayment ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Confirm Rejection
             </Button>
           </div>
         </div>
