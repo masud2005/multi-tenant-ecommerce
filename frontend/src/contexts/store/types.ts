@@ -49,6 +49,7 @@ export interface StoreContextValue {
   compare: string[];
   recentlyViewed: string[];
   user: User | null;
+  setUser: (u: any) => void;
   addresses: Address[];
   isAddressesLoading?: boolean;
   refreshAddresses?: () => Promise<void>;

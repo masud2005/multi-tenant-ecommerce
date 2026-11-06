@@ -253,6 +253,80 @@ function OrdersContent() {
   const totalOrdersCount = serverCounts.all > 0 ? serverCounts.all : liveOrders.length;
   const unfulfilledCount = count('unfulfilled');
 
+  // Dynamic real CSV export of filtered orders
+  const handleExportOrders = () => {
+    if (rows.length === 0) {
+      toast.error('No orders to export in current view');
+      return;
+    }
+
+    const headers = [
+      'Order Number',
+      'Date & Time',
+      'Customer Name',
+      'Phone',
+      'District',
+      'Address',
+      'Items Count',
+      'Items Summary',
+      'Subtotal',
+      'Delivery Charge',
+      'Discount',
+      'Total Amount',
+      'Payment Method',
+      'Payment Status',
+      'Order Status',
+      'Fulfillment Status',
+      'Courier',
+      'Tracking Number',
+    ];
+
+    const csvRows = [headers.join(',')];
+
+    for (const o of rows) {
+      const itemsSummary = o.items.map((i) => `${i.title} (${i.qty}x)`).join('; ');
+      const address = [o.shippingAddress?.line1, o.shippingAddress?.area, o.shippingAddress?.district]
+        .filter(Boolean)
+        .join(', ');
+
+      const row = [
+        `"${o.number}"`,
+        `"${formatDateTime(o.createdAt)}"`,
+        `"${(o.customerName || '').replace(/"/g, '""')}"`,
+        `"${(o.phone || o.shippingAddress?.phone || '').replace(/"/g, '""')}"`,
+        `"${(o.shippingAddress?.district || '').replace(/"/g, '""')}"`,
+        `"${address.replace(/"/g, '""')}"`,
+        `"${o.items.reduce((s, i) => s + i.qty, 0)}"`,
+        `"${itemsSummary.replace(/"/g, '""')}"`,
+        `"${o.subtotal}"`,
+        `"${o.shipping}"`,
+        `"${o.discount}"`,
+        `"${o.total}"`,
+        `"${(o.paymentMethod || '').toUpperCase()}"`,
+        `"${(o.paymentStatus || '').toUpperCase()}"`,
+        `"${(o.status || '').toUpperCase()}"`,
+        `"${(o.fulfillmentStatus || '').toUpperCase()}"`,
+        `"${(o.courier || '').replace(/"/g, '""')}"`,
+        `"${(o.tracking || '').replace(/"/g, '""')}"`,
+      ];
+      csvRows.push(row.join(','));
+    }
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute(
+      'download',
+      `orders_report_${tab}_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${rows.length} orders successfully!`);
+  };
+
   return (
     <div className="w-full space-y-6">
       <PageHeader
@@ -275,9 +349,10 @@ function OrdersContent() {
               action="export"
               variant="secondary"
               size="sm"
-              onClick={() => toast.success(`Exported ${rows.length} orders to orders.csv`)}
+              onClick={handleExportOrders}
+              className="cursor-pointer"
             >
-              <Download className="h-4 w-4" aria-hidden /> Export
+              <Download className="h-4 w-4 mr-1" aria-hidden /> Export CSV
             </GuardedButton>
           </div>
         }

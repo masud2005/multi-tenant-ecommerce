@@ -358,21 +358,6 @@ export const orderService = {
     return await apiClient.post<ApiResponse<any>>(endpoint, payload);
   },
 
-  // 8. Verify or reject customer manual bKash or Nagad payment (Owner)
-  async verifyPayment(
-    id: string,
-    approved: boolean,
-    note?: string,
-    tenantId?: string,
-  ): Promise<ApiResponse<any>> {
-    const endpoint = tenantId
-      ? `/owner/orders/${encodeURIComponent(id)}/verify-payment?tenantId=${encodeURIComponent(tenantId)}`
-      : `/owner/orders/${encodeURIComponent(id)}/verify-payment`;
-    return await apiClient.patch<ApiResponse<any>>(endpoint, { approved, note });
-  },
-
-
-
   // ----------------------------------------------------
   // Legacy / Fallback helpers with mock seed data support
   // ----------------------------------------------------

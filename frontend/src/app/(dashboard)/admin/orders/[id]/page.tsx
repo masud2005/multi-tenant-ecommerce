@@ -22,7 +22,9 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { useAdmin } from '@/contexts/AdminContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { orderService } from '@/services/order-service';
+import { OrderInvoiceModal } from '@/components/dashboard/admin/orders/OrderInvoiceModal';
 import { couriers } from '@/data/shipping';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
@@ -68,11 +70,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const router = useRouter();
   const { orders: storeOrders, customers, setOrderStatus, refundOrder, markCodCollected, cancelOrder, returns } = useStore();
   const { actor, can } = useAdmin();
+  const { tenant } = useTenant();
 
   // Local state for backend order
   const [liveOrder, setLiveOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   const [note, setNote] = useState('');
   const [internal, setInternal] = useState(true);
@@ -91,6 +95,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   // Manual payment verification (bKash / Nagad / COD)
   const handleVerifyPayment = async (approved: boolean, noteText?: string) => {
+    if (!order) return;
     try {
       setIsVerifyingPayment(true);
       await orderService.verifyPayment(order.id, approved, noteText);
@@ -350,8 +355,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <Button variant="secondary" size="sm" onClick={fetchOrderDetail} disabled={isLoading} className="cursor-pointer">
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden /> Refresh
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => window.print()} className="cursor-pointer">
-              <Printer className="h-4 w-4" aria-hidden /> Print slip
+            <Button variant="secondary" size="sm" onClick={() => setInvoiceOpen(true)} className="cursor-pointer">
+              <Printer className="h-4 w-4" aria-hidden /> Print Cash Memo / Invoice
             </Button>
             {isPaid && can('payments', 'refund') && refundable > 0 && (
               <GuardedButton
@@ -791,6 +796,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       </Modal>
+
+      {/* Printable Cash Memo / Order Invoice Modal */}
+      <OrderInvoiceModal
+        open={invoiceOpen}
+        onClose={() => setInvoiceOpen(false)}
+        order={order}
+        tenant={tenant}
+      />
     </div>
   );
 }

@@ -166,6 +166,9 @@ export default function CheckoutPage() {
     {
       id: 'standard',
       name: isDhaka ? 'Inside Dhaka Delivery' : 'Outside Dhaka Delivery',
+      description: isDhaka
+        ? 'Delivery within Dhaka metropolitan area'
+        : 'Delivery to all 63 districts outside Dhaka',
       eta: isDhaka ? '1–2 business days' : '2–4 business days',
       price: () => calculatedShippingCost,
       available: () => true,
