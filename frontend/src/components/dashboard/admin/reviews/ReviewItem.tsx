@@ -156,36 +156,36 @@ export function ReviewItem({ review, onUpdateStatus, onPostReply }: ReviewItemPr
             <span>Reply</span>
           </Button>
 
-          {review.status !== 'published' && (
+          {review.status !== 'PUBLISHED' && review.status !== 'published' && (
             <Button
               size="sm"
               variant="secondary"
               onClick={() =>
-                onUpdateStatus(review.id, 'published', 'Review published')
+                onUpdateStatus(review.id, 'PUBLISHED', 'Review published')
               }
               className="cursor-pointer"
             >
-              Approve
+              Publish
             </Button>
           )}
 
-          {review.status === 'published' && (
+          {(review.status === 'PUBLISHED' || review.status === 'published') && (
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => onUpdateStatus(review.id, 'hidden', 'Review hidden')}
+              onClick={() => onUpdateStatus(review.id, 'HIDDEN', 'Review hidden')}
               className="cursor-pointer"
             >
               Hide
             </Button>
           )}
 
-          {review.status === 'pending' && (
+          {(review.status === 'PENDING' || review.status === 'pending') && (
             <Button
               size="sm"
               variant="ghost"
               onClick={() =>
-                onUpdateStatus(review.id, 'rejected', 'Review rejected')
+                onUpdateStatus(review.id, 'REJECTED', 'Review rejected')
               }
               className="cursor-pointer text-danger hover:text-danger hover:bg-danger/10"
             >

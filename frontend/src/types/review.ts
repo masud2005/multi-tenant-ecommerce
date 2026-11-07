@@ -1,5 +1,6 @@
 export type ReviewStatus =
   | 'PUBLISHED'
+  | 'PENDING'
   | 'HIDDEN'
   | 'REJECTED'
   | 'published'
@@ -39,6 +40,7 @@ export interface Review {
   verified: boolean;
   photos: string[];
   helpful: number;
+  helpfulVotedByMe?: boolean;
   status: ReviewStatus;
   size?: string | null;
   reply?: string | null;
@@ -77,8 +79,8 @@ export interface ProductReviewsResponse {
 export interface CreateReviewPayload {
   productId: string;
   rating: number;
-  title: string;
   body: string;
+  title?: string;
   author?: string;
   photos?: string[];
   size?: string;
@@ -104,4 +106,26 @@ export interface OwnerReviewsQuery {
   search?: string;
   sortBy?: 'createdAt' | 'rating' | 'helpful';
   sortOrder?: 'desc' | 'asc';
+}
+
+export interface CreateOwnerReviewPayload {
+  author: string;
+  rating: number;
+  title?: string;
+  body: string;
+  productId: string;
+  verified?: boolean;
+  size?: string;
+  status?: ReviewStatus;
+}
+
+export interface UpdateOwnerReviewPayload {
+  author?: string;
+  rating?: number;
+  title?: string;
+  body?: string;
+  productId?: string;
+  verified?: boolean;
+  size?: string;
+  status?: ReviewStatus;
 }

@@ -41,6 +41,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     cartState.setCart
   );
 
+  // 6. Comprehensive Logout Handler (clears auth, in-memory cart & wishlist)
+  const logout = useCallback(() => {
+    auth.logout();
+    cartState.setCart([]);
+    wishlistState.setWishlist([]);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('tanti.cart');
+        localStorage.removeItem('tanti.wishlist');
+      } catch {}
+    }
+  }, [auth, cartState, wishlistState]);
+
   // 7. Modals, Drawers & UI Navigation State
   const ui = useStoreUI();
 
@@ -90,7 +103,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       customers: auth.customers,
       login: auth.login,
       register: auth.register,
-      logout: auth.logout,
+      logout,
       saveAddress: auth.saveAddress,
       deleteAddress: auth.deleteAddress,
       setDefaultAddress: auth.setDefaultAddress,

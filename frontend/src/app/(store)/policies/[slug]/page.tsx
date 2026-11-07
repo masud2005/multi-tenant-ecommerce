@@ -6,6 +6,7 @@ import { policies } from '@/data/content';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { pageService, ReturnsPageData } from '@/services/page-service';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface PolicyPageProps {
   params: Promise<{ slug: string }>;
@@ -13,6 +14,7 @@ interface PolicyPageProps {
 
 export default function PolicyPage({ params }: PolicyPageProps) {
   const { slug } = use(params);
+  const { tenant } = useTenant();
   const staticPolicy = slug ? policies[slug] : undefined;
   const [dynamicReturns, setDynamicReturns] = useState<ReturnsPageData | null>(null);
 
@@ -98,8 +100,12 @@ export default function PolicyPage({ params }: PolicyPageProps) {
         <div className="mt-10 space-y-8">
           {displaySections.map((s) => (
             <section key={s.heading} className="space-y-2">
-              <h2 className="text-lg font-semibold text-ink">{s.heading}</h2>
-              <p className="leading-relaxed text-ink-soft whitespace-pre-line">{s.body}</p>
+              <h2 className="text-lg font-semibold text-ink">
+                {s.heading.replace(/\bTanti\b/g, tenant.name)}
+              </h2>
+              <p className="leading-relaxed text-ink-soft whitespace-pre-line">
+                {s.body.replace(/\bTanti\b/g, tenant.name)}
+              </p>
             </section>
           ))}
         </div>

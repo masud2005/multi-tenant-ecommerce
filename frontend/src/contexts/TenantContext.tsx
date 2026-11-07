@@ -64,6 +64,8 @@ export function TenantProvider({
             position: raw.currencyPosition || fallbackTenant.currency.position,
           },
           theme: raw.theme || fallbackTenant.theme,
+          announcement: raw.announcement ?? (fallbackTenant as any).announcement,
+          announcementEnabled: raw.announcementEnabled ?? (fallbackTenant as any).announcementEnabled ?? true,
           modules: raw.modules || fallbackTenant.modules,
           contact: {
             email: raw.contact?.email || fallbackTenant.contact.email,

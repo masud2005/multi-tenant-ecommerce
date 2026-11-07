@@ -51,6 +51,8 @@ export interface Tenant {
   theme: TenantTheme;
   modules: TenantModules;
   contact: TenantContact;
+  announcement?: string;
+  announcementEnabled?: boolean;
   socials?: {
     facebook?: string;
     instagram?: string;

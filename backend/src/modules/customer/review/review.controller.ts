@@ -19,6 +19,7 @@ import {
 import { ReviewService } from './review.service';
 import { CreateReviewDto, ReviewQueryDto } from './dto';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
 
 @ApiTags('(Customer) Reviews')
@@ -27,13 +28,14 @@ import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.g
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
-  // 1. Submit a new customer review (Immediately PUBLISHED & Live)
   @Post('reviews')
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Submit a new customer review for a product' })
   @ApiResponse({ status: 201, description: 'Review published successfully' })
   @ApiResponse({ status: 400, description: 'Validation failed or missing fields' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  @ApiResponse({ status: 409, description: 'Customer already reviewed this product' })
   @ApiResponse({ status: 404, description: 'Product not found' })
   async createReview(
     @Body() dto: CreateReviewDto,
@@ -46,12 +48,44 @@ export class ReviewController {
     return this.reviewService.createReview(tenantId, userId, userRole, dto);
   }
 
-  // 2. Fetch all published reviews for a product with statistics and filters
+  @Get('reviews/me')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Get my reviews and delivered products awaiting review',
+  })
+  @ApiResponse({ status: 200, description: 'Customer reviews retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
+  async getMyReviews(
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    const userId = user?.id || user?.sub;
+    return this.reviewService.getMyReviews(tenantId, userId);
+  }
+
+  @Get('reviews')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get published reviews for store testimonials' })
+  @ApiResponse({ status: 200, description: 'Store reviews retrieved successfully' })
+  async getStoreReviews(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('rating') rating?: number,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.reviewService.getStoreReviews({ page, limit, rating }, tenantId);
+  }
+
   @Get('products/:productId/reviews')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all reviews and rating distribution for a product' })
   @ApiResponse({ status: 200, description: 'Product reviews retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Product not found' })
+  @UseGuards(OptionalJwtAuthGuard)
   async getProductReviews(
     @Param('productId') productId: string,
     @Query() query: ReviewQueryDto,
@@ -59,14 +93,16 @@ export class ReviewController {
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
-    return this.reviewService.getProductReviews(productId, query, tenantId);
+    const userId = user?.id || user?.sub;
+    return this.reviewService.getProductReviews(productId, query, tenantId, userId);
   }
 
-  // 3. Mark a review as helpful (increment upvotes)
   @Post('reviews/:id/helpful')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Mark a review as helpful' })
-  @ApiResponse({ status: 200, description: 'Review marked as helpful' })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Toggle helpful vote on a review' })
+  @ApiResponse({ status: 200, description: 'Helpful vote toggled' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async markHelpful(
     @Param('id') id: string,
@@ -74,6 +110,7 @@ export class ReviewController {
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
-    return this.reviewService.markHelpful(id, tenantId);
+    const userId = user?.id || user?.sub;
+    return this.reviewService.toggleHelpful(id, tenantId, userId);
   }
 }

@@ -2,16 +2,15 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Layers, Palette, History, LayoutTemplate } from 'lucide-react';
+import Link from 'next/link';
+import { Palette, History, LayoutTemplate } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
-import { Badge } from '@/components/ui/Badge';
 import { Drawer } from '@/components/ui/Drawer';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { themeService } from '@/services/theme-service';
 import {
-  ThemeSectionsManager,
   BrandAmbienceStudio,
   ThemeVersionHistory,
   ThemePreviewCanvas,
@@ -56,7 +55,7 @@ function createFallbackTheme(): TenantTheme {
 
 export default function AdminThemePage() {
   const [theme, setTheme] = useState<TenantTheme | null>(null);
-  const [activeTab, setActiveTab] = useState<'sections' | 'styling' | 'landing'>('landing');
+  const [activeTab, setActiveTab] = useState<'styling' | 'landing'>('landing');
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -276,15 +275,8 @@ export default function AdminThemePage() {
       <div className="w-full space-y-6">
         {/* Page Header */}
         <PageHeader
-          title="Theme & Ambience"
-          description="Pick a design for each homepage section, edit the shared copy, and tune brand colours. Choices are stored in this browser for now."
-          meta={
-            <div className="flex items-center gap-2">
-              <Badge tone={dirty ? 'warning' : 'success'} dot>
-                {dirty ? 'Unpublished changes' : 'Live'}
-              </Badge>
-            </div>
-          }
+          title="Store appearance"
+          description="Set the look of the shop, then edit each homepage section. About, FAQ and policies live under Pages."
           actions={
             <div className="flex items-center gap-2">
               <button
@@ -322,68 +314,48 @@ export default function AdminThemePage() {
         />
 
         {/* 2-Column Layout */}
-        <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-          {/* Left: Tabs */}
+        <div className="grid items-start gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
           <div className="space-y-4">
-            <div className="grid grid-cols-3 rounded-lg border border-line bg-surface p-1 shadow-xs">
+            <div className="grid grid-cols-2 rounded-lg border border-line bg-surface p-1">
               <button
                 type="button"
                 onClick={() => setActiveTab('landing')}
                 className={cn(
-                  'flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-semibold transition-all cursor-pointer',
-                  activeTab === 'landing'
-                    ? 'bg-subtle text-ink shadow-xs border border-line font-bold'
-                    : 'text-ink-muted hover:text-ink'
+                  'flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium',
+                  activeTab === 'landing' ? 'bg-canvas text-ink shadow-xs' : 'text-ink-muted'
                 )}
               >
                 <LayoutTemplate className="h-4 w-4" />
-                <span>Landing</span>
+                Homepage
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('styling')}
                 className={cn(
-                  'flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-semibold transition-all cursor-pointer',
-                  activeTab === 'styling'
-                    ? 'bg-subtle text-ink shadow-xs border border-line font-bold'
-                    : 'text-ink-muted hover:text-ink'
+                  'flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium',
+                  activeTab === 'styling' ? 'bg-canvas text-ink shadow-xs' : 'text-ink-muted'
                 )}
               >
                 <Palette className="h-4 w-4" />
-                <span>Brand</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('sections')}
-                className={cn(
-                  'flex items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-semibold transition-all cursor-pointer',
-                  activeTab === 'sections'
-                    ? 'bg-subtle text-ink shadow-xs border border-line font-bold'
-                    : 'text-ink-muted hover:text-ink'
-                )}
-              >
-                <Layers className="h-4 w-4" />
-                <span>Sections</span>
+                Look
               </button>
             </div>
-
-            {activeTab === 'sections' && (
-              <ThemeSectionsManager
-                sections={theme.sections}
-                onReorder={handleReorderSections}
-                onToggleVisibility={handleToggleVisibility}
-              />
-            )}
 
             {activeTab === 'styling' && (
               <BrandAmbienceStudio theme={theme} onChange={handleThemeChange} />
             )}
 
             {activeTab === 'landing' && <LandingTemplateStudio />}
+
+            <p className="text-sm text-ink-muted">
+              Need to edit About, contact, FAQ or policies?{' '}
+              <Link href="/admin/content" className="font-medium text-ink underline">
+                Open pages
+              </Link>
+            </p>
           </div>
 
-          {/* Right: Live Preview */}
-          <ThemePreviewCanvas theme={theme} focus={activeTab === 'sections' ? 'sections' : 'landing'} />
+          <ThemePreviewCanvas theme={theme} focus="landing" />
         </div>
 
         {/* Version History Drawer */}

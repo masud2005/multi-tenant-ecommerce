@@ -3,15 +3,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDownIcon, SearchIcon } from 'lucide-react';
-import { faqs as initialFallbackFaqs } from '@/data/content';
 import { faqService, FaqItemModel } from '@/services/faq-service';
+import { useTenant } from '@/contexts/TenantContext';
 import { cn } from '@/utils/cn';
 
 export default function FaqPage() {
+  const { tenant } = useTenant();
   const [q, setQ] = useState('');
-  const [faqList, setFaqList] = useState<{ category: string; q: string; a: string }[]>(
-    initialFallbackFaqs.filter((f) => f.category.toLowerCase() !== 'payments')
-  );
+  const [faqList, setFaqList] = useState<{ category: string; q: string; a: string }[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   const [cat, setCat] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -104,13 +103,21 @@ export default function FaqPage() {
           <p className="py-10 text-center text-sm text-ink-muted">
             {isLoading ? (
               'Loading questions...'
-            ) : (
+            ) : q ? (
               <>
                 No answers match &ldquo;{q}&rdquo;.{' '}
                 <Link href="/contact" className="underline">
                   Ask us directly
                 </Link>
                 .
+              </>
+            ) : (
+              <>
+                No frequently asked questions published yet.{' '}
+                <Link href="/contact" className="underline">
+                  Contact our support team
+                </Link>{' '}
+                for assistance.
               </>
             )}
           </p>
@@ -142,7 +149,7 @@ export default function FaqPage() {
       <p className="mt-10 text-sm text-ink-muted">
         Still stuck?{' '}
         <Link href="/contact" className="font-medium text-ink underline">
-          Contact Tanti Care
+          Contact {tenant.name} Support
         </Link>
       </p>
     </div>

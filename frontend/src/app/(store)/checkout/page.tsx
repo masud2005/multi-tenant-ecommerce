@@ -8,7 +8,9 @@ import { LockIcon, ChevronLeftIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { useCartLines } from '@/hooks/useCartLines';
 import { storeService } from '@/services/store-service';
+import { discountService, type ApplyDiscountResult } from '@/services/discount-service';
 import { findCoupon, orderTotals } from '@/utils/pricing';
+import type { Coupon } from '@/data/shipping';
 import { formatBDT } from '@/utils/format';
 import type { Address, PaymentMethod } from '@/types/commerce';
 import {
@@ -73,6 +75,8 @@ export default function CheckoutPage() {
     }
     return '';
   });
+  const [appliedDiscount, setAppliedDiscount] = useState<ApplyDiscountResult | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [codeError, setCodeError] = useState('');
   const [errors, setErrors] = useState<Errors>({});
   const [placing, setPlacing] = useState(false);
@@ -151,12 +155,27 @@ export default function CheckoutPage() {
   const isFreeThreshold =
     shippingConfig.freeShippingThreshold > 0 &&
     subtotal >= shippingConfig.freeShippingThreshold;
-  const isFreeShipping = coupon?.type === 'free_shipping' || isFreeThreshold;
+  const isFreeShipping =
+    appliedDiscount?.isFreeShipping || coupon?.type === 'free_shipping' || isFreeThreshold;
   const calculatedShippingCost = isFreeShipping
     ? 0
     : isDhaka
     ? shippingConfig.insideDhaka
     : shippingConfig.outsideDhaka;
+
+  const effectiveCoupon: Coupon | undefined = appliedDiscount
+    ? {
+        code: appliedDiscount.code,
+        label: appliedDiscount.title || 'Special Discount',
+        type:
+          appliedDiscount.type === 'FREE_SHIPPING'
+            ? 'free_shipping'
+            : appliedDiscount.type === 'PERCENTAGE'
+            ? 'percent'
+            : 'fixed',
+        value: appliedDiscount.value,
+      }
+    : coupon;
 
   const shippingMethodName = isDhaka
     ? `Dhaka Inside Delivery (৳${shippingConfig.insideDhaka})`
@@ -175,13 +194,29 @@ export default function CheckoutPage() {
     },
   ];
 
-  const totals = orderTotals({
+  const baseTotals = orderTotals({
     subtotal,
-    coupon,
+    coupon: effectiveCoupon,
     shipping: calculatedShippingCost,
     cod: payment === 'cod',
     storeCredit: useCredit ? storeCredit : 0,
   });
+
+  const totals = appliedDiscount
+    ? {
+        ...baseTotals,
+        discount: appliedDiscount.discountAmount,
+        shipping: calculatedShippingCost,
+        total: Math.max(
+          0,
+          subtotal -
+            appliedDiscount.discountAmount +
+            calculatedShippingCost +
+            (payment === 'cod' ? baseTotals.codFee : 0) -
+            baseTotals.credit
+        ),
+      }
+    : baseTotals;
 
   const validate = () => {
     const e: Errors = {};
@@ -216,15 +251,33 @@ export default function CheckoutPage() {
     return e;
   };
 
-  const applyCode = () => {
-    const c = findCoupon(code);
-    if (!c) return setCodeError('Invalid code');
-    if (c.minSubtotal && subtotal < c.minSubtotal)
-      return setCodeError(`Requires a subtotal of ${formatBDT(c.minSubtotal)}`);
+  const applyCode = async () => {
+    if (!code.trim()) return;
+    setIsValidatingCoupon(true);
     setCodeError('');
-    setApplied(c.code);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('tanti.coupon', c.code);
+
+    try {
+      const res = await discountService.applyDiscount({
+        code: code.trim(),
+        subtotal,
+        customerEmail: user?.email,
+      });
+
+      if (res?.data) {
+        setAppliedDiscount(res.data);
+        setApplied(res.data.code);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('tanti.coupon', res.data.code);
+        }
+        toast.success(
+          `${res.data.code} applied — ${res.data.title || 'Discount applied'}`
+        );
+        return;
+      }
+    } catch (err: any) {
+      setCodeError(err?.message || 'Invalid or expired coupon code');
+    } finally {
+      setIsValidatingCoupon(false);
     }
   };
 
@@ -423,7 +476,7 @@ export default function CheckoutPage() {
           onCodeChange={setCode}
           onApplyCode={applyCode}
           codeError={codeError}
-          appliedCoupon={coupon}
+          appliedCoupon={effectiveCoupon}
           isLoggedIn={!!user}
           storeCredit={storeCredit}
           useCredit={useCredit}

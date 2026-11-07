@@ -20,6 +20,7 @@ import { ProductCard } from '@/components/store/product';
 import { SectionHeading } from '@/components/store/shared';
 import { findCoupon, couponDiscount } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
+import { discountService, type ApplyDiscountResult } from '@/services/discount-service';
 
 export default function CartPage() {
   const {
@@ -44,13 +45,20 @@ export default function CartPage() {
     }
     return '';
   });
+  const [appliedDiscount, setAppliedDiscount] = useState<ApplyDiscountResult | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [codeError, setCodeError] = useState('');
 
   const coupon = applied ? findCoupon(applied) : undefined;
-  const discount = couponDiscount(coupon, subtotal);
+  const discount = appliedDiscount
+    ? appliedDiscount.discountAmount
+    : couponDiscount(coupon, subtotal);
+  const isFreeShipping = appliedDiscount
+    ? appliedDiscount.isFreeShipping
+    : coupon?.type === 'free_shipping';
   const shipping =
-    coupon?.type === 'free_shipping' ? 0 : shippingMethods[0].price(district, subtotal);
-  const total = subtotal - discount + shipping;
+    isFreeShipping ? 0 : shippingMethods[0].price(district, subtotal);
+  const total = Math.max(0, subtotal - discount + shipping);
   const inCartIds = active.map((l) => l.product.id);
   const recommendations = products
     .filter(
@@ -62,20 +70,36 @@ export default function CartPage() {
     .slice(0, 4);
   const blocked = active.some((l) => l.issue === 'out_of_stock');
 
-  const applyCode = () => {
-    const c = findCoupon(code);
-    if (!c) {
-      return setCodeError('This code isn’t valid. Check the spelling and try again.');
-    }
-    if (c.minSubtotal && subtotal < c.minSubtotal) {
-      return setCodeError(`Add ${formatBDT(c.minSubtotal - subtotal)} more to use ${c.code}.`);
-    }
+  const applyCode = async () => {
+    if (!code.trim()) return;
+    setIsValidatingCoupon(true);
     setCodeError('');
-    setApplied(c.code);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('tanti.coupon', c.code);
+
+    try {
+      const res = await discountService.applyDiscount({
+        code: code.trim(),
+        subtotal,
+        customerEmail: user?.email,
+      });
+
+      if (res?.data) {
+        setAppliedDiscount(res.data);
+        setApplied(res.data.code);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('tanti.coupon', res.data.code);
+        }
+        toast.success(
+          `${res.data.code} applied — ${res.data.title || 'Discount applied'}`
+        );
+        return;
+      }
+    } catch (err: any) {
+      setCodeError(
+        err?.message || 'This coupon code is not valid or has expired.'
+      );
+    } finally {
+      setIsValidatingCoupon(false);
     }
-    toast.success(`${c.code} applied — ${c.label}`);
   };
 
   if (active.length === 0 && saved.length === 0) {
@@ -84,8 +108,8 @@ export default function CartPage() {
         <EmptyState
           icon={ShoppingBagIcon}
           title="Your bag is empty"
-          description="Browse our new Eid collection or pick up where you left off."
-          action={<Button href="/collections/eid-2026">Shop Eid 2026</Button>}
+          description="Explore our latest collection and start adding items to your bag."
+          action={<Button href="/shop">Browse Catalog</Button>}
         />
       </div>
     );
@@ -284,17 +308,24 @@ export default function CartPage() {
                   aria-invalid={!!codeError}
                   className="h-10 flex-1 rounded-md border border-line-strong px-3 text-sm uppercase focus:border-clay focus:outline-none"
                 />
-                <Button variant="secondary" onClick={applyCode} disabled={!code}>
-                  Apply
+                <Button
+                  variant="secondary"
+                  onClick={applyCode}
+                  disabled={!code || isValidatingCoupon}
+                >
+                  {isValidatingCoupon ? 'Validating…' : 'Apply'}
                 </Button>
               </div>
               {codeError && <p className="mt-1.5 text-xs text-danger">{codeError}</p>}
-              {coupon && !codeError && (
+              {(appliedDiscount || coupon) && !codeError && (
                 <p className="mt-1.5 flex items-center justify-between text-xs text-success">
-                  {coupon.code} · {coupon.label}
+                  {appliedDiscount
+                    ? `${appliedDiscount.code} · ${appliedDiscount.title || 'Discount applied'}`
+                    : `${coupon?.code} · ${coupon?.label}`}
                   <button
                     onClick={() => {
                       setApplied('');
+                      setAppliedDiscount(null);
                       setCode('');
                       if (typeof window !== 'undefined') {
                         sessionStorage.removeItem('tanti.coupon');

@@ -152,28 +152,17 @@ export async function seedCustomers(prisma: PrismaClient) {
       skipDuplicates: true,
     });
 
-    // 6. Active Shopping Cart
+    // 6. Active Shopping Cart (Initialized empty - items added organically by users)
     await prisma.cart.deleteMany({
       where: { customerId: profile.id },
     });
 
-    const cart = await prisma.cart.create({
+    await prisma.cart.create({
       data: {
         tenantId: tenant.id,
         customerId: profile.id,
       },
     });
-
-    if (p1.variants?.[0]) {
-      await prisma.cartItem.create({
-        data: {
-          cartId: cart.id,
-          productId: p1.id,
-          variantId: p1.variants[0].id,
-          qty: 1,
-        },
-      });
-    }
 
     // 7. Verified Product Reviews
     await prisma.review.deleteMany({
@@ -425,5 +414,58 @@ export async function seedCustomers(prisma: PrismaClient) {
   });
 
   console.log(`✅ Seeded rich demo customer data & login logs for: ${customerEmail} (Password: 123456)`);
+
+  // Extra test customer for multi-account testing (not shown on login showcase)
+  const extraEmail = 'demo@gmail.com';
+  const extraName = 'Demo Shopper';
+  const extraPhone = '01711999999';
+  const extraUser = await prisma.user.upsert({
+    where: { email: extraEmail },
+    update: {
+      name: extraName,
+      phone: extraPhone,
+      password: hashedPassword,
+      role: UserRole.CUSTOMER,
+      status: UserStatus.ACTIVE,
+    },
+    create: {
+      name: extraName,
+      email: extraEmail,
+      phone: extraPhone,
+      password: hashedPassword,
+      role: UserRole.CUSTOMER,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  await prisma.customerProfile.upsert({
+    where: {
+      tenantId_email: {
+        tenantId: tenant.id,
+        email: extraEmail,
+      },
+    },
+    update: {
+      userId: extraUser.id,
+      name: extraName,
+      phone: extraPhone,
+      district: 'Dhaka',
+      segment: CustomerSegment.NEW,
+      isActive: true,
+    },
+    create: {
+      tenantId: tenant.id,
+      userId: extraUser.id,
+      name: extraName,
+      email: extraEmail,
+      phone: extraPhone,
+      district: 'Dhaka',
+      segment: CustomerSegment.NEW,
+      marketingConsent: true,
+      isActive: true,
+    },
+  });
+
+  console.log(`✅ Extra test customer ready: ${extraEmail} (Password: 123456)`);
 }
 
