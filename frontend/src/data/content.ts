@@ -1,7 +1,5 @@
 import { images } from './images';
 
-export const announcement = 'Free delivery inside Dhaka on orders over ৳2,500 · Easy 7-day returns';
-
 export const testimonials = [
   { name: 'Ayesha Siddiqua', location: 'Gulshan, Dhaka', quote: 'The jamdani I bought for my sister’s wedding felt like an heirloom. Delivered next day, wrapped beautifully.' },
   { name: 'Tanvir Ahmed', location: 'Chattogram', quote: 'Exchanging a size was genuinely easy — the courier swapped it at my door. That’s why I keep ordering.' },

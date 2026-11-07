@@ -381,7 +381,9 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                           <span className="text-ink-soft">{review.reply}</span>
                         </p>
                       ) : (
-                        <p className="text-sm text-ink-muted">No public reply yet.</p>
+                        <p className="text-sm text-ink-muted">
+                          Waiting for your reply — customers will see it on the product page.
+                        </p>
                       )}
                     </div>
 

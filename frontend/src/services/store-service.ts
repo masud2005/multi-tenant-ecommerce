@@ -47,4 +47,16 @@ export const storeService = {
   async updateOwnerSettings(payload: UpdateStoreSettingsPayload): Promise<ApiResponse<any>> {
     return await apiClient.patch<ApiResponse<any>>('/owner/settings', payload);
   },
+
+  // 4. Upload / replace store logo image
+  async uploadOwnerLogo(file: File): Promise<ApiResponse<any>> {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return await apiClient.patch<ApiResponse<any>>('/owner/settings/logo', formData);
+  },
+
+  // 5. Remove store logo
+  async removeOwnerLogo(): Promise<ApiResponse<any>> {
+    return await apiClient.delete<ApiResponse<any>>('/owner/settings/logo');
+  },
 };

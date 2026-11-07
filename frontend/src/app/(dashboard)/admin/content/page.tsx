@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Plus, Edit3, HelpCircle } from 'lucide-react';
+import { Plus, Edit3, HelpCircle, Save } from 'lucide-react';
 import { cmsPages, menus } from '@/data/admin';
-import { blogPosts, faqs as initialFaqs, announcement } from '@/data/content';
+import { blogPosts, faqs as initialFaqs } from '@/data/content';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
@@ -23,6 +23,7 @@ import { ContactEditorDrawer } from '@/components/dashboard/admin/content/Contac
 import { AboutEditorDrawer } from '@/components/dashboard/admin/content/AboutEditorDrawer';
 import { ReturnsEditorDrawer } from '@/components/dashboard/admin/content/ReturnsEditorDrawer';
 import { faqService } from '@/services/faq-service';
+import { storeService } from '@/services/store-service';
 import { cn } from '@/utils/cn';
 
 type Tab = 'pages' | 'blog' | 'navigation' | 'faq';
@@ -35,9 +36,14 @@ const tone = {
 export default function AdminContentPage() {
   const [tab, setTab] = useState<Tab>('pages');
   const [editing, setEditing] = useState<string | null>(null);
-  const [bar, setBar] = useState(true);
   const [publishMode, setPublishMode] = useState('Publish now');
   const page = cmsPages.find((p) => p.id === editing);
+
+  // Announcement bar (persisted in tenant store settings — no mock defaults)
+  const [announcementText, setAnnouncementText] = useState('');
+  const [announcementEnabled, setAnnouncementEnabled] = useState(false);
+  const [announcementLoading, setAnnouncementLoading] = useState(true);
+  const [announcementSaving, setAnnouncementSaving] = useState(false);
 
   // About, Contact, FAQ & Returns Editor state
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -64,9 +70,27 @@ export default function AdminContentPage() {
   const [activeFaqFilter, setActiveFaqFilter] = useState<string>('all');
   const [loadingFaqs, setLoadingFaqs] = useState(false);
 
-  // Fetch real FAQs from backend on mount
+  // Load announcement + FAQs from backend on mount
   useEffect(() => {
     let isMounted = true;
+
+    async function loadAnnouncement() {
+      try {
+        setAnnouncementLoading(true);
+        const res = await storeService.getOwnerSettings();
+        if (!isMounted || !res?.data) return;
+        const d = res.data;
+        setAnnouncementText(
+          typeof d.announcement === 'string' ? d.announcement : ''
+        );
+        setAnnouncementEnabled(Boolean(d.announcementEnabled));
+      } catch (err) {
+        console.error('Error fetching announcement settings:', err);
+      } finally {
+        if (isMounted) setAnnouncementLoading(false);
+      }
+    }
+
     async function loadFaqs() {
       try {
         setLoadingFaqs(true);
@@ -92,11 +116,57 @@ export default function AdminContentPage() {
         if (isMounted) setLoadingFaqs(false);
       }
     }
+
+    loadAnnouncement();
     loadFaqs();
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const saveAnnouncement = async (overrides?: {
+    text?: string;
+    enabled?: boolean;
+  }) => {
+    const text = (overrides?.text ?? announcementText).trim();
+    const enabled = overrides?.enabled ?? announcementEnabled;
+
+    if (enabled && !text) {
+      toast.error('Add announcement text before showing it on the storefront');
+      return false;
+    }
+
+    try {
+      setAnnouncementSaving(true);
+      await storeService.updateOwnerSettings({
+        announcement: text,
+        announcementEnabled: enabled,
+      });
+      setAnnouncementText(text);
+      setAnnouncementEnabled(enabled);
+      toast.success(
+        overrides?.enabled !== undefined
+          ? enabled
+            ? 'Announcement bar is live on the storefront'
+            : 'Announcement bar hidden from the storefront'
+          : 'Announcement bar saved'
+      );
+      return true;
+    } catch (err) {
+      console.error('Failed to save announcement:', err);
+      toast.error('Failed to save announcement bar');
+      return false;
+    } finally {
+      setAnnouncementSaving(false);
+    }
+  };
+
+  const handleAnnouncementToggle = async (enabled: boolean) => {
+    const previous = announcementEnabled;
+    setAnnouncementEnabled(enabled);
+    const ok = await saveAnnouncement({ enabled });
+    if (!ok) setAnnouncementEnabled(previous);
+  };
 
   const filteredFaqs =
     activeFaqFilter === 'all'
@@ -168,23 +238,46 @@ export default function AdminContentPage() {
             )
           }
         />
-        <Panel className="mb-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="min-w-[240px] flex-1">
-              <p className="text-sm font-medium text-ink">Announcement bar</p>
-              <p className="text-sm text-ink-muted">{announcement}</p>
+        <Panel
+          className="mb-6"
+          title="Announcement bar"
+          description="Shown above the storefront navigation when enabled. Same setting as Store Settings."
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Switch
+                checked={announcementEnabled}
+                onChange={handleAnnouncementToggle}
+                label="Show announcement bar on storefront"
+                disabled={announcementLoading || announcementSaving}
+              />
+              <GuardedButton
+                module="content"
+                action="update"
+                size="sm"
+                variant="secondary"
+                disabled={announcementLoading || announcementSaving}
+                onClick={() => saveAnnouncement()}
+              >
+                <Save className="h-4 w-4" aria-hidden />
+                {announcementSaving ? 'Saving…' : 'Save text'}
+              </GuardedButton>
             </div>
-            <Switch
-              checked={bar}
-              onChange={(v) => {
-                setBar(v);
-                toast.success(
-                  v ? 'Announcement bar shown' : 'Announcement bar hidden'
-                );
-              }}
-              label="Show announcement bar"
-              hideLabel
+            <Input
+              label="Banner text"
+              value={announcementText}
+              onChange={(e) => setAnnouncementText(e.target.value)}
+              placeholder="e.g. Free delivery inside Dhaka on orders over ৳2,500"
+              disabled={announcementLoading || announcementSaving}
+              hint="Keep it short — one line works best on mobile."
             />
+            {announcementEnabled && announcementText.trim() ? (
+              <div className="overflow-hidden rounded-md border border-line">
+                <div className="bg-ink px-4 py-1.5 text-center text-xs font-medium tracking-wide text-canvas">
+                  {announcementText.trim()}
+                </div>
+              </div>
+            ) : null}
           </div>
         </Panel>
         <div className="mb-6">

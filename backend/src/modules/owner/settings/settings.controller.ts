@@ -1,15 +1,21 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
   HttpStatus,
   Patch,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -70,5 +76,52 @@ export class SettingsController {
   ) {
     const tenantId = tenantHeader || user?.tenantId;
     return this.settingsService.updateStoreSettings(dto, tenantId);
+  }
+
+  // 3. Upload / replace store logo
+  @Patch('logo')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('logo'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        logo: {
+          type: 'string',
+          format: 'binary',
+          description: 'Store logo image file',
+        },
+      },
+      required: ['logo'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload or replace the store logo image' })
+  @ApiResponse({ status: 200, description: 'Store logo uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or missing image file' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
+  async uploadLogo(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.settingsService.uploadLogo(file, tenantId);
+  }
+
+  // 4. Remove store logo
+  @Delete('logo')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove the store logo (storefront falls back to name)' })
+  @ApiResponse({ status: 200, description: 'Store logo removed successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
+  async removeLogo(
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.settingsService.removeLogo(tenantId);
   }
 }

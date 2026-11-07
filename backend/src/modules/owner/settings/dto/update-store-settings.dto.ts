@@ -29,16 +29,16 @@ export class UpdateStoreSettingsDto {
   tagline?: string;
 
   @ApiPropertyOptional({
-    description: 'Store logo image URL',
-    example: '/images/tanti-logo.svg',
+    description: 'Store logo image URL (empty string clears the logo)',
+    example: 'https://res.cloudinary.com/demo/image/upload/store-logo.png',
   })
   @IsString()
   @IsOptional()
   logo?: string;
 
   @ApiPropertyOptional({
-    description: 'Store favicon image URL',
-    example: '/favicon.ico',
+    description: 'Store favicon image URL (empty string clears the favicon)',
+    example: 'https://res.cloudinary.com/demo/image/upload/favicon.png',
   })
   @IsString()
   @IsOptional()

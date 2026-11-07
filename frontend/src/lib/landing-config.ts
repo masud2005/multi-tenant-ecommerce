@@ -27,12 +27,22 @@ export interface LandingSectionSetting {
 
 export type LandingDesigns = Record<LandingSectionId, LandingSectionSetting>;
 
+export interface LandingHeroSlide {
+  id: string;
+  image: string;
+  alt: string;
+}
+
+export const MAX_HERO_SLIDES = 5;
+
 export interface LandingConfig {
   heroEyebrow: string;
   heroTitle: string;
   heroSubtitle: string;
   heroCta: string;
   heroScript: string;
+  /** Custom hero carousel images. Empty = fall back to collections/products. */
+  heroSlides: LandingHeroSlide[];
   featuredEyebrow: string;
   featuredTitle: string;
   featuredSubtitle: string;
@@ -42,6 +52,9 @@ export interface LandingConfig {
   promoSubtitle: string;
   promoCta: string;
   promoScript: string;
+  /** Custom offer/promo image. Empty = fall back to first collection/product image. */
+  promoImage: string;
+  promoImageAlt: string;
   picksEyebrow: string;
   picksTitle: string;
   picksSubtitle: string;
@@ -136,6 +149,9 @@ const COPY_DEFAULTS = {
 
 export const DEFAULT_LANDING_CONFIG: LandingConfig = {
   ...COPY_DEFAULTS,
+  heroSlides: [],
+  promoImage: '',
+  promoImageAlt: '',
   designs: defaultDesigns(),
 };
 
@@ -143,6 +159,33 @@ function asText(value: unknown, fallback: string) {
   if (typeof value !== 'string') return fallback;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed.slice(0, 220) : fallback;
+}
+
+function asImageUrl(value: unknown, fallback = '') {
+  if (typeof value !== 'string') return fallback;
+  return value.trim();
+}
+
+function readHeroSlides(value: unknown): LandingHeroSlide[] {
+  if (!Array.isArray(value)) return [];
+  const slides: LandingHeroSlide[] = [];
+  for (let i = 0; i < value.length; i += 1) {
+    const item = value[i];
+    if (!item || typeof item !== 'object') continue;
+    const record = item as Partial<LandingHeroSlide>;
+    const image = asImageUrl(record.image);
+    if (!image) continue;
+    slides.push({
+      id: typeof record.id === 'string' && record.id.trim() ? record.id.trim() : `slide-${i + 1}`,
+      image,
+      alt:
+        typeof record.alt === 'string' && record.alt.trim()
+          ? record.alt.trim().slice(0, 120)
+          : `Hero slide ${slides.length + 1}`,
+    });
+    if (slides.length >= MAX_HERO_SLIDES) break;
+  }
+  return slides;
 }
 
 export function resolveDesign(sectionId: LandingSectionId, selected: string) {
@@ -195,6 +238,7 @@ export function normalizeLandingConfig(value: unknown): LandingConfig {
     heroSubtitle: asText(source.heroSubtitle, base.heroSubtitle),
     heroCta: asText(source.heroCta, base.heroCta),
     heroScript: asText(source.heroScript, base.heroScript),
+    heroSlides: readHeroSlides(source.heroSlides),
     featuredEyebrow: asText(source.featuredEyebrow, base.featuredEyebrow),
     featuredTitle: asText(source.featuredTitle, base.featuredTitle),
     featuredSubtitle: asText(source.featuredSubtitle, base.featuredSubtitle),
@@ -204,6 +248,8 @@ export function normalizeLandingConfig(value: unknown): LandingConfig {
     promoSubtitle: asText(source.promoSubtitle, base.promoSubtitle),
     promoCta: asText(source.promoCta, base.promoCta),
     promoScript: asText(source.promoScript, base.promoScript),
+    promoImage: asImageUrl(source.promoImage),
+    promoImageAlt: asText(source.promoImageAlt, ''),
     picksEyebrow: asText(source.picksEyebrow, base.picksEyebrow),
     picksTitle: asText(source.picksTitle, base.picksTitle),
     picksSubtitle: asText(source.picksSubtitle, base.picksSubtitle),

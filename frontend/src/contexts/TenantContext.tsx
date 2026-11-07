@@ -34,7 +34,8 @@ export function TenantProvider({
 }) {
   const [currentSlug, setCurrentSlug] = useState<string>(initialSlug);
   const [liveTenant, setLiveTenant] = useState<Tenant | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // Start loading so storefront never flashes mock announcement before API.
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const fallbackTenant = useMemo(() => {
     return getTenantBySlug(currentSlug);
@@ -49,12 +50,24 @@ export function TenantProvider({
         const mapped: Tenant = {
           id: raw.id || fallbackTenant.id,
           slug: raw.slug || slug,
-          name: raw.name || fallbackTenant.name,
-          tagline: raw.tagline || fallbackTenant.tagline,
+          name: typeof raw.name === 'string' ? raw.name : fallbackTenant.name,
+          tagline:
+            typeof raw.tagline === 'string' ? raw.tagline : undefined,
           domain: raw.domain || fallbackTenant.domain,
           customDomain: raw.customDomain || fallbackTenant.customDomain,
-          logoUrl: raw.logo || raw.logoUrl || fallbackTenant.logoUrl,
-          faviconUrl: raw.favicon || raw.faviconUrl || fallbackTenant.faviconUrl,
+          // Branding is backend-only — never fall back to mock logo assets.
+          logoUrl:
+            typeof raw.logo === 'string' && raw.logo.trim()
+              ? raw.logo.trim()
+              : typeof raw.logoUrl === 'string' && raw.logoUrl.trim()
+                ? raw.logoUrl.trim()
+                : undefined,
+          faviconUrl:
+            typeof raw.favicon === 'string' && raw.favicon.trim()
+              ? raw.favicon.trim()
+              : typeof raw.faviconUrl === 'string' && raw.faviconUrl.trim()
+                ? raw.faviconUrl.trim()
+                : undefined,
           plan: (raw.plan as any) || fallbackTenant.plan,
           planState: (raw.planState as any) || fallbackTenant.planState,
           currency: {
@@ -64,8 +77,13 @@ export function TenantProvider({
             position: raw.currencyPosition || fallbackTenant.currency.position,
           },
           theme: raw.theme || fallbackTenant.theme,
-          announcement: raw.announcement ?? (fallbackTenant as any).announcement,
-          announcementEnabled: raw.announcementEnabled ?? (fallbackTenant as any).announcementEnabled ?? true,
+          // Announcement is backend-only — never fall back to mock data.
+          announcement:
+            typeof raw.announcement === 'string' ? raw.announcement : undefined,
+          announcementEnabled:
+            typeof raw.announcementEnabled === 'boolean'
+              ? raw.announcementEnabled
+              : false,
           modules: raw.modules || fallbackTenant.modules,
           contact: {
             email: raw.contact?.email || fallbackTenant.contact.email,
@@ -82,9 +100,11 @@ export function TenantProvider({
           socials: raw.socials || fallbackTenant.socials,
         };
         setLiveTenant(mapped);
+      } else {
+        setLiveTenant(null);
       }
     } catch {
-      // Graceful fallback to mock data
+      // Graceful fallback to mock data (without announcement)
       setLiveTenant(null);
     } finally {
       setIsLoading(false);
@@ -95,7 +115,18 @@ export function TenantProvider({
     fetchTenantData(currentSlug);
   }, [currentSlug, fetchTenantData]);
 
-  const activeTenant = liveTenant || fallbackTenant;
+  // Fallback tenant never carries branding/announcement — only live API data may.
+  const activeTenant = useMemo<Tenant>(() => {
+    if (liveTenant) return liveTenant;
+    return {
+      ...fallbackTenant,
+      name: '',
+      logoUrl: undefined,
+      faviconUrl: undefined,
+      announcement: undefined,
+      announcementEnabled: false,
+    };
+  }, [liveTenant, fallbackTenant]);
   const isSuspended = activeTenant.planState === 'suspended';
 
   const formatPrice = useCallback(
@@ -157,9 +188,16 @@ export function useTenant(): TenantContextValue {
   if (!ctx) {
     const fallback = mockTenants[DEFAULT_TENANT_SLUG];
     return {
-      tenant: fallback,
+      tenant: {
+        ...fallback,
+        name: '',
+        logoUrl: undefined,
+        faviconUrl: undefined,
+        announcement: undefined,
+        announcementEnabled: false,
+      },
       isSuspended: false,
-      isLoading: false,
+      isLoading: true,
       formatPrice: (amount: number) => `৳${amount.toLocaleString()}`,
       hasModule: () => true,
       switchTenant: () => {},

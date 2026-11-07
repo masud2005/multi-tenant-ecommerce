@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { StorageService } from '../../../shared/storage/storage.service';
 import { UpdateStoreSettingsDto } from './dto';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 
@@ -12,7 +13,10 @@ import { ResponseHelper } from '../../../common/helpers/response.helper';
 export class SettingsService {
   private readonly logger = new Logger(SettingsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {}
 
   // Helper to resolve the active tenant ID
   private async resolveTenantId(tenantId?: string): Promise<string> {
@@ -35,35 +39,37 @@ export class SettingsService {
     return defaultTenant.id;
   }
 
+  private readonly settingsSelect = {
+    id: true,
+    name: true,
+    slug: true,
+    tagline: true,
+    domain: true,
+    customDomain: true,
+    logo: true,
+    favicon: true,
+    status: true,
+    plan: true,
+    planState: true,
+    currency: true,
+    currencySymbol: true,
+    currencyPosition: true,
+    contact: true,
+    socials: true,
+    settings: true,
+    announcement: true,
+    announcementEnabled: true,
+    createdAt: true,
+    updatedAt: true,
+  } as const;
+
   // 1. Get complete store settings and public contact details
   async getStoreSettings(tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: targetTenantId },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        tagline: true,
-        domain: true,
-        customDomain: true,
-        logo: true,
-        favicon: true,
-        status: true,
-        plan: true,
-        planState: true,
-        currency: true,
-        currencySymbol: true,
-        currencyPosition: true,
-        contact: true,
-        socials: true,
-        settings: true,
-        announcement: true,
-        announcementEnabled: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: this.settingsSelect,
     });
 
     if (!tenant) {
@@ -123,8 +129,12 @@ export class SettingsService {
 
     if (dto.name !== undefined) updateData.name = dto.name.trim();
     if (dto.tagline !== undefined) updateData.tagline = dto.tagline.trim();
-    if (dto.logo !== undefined) updateData.logo = dto.logo;
-    if (dto.favicon !== undefined) updateData.favicon = dto.favicon;
+    if (dto.logo !== undefined) {
+      updateData.logo = dto.logo.trim() ? dto.logo.trim() : null;
+    }
+    if (dto.favicon !== undefined) {
+      updateData.favicon = dto.favicon.trim() ? dto.favicon.trim() : null;
+    }
     if (dto.currency !== undefined) updateData.currency = dto.currency;
     if (dto.currencySymbol !== undefined)
       updateData.currencySymbol = dto.currencySymbol;
@@ -168,36 +178,105 @@ export class SettingsService {
         ...updateData,
         updatedAt: new Date(),
       },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        tagline: true,
-        domain: true,
-        customDomain: true,
-        logo: true,
-        favicon: true,
-        status: true,
-        plan: true,
-        planState: true,
-        currency: true,
-        currencySymbol: true,
-        currencyPosition: true,
-        contact: true,
-        socials: true,
-        settings: true,
-        announcement: true,
-        announcementEnabled: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: this.settingsSelect,
     });
 
-    this.logger.log(`Store settings updated for tenant: ${updated.name} (${updated.slug})`);
+    this.logger.log(
+      `Store settings updated for tenant: ${updated.name} (${updated.slug})`,
+    );
 
     return ResponseHelper.success(
       updated,
       'Store settings updated successfully',
     );
+  }
+
+  // 3. Upload / replace store logo
+  async uploadLogo(file: Express.Multer.File, tenantId?: string) {
+    if (!file) {
+      throw new BadRequestException('Logo image file is required');
+    }
+
+    if (!file.mimetype?.startsWith('image/')) {
+      throw new BadRequestException('Logo must be an image file');
+    }
+
+    const targetTenantId = await this.resolveTenantId(tenantId);
+    const existing = await this.prisma.tenant.findUnique({
+      where: { id: targetTenantId },
+      select: { id: true, logo: true, name: true, slug: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Store not found');
+    }
+
+    const uploadResult = await this.storageService.uploadFile(file, {
+      folder: 'store/logos',
+      publicId: `tenant-${existing.id}-logo`,
+      overwrite: true,
+      tags: ['store-logo', existing.slug],
+    });
+
+    try {
+      const updated = await this.prisma.tenant.update({
+        where: { id: targetTenantId },
+        data: {
+          logo: uploadResult.url,
+          updatedAt: new Date(),
+        },
+        select: this.settingsSelect,
+      });
+
+      // Best-effort cleanup if previous logo was a different Cloudinary asset
+      if (
+        existing.logo &&
+        existing.logo !== uploadResult.url &&
+        !existing.logo.includes(`tenant-${existing.id}-logo`)
+      ) {
+        this.storageService.deleteFile(existing.logo).catch(() => {});
+      }
+
+      this.logger.log(
+        `Store logo uploaded for tenant: ${updated.name} (${updated.slug})`,
+      );
+
+      return ResponseHelper.success(updated, 'Store logo uploaded successfully');
+    } catch (error) {
+      await this.storageService.deleteFile(uploadResult.url).catch(() => {});
+      throw error;
+    }
+  }
+
+  // 4. Remove store logo
+  async removeLogo(tenantId?: string) {
+    const targetTenantId = await this.resolveTenantId(tenantId);
+    const existing = await this.prisma.tenant.findUnique({
+      where: { id: targetTenantId },
+      select: { id: true, logo: true, name: true, slug: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Store not found');
+    }
+
+    const updated = await this.prisma.tenant.update({
+      where: { id: targetTenantId },
+      data: {
+        logo: null,
+        updatedAt: new Date(),
+      },
+      select: this.settingsSelect,
+    });
+
+    if (existing.logo) {
+      this.storageService.deleteFile(existing.logo).catch(() => {});
+    }
+
+    this.logger.log(
+      `Store logo removed for tenant: ${updated.name} (${updated.slug})`,
+    );
+
+    return ResponseHelper.success(updated, 'Store logo removed successfully');
   }
 }
