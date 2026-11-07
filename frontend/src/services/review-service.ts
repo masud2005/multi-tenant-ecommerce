@@ -170,6 +170,49 @@ export const reviewService = {
     }
   },
 
+  // 3.0 Fetch my reviews + delivered products awaiting review (GET /customer/reviews/me)
+  async getMyReviews(): Promise<
+    ApiResponse<{
+      reviews: Review[];
+      reviewableProducts: Array<{
+        id: string;
+        title: string;
+        slug: string;
+        images: string[];
+        price?: number;
+        salePrice?: number | null;
+      }>;
+    }>
+  > {
+    try {
+      const res = await apiClient.get<ApiResponse<any>>('/customer/reviews/me');
+      if (res?.data) {
+        const rawReviews = Array.isArray(res.data.reviews) ? res.data.reviews : [];
+        const rawProducts = Array.isArray(res.data.reviewableProducts)
+          ? res.data.reviewableProducts
+          : [];
+        return {
+          ...res,
+          data: {
+            reviews: rawReviews.map(mapBackendReviewToFrontend),
+            reviewableProducts: rawProducts.map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              slug: p.slug,
+              images: Array.isArray(p.images) ? p.images : [],
+              price: Number(p.price) || 0,
+              salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+            })),
+          },
+        };
+      }
+      throw new Error('No data received');
+    } catch (error: any) {
+      console.warn('[review-service] Failed to fetch my reviews:', error?.message || error);
+      throw error;
+    }
+  },
+
   // 3.1 Fetch published reviews for store testimonials (GET /customer/reviews)
   async getStoreReviews(
     query: { page?: number; limit?: number; rating?: number } = {},

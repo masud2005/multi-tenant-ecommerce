@@ -112,7 +112,7 @@ export interface CreateOwnerReviewPayload {
   rating: number;
   title?: string;
   body: string;
-  productId?: string;
+  productId: string;
   verified?: boolean;
   size?: string;
   status?: ReviewStatus;

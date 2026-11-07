@@ -4,12 +4,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { CartItem } from '@/types/commerce';
 import { cartService } from '@/services';
+import { authService } from '@/services/auth';
 import type { User } from './types';
 import { loadCart } from './utils';
 
 export function useStoreCart(user?: User | null) {
   // Initialize immediately from localStorage so cart never flashes empty on page refresh
-  const [cart, setCart] = useState<CartItem[]>(() => loadCart());
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    // If visitor is definitely not authenticated, do not restore stale cart from previous sessions
+    if (typeof window !== 'undefined' && !authService.isAuthenticated()) {
+      return [];
+    }
+    return loadCart();
+  });
 
   // Keep localStorage continuously in sync with current cart state
   useEffect(() => {
@@ -19,6 +26,18 @@ export function useStoreCart(user?: User | null) {
       }
     } catch {}
   }, [cart]);
+
+  // Reset cart to empty if unauthenticated visitor visits the store or when user logs out
+  useEffect(() => {
+    if (!user?.id && !authService.isAuthenticated()) {
+      setCart([]);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('tanti.cart');
+        } catch {}
+      }
+    }
+  }, [user?.id]);
 
   // Sync cart with backend database when authenticated customer logs in or refreshes
   useEffect(() => {

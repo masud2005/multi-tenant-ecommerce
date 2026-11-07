@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   BadgeCheck,
   Camera,
-  Flag,
   MessageSquare,
   Sparkles,
   Star,
@@ -50,12 +50,14 @@ const FIT_OPTIONS = [
 
 export function ProductReviews({ product }: ProductReviewsProps) {
   const { user } = useStore();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // State for reviews and live backend data
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState<ReviewStats>({
     totalReviews: 0,
-    averageRating: 5.0,
+    averageRating: 0,
     distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
     withPhotosCount: 0,
   });
@@ -205,14 +207,17 @@ export function ProductReviews({ product }: ProductReviewsProps) {
     e.preventDefault();
     const errors: Record<string, string> = {};
 
+    if (!user) {
+      toast.error('Please sign in to submit a review.');
+      router.push(`/login?next=${encodeURIComponent(`${pathname || '/'}#reviews`)}`);
+      return;
+    }
+
     if (!form.rating || form.rating < 1 || form.rating > 5) {
       errors.rating = 'Please select a star rating.';
     }
     if (!form.body.trim() || form.body.trim().length < 3) {
       errors.body = 'Please share your thoughts (at least 3 characters).';
-    }
-    if (!user && !form.author.trim()) {
-      errors.author = 'Please enter your name.';
     }
 
     setFormErrors(errors);
@@ -220,7 +225,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
 
     setSubmitting(true);
     try {
-      const authorName = user?.name || form.author.trim() || 'Customer';
+      const authorName = user.name || 'Customer';
       const autoTitle =
         form.body.trim().length > 40
           ? `${form.body.trim().slice(0, 37)}...`
@@ -237,7 +242,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
 
       const res = await reviewService.createReview(payload);
       if (res?.data) {
-        toast.success('Your review has been published instantly! 🎉');
+        toast.success('Your review has been published.');
         setIsWriteModalOpen(false);
         setForm({
           rating: 5,
@@ -296,9 +301,14 @@ export function ProductReviews({ product }: ProductReviewsProps) {
         ) : (
           <Button
             onClick={() => {
-              if (user?.name) {
-                setForm((prev) => ({ ...prev, author: user.name }));
+              if (!user) {
+                toast.error('Please sign in to write a review.');
+                router.push(
+                  `/login?next=${encodeURIComponent(`${pathname || '/'}#reviews`)}`,
+                );
+                return;
               }
+              setForm((prev) => ({ ...prev, author: user.name || '' }));
               setIsWriteModalOpen(true);
             }}
             className="cursor-pointer gap-2 shadow-sm shrink-0"
@@ -633,8 +643,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
                       </div>
                     )}
 
-                    {/* Bottom Actions: Helpful & Report */}
-                    <div className="mt-5 flex items-center justify-between border-t border-line/60 pt-3 text-xs text-ink-muted">
+                    <div className="mt-5 flex items-center border-t border-line/60 pt-3 text-xs text-ink-muted">
                       <button
                         type="button"
                         disabled={isVoted}
@@ -649,15 +658,6 @@ export function ProductReviews({ product }: ProductReviewsProps) {
                         <ThumbsUp className={cn('h-3.5 w-3.5', isVoted && 'fill-emerald-600')} />
                         <span>Helpful ({rev.helpful})</span>
                         {isVoted && <span className="text-xs font-bold">✓ Voted</span>}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => toast.info('Thank you! This review has been flagged for check.')}
-                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 hover:bg-subtle hover:text-ink transition-colors cursor-pointer text-xs"
-                      >
-                        <Flag className="h-3 w-3" />
-                        <span>Report</span>
                       </button>
                     </div>
                   </article>
@@ -711,20 +711,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
             )}
           </div>
 
-          {/* 2. Author Name (Only if not logged in) */}
-          {!user && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-ink">Your Name *</label>
-              <Input
-                placeholder="e.g. Sarah Jenkins"
-                value={form.author}
-                onChange={(e) => setForm((prev) => ({ ...prev, author: e.target.value }))}
-                error={formErrors.author}
-              />
-            </div>
-          )}
-
-          {/* 3. Review Details Textarea */}
+          {/* Review Details Textarea */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-ink">Your Review *</label>
             <Textarea

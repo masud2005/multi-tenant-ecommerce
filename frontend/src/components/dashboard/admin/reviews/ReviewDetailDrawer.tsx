@@ -209,8 +209,8 @@ export function ReviewDetailDrawer({
       >
         <div className="space-y-6 p-5">
           {/* Top Moderation Toolbar */}
-          <div className="flex items-center justify-between rounded-xl bg-subtle/60 p-3.5 border border-line">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 rounded-lg border border-line bg-subtle p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge tone={isPublished ? 'success' : 'neutral'} dot>
                 {isPublished ? 'Live & Published' : 'Hidden from Store'}
               </Badge>
@@ -221,7 +221,7 @@ export function ReviewDetailDrawer({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
                 variant={isPublished ? 'secondary' : 'primary'}

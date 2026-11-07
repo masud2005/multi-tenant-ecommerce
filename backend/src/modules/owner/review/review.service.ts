@@ -14,6 +14,7 @@ import {
 } from './dto';
 import { ReviewStatus } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
+import { syncProductReviewAggregates } from '../../../common/helpers/product-review-stats.helper';
 
 @Injectable()
 export class ReviewService {
@@ -21,7 +22,6 @@ export class ReviewService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // Helper to resolve active tenant context
   private async resolveTenantId(tenantId?: string): Promise<string> {
     if (tenantId && tenantId.length > 10) {
       const exists = await this.prisma.tenant.findUnique({
@@ -42,7 +42,6 @@ export class ReviewService {
     return defaultTenant.id;
   }
 
-  // 1. Fetch all store reviews with multi-search, filters, pagination, and analytics
   async getReviews(query: OwnerReviewQueryDto, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
@@ -51,17 +50,14 @@ export class ReviewService {
       deletedAt: null,
     };
 
-    // Rating star filter
     if (query.rating && query.rating >= 1 && query.rating <= 5) {
       where.rating = query.rating;
     }
 
-    // Product specific filter
     if (query.productId) {
       where.productId = query.productId;
     }
 
-    // Reply status filter
     if (typeof query.hasReply === 'boolean') {
       if (query.hasReply) {
         where.reply = { not: null };
@@ -70,12 +66,10 @@ export class ReviewService {
       }
     }
 
-    // Photos only filter
     if (query.withPhotosOnly) {
       where.photos = { isEmpty: false };
     }
 
-    // Search query across customer author, title, body, and product title
     if (query.search?.trim()) {
       const s = query.search.trim();
       where.OR = [
@@ -94,8 +88,7 @@ export class ReviewService {
     const sortOrder = query.sortOrder || 'desc';
     const orderBy = { [sortBy]: sortOrder };
 
-    // Parallel execution for review list, total count, and overview stats
-    const [reviews, total, allStoreReviews] = await Promise.all([
+    const [reviews, total, publishedReviews] = await Promise.all([
       this.prisma.review.findMany({
         where,
         include: {
@@ -124,7 +117,11 @@ export class ReviewService {
       }),
       this.prisma.review.count({ where }),
       this.prisma.review.findMany({
-        where: { tenantId: targetTenantId, deletedAt: null },
+        where: {
+          tenantId: targetTenantId,
+          deletedAt: null,
+          status: ReviewStatus.PUBLISHED,
+        },
         select: {
           rating: true,
           reply: true,
@@ -133,13 +130,12 @@ export class ReviewService {
       }),
     ]);
 
-    // Compute aggregate store metrics
     const distribution: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     let totalScore = 0;
     let repliedCount = 0;
     let withPhotosCount = 0;
 
-    allStoreReviews.forEach((r) => {
+    publishedReviews.forEach((r) => {
       const star = Math.min(5, Math.max(1, r.rating));
       distribution[star] = (distribution[star] || 0) + 1;
       totalScore += star;
@@ -151,19 +147,19 @@ export class ReviewService {
       }
     });
 
-    const totalStoreReviews = allStoreReviews.length;
+    const totalPublished = publishedReviews.length;
     const averageRating =
-      totalStoreReviews > 0 ? Number((totalScore / totalStoreReviews).toFixed(1)) : 5.0;
+      totalPublished > 0 ? Number((totalScore / totalPublished).toFixed(1)) : 0;
 
     return ResponseHelper.success(
       {
         reviews,
         stats: {
-          totalReviews: totalStoreReviews,
+          totalReviews: totalPublished,
           averageRating,
           distribution,
           repliedCount,
-          pendingReplyCount: Math.max(0, totalStoreReviews - repliedCount),
+          pendingReplyCount: Math.max(0, totalPublished - repliedCount),
           withPhotosCount,
         },
         pagination: {
@@ -177,7 +173,6 @@ export class ReviewService {
     );
   }
 
-  // 2. Retrieve detailed single review
   async getReviewById(id: string, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
@@ -216,7 +211,6 @@ export class ReviewService {
     return ResponseHelper.success(review, 'Review details retrieved successfully');
   }
 
-  // 3. Add or update official store admin reply to a review
   async replyToReview(
     id: string,
     dto: ReplyReviewDto,
@@ -256,12 +250,13 @@ export class ReviewService {
     });
 
     const adminName = adminUser?.name || adminUser?.email || 'Admin';
-    this.logger.log(`Admin [${adminName}] replied to review "${id}" for product "${updated.product?.title}"`);
+    this.logger.log(
+      `Admin [${adminName}] replied to review "${id}" for product "${updated.product?.title}"`,
+    );
 
     return ResponseHelper.success(updated, 'Admin reply posted successfully');
   }
 
-  // 4. Create review manually by Owner / Admin
   async createReviewManually(
     dto: CreateOwnerReviewDto,
     tenantId?: string,
@@ -269,36 +264,31 @@ export class ReviewService {
   ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
-    // If productId is not provided, find the first product in tenant or fallback
-    let targetProductId = dto.productId;
-    if (!targetProductId) {
-      const firstProduct = await this.prisma.product.findFirst({
-        where: { tenantId: targetTenantId, deletedAt: null },
-        orderBy: { createdAt: 'desc' },
-      });
-      if (firstProduct) {
-        targetProductId = firstProduct.id;
-      } else {
-        throw new BadRequestException('A product must exist in the catalog to attach a review');
-      }
-    } else {
-      const productExists = await this.prisma.product.findFirst({
-        where: { id: targetProductId, tenantId: targetTenantId, deletedAt: null },
-      });
-      if (!productExists) {
-        throw new NotFoundException(`Product with ID "${targetProductId}" not found`);
-      }
+    if (!dto.productId?.trim()) {
+      throw new BadRequestException('Product ID is required to create a review');
+    }
+
+    const productExists = await this.prisma.product.findFirst({
+      where: {
+        id: dto.productId.trim(),
+        tenantId: targetTenantId,
+        deletedAt: null,
+      },
+    });
+
+    if (!productExists) {
+      throw new NotFoundException(`Product with ID "${dto.productId}" not found`);
     }
 
     const review = await this.prisma.review.create({
       data: {
         tenantId: targetTenantId,
-        productId: targetProductId,
+        productId: productExists.id,
         author: dto.author.trim(),
         rating: dto.rating,
-        title: dto.title?.trim() || 'Verified Customer Review',
+        title: dto.title?.trim() || 'Customer Review',
         body: dto.body.trim(),
-        verified: dto.verified !== undefined ? dto.verified : true,
+        verified: dto.verified === true,
         size: dto.size?.trim() || null,
         status: dto.status || ReviewStatus.PUBLISHED,
       },
@@ -314,12 +304,15 @@ export class ReviewService {
       },
     });
 
+    await syncProductReviewAggregates(this.prisma, productExists.id);
+
     const adminName = adminUser?.name || adminUser?.email || 'Admin';
-    this.logger.log(`Admin [${adminName}] created review "${review.id}" for product "${review.product?.title}"`);
+    this.logger.log(
+      `Admin [${adminName}] created review "${review.id}" for product "${review.product?.title}"`,
+    );
     return ResponseHelper.success(review, 'Review created successfully');
   }
 
-  // 5. Update review status (PUBLISHED, HIDDEN, REJECTED, PENDING)
   async updateReviewStatus(
     id: string,
     dto: UpdateReviewStatusDto,
@@ -357,10 +350,11 @@ export class ReviewService {
       },
     });
 
+    await syncProductReviewAggregates(this.prisma, existing.productId);
+
     return ResponseHelper.success(updated, `Review status updated to ${dto.status}`);
   }
 
-  // 6. Update review details
   async updateReview(
     id: string,
     dto: UpdateOwnerReviewDto,
@@ -387,14 +381,21 @@ export class ReviewService {
     if (dto.verified !== undefined) data.verified = dto.verified;
     if (dto.size !== undefined) data.size = dto.size.trim();
     if (dto.status !== undefined) data.status = dto.status;
+
+    let nextProductId = existing.productId;
     if (dto.productId) {
       const productExists = await this.prisma.product.findFirst({
-        where: { id: dto.productId, tenantId: targetTenantId, deletedAt: null },
+        where: {
+          id: dto.productId,
+          tenantId: targetTenantId,
+          deletedAt: null,
+        },
       });
       if (!productExists) {
         throw new NotFoundException(`Product with ID "${dto.productId}" not found`);
       }
       data.productId = dto.productId;
+      nextProductId = dto.productId;
     }
 
     const updated = await this.prisma.review.update({
@@ -412,10 +413,14 @@ export class ReviewService {
       },
     });
 
+    await syncProductReviewAggregates(this.prisma, nextProductId);
+    if (existing.productId !== nextProductId) {
+      await syncProductReviewAggregates(this.prisma, existing.productId);
+    }
+
     return ResponseHelper.success(updated, 'Review updated successfully');
   }
 
-  // 7. Delete review (soft delete)
   async deleteReview(id: string, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
@@ -433,6 +438,8 @@ export class ReviewService {
         deletedAt: new Date(),
       },
     });
+
+    await syncProductReviewAggregates(this.prisma, existing.productId);
 
     return ResponseHelper.success({ id }, 'Review deleted successfully');
   }

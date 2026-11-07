@@ -152,28 +152,17 @@ export async function seedCustomers(prisma: PrismaClient) {
       skipDuplicates: true,
     });
 
-    // 6. Active Shopping Cart
+    // 6. Active Shopping Cart (Initialized empty - items added organically by users)
     await prisma.cart.deleteMany({
       where: { customerId: profile.id },
     });
 
-    const cart = await prisma.cart.create({
+    await prisma.cart.create({
       data: {
         tenantId: tenant.id,
         customerId: profile.id,
       },
     });
-
-    if (p1.variants?.[0]) {
-      await prisma.cartItem.create({
-        data: {
-          cartId: cart.id,
-          productId: p1.id,
-          variantId: p1.variants[0].id,
-          qty: 1,
-        },
-      });
-    }
 
     // 7. Verified Product Reviews
     await prisma.review.deleteMany({

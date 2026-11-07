@@ -37,12 +37,15 @@ export class CreateOwnerReviewDto {
   @MaxLength(2000)
   body: string;
 
-  @ApiPropertyOptional({ description: 'Product ID this review belongs to' })
+  @ApiProperty({ description: 'Product ID this review belongs to' })
   @IsString()
-  @IsOptional()
-  productId?: string;
+  @IsNotEmpty({ message: 'Product ID is required' })
+  productId: string;
 
-  @ApiPropertyOptional({ description: 'Whether the purchase is verified', default: true })
+  @ApiPropertyOptional({
+    description: 'Whether the purchase is verified',
+    default: false,
+  })
   @IsBoolean()
   @IsOptional()
   verified?: boolean;
