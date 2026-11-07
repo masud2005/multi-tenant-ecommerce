@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { useTenant } from '@/contexts/TenantContext';
-import { announcement } from '@/data/content';
 import { Drawer } from '@/components/ui/Drawer';
 import { cn } from '@/utils/cn';
 
@@ -76,10 +75,12 @@ export function StoreHeader() {
   return (
     <>
     <header className="fixed inset-x-0 top-0 z-40">
-      {/* Top Announcement Bar - fixed from the start with solid background */}
-      <div className="bg-ink text-canvas px-4 py-1.5 text-center text-xs font-medium tracking-wide border-b border-ink-soft/20 shadow-xs">
-        {announcement}
-      </div>
+      {/* Top Announcement Bar - Dynamic from Store Tenant Settings in DB */}
+      {Boolean(tenant.announcementEnabled && tenant.announcement?.trim()) && (
+        <div className="bg-ink text-canvas px-4 py-1.5 text-center text-xs font-medium tracking-wide border-b border-ink-soft/20 shadow-xs">
+          {tenant.announcement}
+        </div>
+      )}
 
       {/* Main Navbar - Frosted Glassmorphism on scroll */}
       <div

@@ -46,6 +46,22 @@ export class ReviewController {
     return this.reviewService.createReview(tenantId, userId, userRole, dto);
   }
 
+  // 1.1 Fetch all published store reviews (for testimonials carousel and storefront landing page)
+  @Get('reviews')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get published reviews for store testimonials' })
+  @ApiResponse({ status: 200, description: 'Store reviews retrieved successfully' })
+  async getStoreReviews(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('rating') rating?: number,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.reviewService.getStoreReviews({ page, limit, rating }, tenantId);
+  }
+
   // 2. Fetch all published reviews for a product with statistics and filters
   @Get('products/:productId/reviews')
   @HttpCode(HttpStatus.OK)

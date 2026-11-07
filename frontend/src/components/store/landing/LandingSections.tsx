@@ -534,6 +534,10 @@ function PicksSection({ config, model, design }: SectionProps) {
 // 6. TRUST SECTION
 // ==========================================
 function TrustSection({ model, design }: SectionProps) {
+  if (model.trustPoints.length === 0) {
+    return null;
+  }
+
   if (design === 'cards') {
     return (
       <section className="mx-auto mt-16 max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Store promises">
@@ -567,30 +571,131 @@ function TrustSection({ model, design }: SectionProps) {
 // 7. REVIEWS SECTION
 // ==========================================
 function ReviewsSection({ config, model, design }: SectionProps) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [isPaused, setIsPaused] = React.useState(false);
+
+  const scrollNext = React.useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    const firstCard = scrollRef.current.firstElementChild as HTMLElement | null;
+    const cardWidth = firstCard ? firstCard.clientWidth + 16 : 320;
+    if (scrollLeft + clientWidth >= scrollWidth - 15) {
+      scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      scrollRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' });
+    }
+  }, []);
+
+  const scrollPrev = React.useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth } = scrollRef.current;
+    const firstCard = scrollRef.current.firstElementChild as HTMLElement | null;
+    const cardWidth = firstCard ? firstCard.clientWidth + 16 : 320;
+    if (scrollLeft <= 15) {
+      scrollRef.current.scrollTo({ left: scrollWidth, behavior: 'smooth' });
+    } else {
+      scrollRef.current.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (isPaused || model.testimonials.length <= 1) return;
+    const timer = setInterval(() => {
+      scrollNext();
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [isPaused, model.testimonials.length, scrollNext]);
+
+  if (model.isReviewsLoading) {
+    return (
+      <section className="mx-auto mt-16 max-w-7xl px-4 sm:px-6 lg:mt-20 lg:px-8" aria-label="Loading reviews">
+        <div className="space-y-3 animate-pulse">
+          <div className="h-4 w-28 rounded bg-subtle" />
+          <div className="h-9 w-64 rounded bg-subtle" />
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-44 rounded-xl border border-line bg-subtle/50 animate-pulse" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (model.testimonials.length === 0) {
+    return (
+      <section className="mx-auto mt-16 max-w-7xl px-4 sm:px-6 lg:mt-20 lg:px-8">
+        <div>
+          <Eyebrow>{config.reviewsEyebrow}</Eyebrow>
+          <h2 className="mt-3 font-display text-4xl text-ink">{config.reviewsTitle}</h2>
+          <p className="mt-2 max-w-md text-sm text-ink-muted">{config.reviewsSubtitle}</p>
+        </div>
+        <p className="mt-8 rounded-lg border border-dashed border-line px-6 py-10 text-center text-sm text-ink-muted">
+          No customer reviews published yet. Reviews and ratings will appear here once submitted and approved.
+        </p>
+      </section>
+    );
+  }
+
   if (design === 'quotes') {
     return (
       <section className="mx-auto mt-16 max-w-7xl px-4 sm:px-6 lg:mt-20 lg:px-8">
-        <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
-          <div className="rounded-lg border border-line bg-surface p-8">
+        <div className="flex items-end justify-between gap-4 mb-8">
+          <div>
             <Eyebrow>{config.reviewsEyebrow}</Eyebrow>
             <h2 className="mt-3 font-display text-4xl text-ink">{config.reviewsTitle}</h2>
-            <p className="mt-3 text-sm text-ink-muted">{config.reviewsSubtitle}</p>
+            <p className="mt-2 text-sm text-ink-muted">{config.reviewsSubtitle}</p>
           </div>
-          <div className="grid gap-4">
-            {model.testimonials.map((review) => (
-              <figure key={review.name} className="rounded-lg bg-subtle px-6 py-5">
-                <Quote className="h-5 w-5 text-clay" aria-hidden />
-                <blockquote className="mt-3 font-display text-xl leading-snug text-ink">“{review.quote}”</blockquote>
-                <figcaption className="mt-4 flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium text-ink">
-                    {review.name}
-                    <span className="font-normal text-ink-muted"> · {review.location}</span>
-                  </span>
-                  <Stars rating={5} />
-                </figcaption>
-              </figure>
-            ))}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={scrollPrev}
+              aria-label="Previous review"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-ink transition-colors hover:bg-subtle hover:border-ink/40 active:scale-95 cursor-pointer shadow-xs"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={scrollNext}
+              aria-label="Next review"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-ink transition-colors hover:bg-subtle hover:border-ink/40 active:scale-95 cursor-pointer shadow-xs"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
+        </div>
+
+        <div
+          ref={scrollRef}
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={() => setIsPaused(true)}
+          onTouchEnd={() => setIsPaused(false)}
+          className="flex gap-5 overflow-x-auto scrollbar-none scroll-smooth pb-2"
+          style={{ scrollSnapType: 'x mandatory' }}
+        >
+          {model.testimonials.map((review, idx) => (
+            <figure
+              key={review.id || `${review.name}-${idx}`}
+              style={{ scrollSnapAlign: 'start' }}
+              className="w-full shrink-0 sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)] rounded-xl bg-subtle/80 border border-line/60 p-7 flex flex-col justify-between"
+            >
+              <div>
+                <Quote className="h-6 w-6 text-clay/70" aria-hidden />
+                <blockquote className="mt-4 font-display text-lg leading-snug text-ink">
+                  “{review.quote}”
+                </blockquote>
+              </div>
+              <figcaption className="mt-6 pt-4 border-t border-line/40 flex items-center justify-between gap-3 text-sm">
+                <span className="font-medium text-ink min-w-0 truncate">
+                  {review.name}
+                  <span className="font-normal text-ink-muted"> · {review.location}</span>
+                </span>
+                <Stars rating={review.rating || 5} />
+              </figcaption>
+            </figure>
+          ))}
         </div>
       </section>
     );
@@ -598,20 +703,68 @@ function ReviewsSection({ config, model, design }: SectionProps) {
 
   return (
     <section className="mx-auto mt-16 max-w-7xl px-4 sm:px-6 lg:mt-20 lg:px-8">
-      <Eyebrow>{config.reviewsEyebrow}</Eyebrow>
-      <h2 className="mt-3 font-display text-4xl text-ink">{config.reviewsTitle}</h2>
-      <p className="mt-2 max-w-md text-sm text-ink-muted">{config.reviewsSubtitle}</p>
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {model.testimonials.map((review) => (
-          <figure key={review.name} className="rounded-lg border border-line bg-surface p-5">
-            <figcaption>
-              <p className="text-sm font-semibold text-ink">{review.name}</p>
-              <p className="text-xs text-ink-muted">{review.location}</p>
-            </figcaption>
-            <div className="mt-4">
-              <Stars rating={5} />
+      {/* Header with Title on Left, Carousel Arrows on Right (Matching Figma / Mockup) */}
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <Eyebrow>{config.reviewsEyebrow}</Eyebrow>
+          <h2 className="mt-3 font-display text-4xl text-ink">{config.reviewsTitle}</h2>
+          <p className="mt-2 max-w-md text-sm text-ink-muted">{config.reviewsSubtitle}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={scrollPrev}
+            aria-label="Previous review"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-ink transition-colors hover:bg-subtle hover:border-ink/40 active:scale-95 cursor-pointer shadow-xs"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={scrollNext}
+            aria-label="Next review"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-surface text-ink transition-colors hover:bg-subtle hover:border-ink/40 active:scale-95 cursor-pointer shadow-xs"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Auto-sliding, touch-swipeable & clickable Multi-Card Carousel */}
+      <div
+        ref={scrollRef}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={() => setIsPaused(true)}
+        onTouchEnd={() => setIsPaused(false)}
+        className="mt-8 flex gap-4 overflow-x-auto scrollbar-none scroll-smooth pb-2"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
+        {model.testimonials.map((review, idx) => (
+          <figure
+            key={review.id || `${review.name}-${idx}`}
+            style={{ scrollSnapAlign: 'start' }}
+            className="w-full shrink-0 sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] rounded-xl border border-line bg-surface p-6 shadow-xs flex flex-col justify-between transition-all hover:shadow-md hover:border-line-strong"
+          >
+            <div>
+              <figcaption className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink truncate">{review.name}</p>
+                  <p className="text-xs text-ink-muted truncate">{review.location}</p>
+                </div>
+                <div className="shrink-0">
+                  <Stars rating={review.rating || 5} />
+                </div>
+              </figcaption>
+              <blockquote className="mt-4 text-sm leading-relaxed text-ink-soft">
+                “{review.quote}”
+              </blockquote>
             </div>
-            <blockquote className="mt-3 text-sm leading-relaxed text-ink-soft">“{review.quote}”</blockquote>
+            {review.productTitle && (
+              <p className="mt-4 pt-3 border-t border-line/60 text-xs text-ink-muted truncate">
+                Purchased <span className="font-medium text-ink">{review.productTitle}</span>
+              </p>
+            )}
           </figure>
         ))}
       </div>

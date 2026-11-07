@@ -25,6 +25,9 @@ import {
   ShieldCheck,
   Tag,
   Quote,
+  Plus,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -34,6 +37,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate } from '@/utils/format';
 import { reviewService } from '@/services/review-service';
 import { ReviewDetailDrawer } from './ReviewDetailDrawer';
+import { CreateReviewModal } from './CreateReviewModal';
 import type { Review, ReviewStats, OwnerReviewsQuery } from '@/types/review';
 import { cn } from '@/utils/cn';
 
@@ -68,6 +72,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
   // Selected review for drawer
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Lightbox for photos
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -119,6 +124,32 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
     fetchOwnerReviews();
   };
 
+  const handleReviewDeleted = (deletedId: string) => {
+    setReviewsList((prev) => prev.filter((r) => r.id !== deletedId));
+    if (selectedReview?.id === deletedId) {
+      setSelectedReview(null);
+      setIsDrawerOpen(false);
+    }
+    fetchOwnerReviews();
+  };
+
+  const handleToggleReviewStatus = async (review: Review, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const isPub = review.status === 'PUBLISHED' || review.status === 'published';
+    const newStatus = isPub ? 'HIDDEN' : 'PUBLISHED';
+    try {
+      const res = await reviewService.updateReviewStatus(review.id, newStatus);
+      if (res?.data) {
+        toast.success(isPub ? 'Review hidden from store' : 'Review published live!');
+        setReviewsList((prev) => prev.map((r) => (r.id === review.id ? res.data : r)));
+      } else {
+        setReviewsList((prev) => prev.map((r) => (r.id === review.id ? { ...r, status: newStatus } : r)));
+      }
+    } catch {
+      toast.error('Failed to change status');
+    }
+  };
+
   const handleOpenDrawer = (review: Review) => {
     setSelectedReview(review);
     setIsDrawerOpen(true);
@@ -147,16 +178,28 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
           </p>
         </div>
 
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => fetchOwnerReviews()}
-          disabled={loading}
-          className="cursor-pointer gap-2 self-start sm:self-auto shrink-0 shadow-xs hover:border-ink"
-        >
-          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          Refresh Data
-        </Button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="cursor-pointer gap-2 shadow-xs"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Review</span>
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => fetchOwnerReviews()}
+            disabled={loading}
+            className="cursor-pointer gap-2 shadow-xs hover:border-ink"
+          >
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+            Refresh Data
+          </Button>
+        </div>
       </div>
 
       {/* Hero KPI Metric Scorecards */}
@@ -629,12 +672,31 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                   )}
                 </div>
 
-                {/* Card Footer: Helpful counter & Primary Action */}
+                {/* Card Footer: Helpful counter, Live Status, & Primary Action */}
                 <div className="mt-5 flex items-center justify-between border-t border-line/60 pt-3 text-xs">
-                  <span className="inline-flex items-center gap-1 text-ink-muted">
-                    <ThumbsUp className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>{review.helpful} Helpful</span>
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold',
+                        review.status === 'PUBLISHED' || review.status === 'published'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                          : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 border border-line'
+                      )}
+                    >
+                      {review.status === 'PUBLISHED' || review.status === 'published'
+                        ? 'Live'
+                        : 'Hidden'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleToggleReviewStatus(review, e)}
+                      className="text-xs text-ink-muted hover:text-ink underline cursor-pointer"
+                    >
+                      {review.status === 'PUBLISHED' || review.status === 'published'
+                        ? 'Hide'
+                        : 'Publish'}
+                    </button>
+                  </div>
 
                   <Button
                     size="sm"
@@ -643,7 +705,7 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                     className="cursor-pointer gap-1.5 shadow-xs"
                   >
                     <MessageSquare className="h-3.5 w-3.5" />
-                    <span>{hasReply ? 'Inspect / Edit' : 'Reply to Customer'}</span>
+                    <span>{hasReply ? 'Manage' : 'Reply / Manage'}</span>
                   </Button>
                 </div>
               </article>
@@ -765,6 +827,17 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
         review={selectedReview}
         onClose={() => setIsDrawerOpen(false)}
         onReviewUpdated={handleReviewUpdated}
+        onReviewDeleted={handleReviewDeleted}
+      />
+
+      {/* Modal for Creating / Adding Reviews Manually */}
+      <CreateReviewModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(newReview) => {
+          setReviewsList((prev) => [newReview, ...prev]);
+          fetchOwnerReviews();
+        }}
       />
 
       {/* Lightbox for customer photos */}

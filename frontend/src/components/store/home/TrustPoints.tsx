@@ -1,11 +1,21 @@
+'use client';
+
 import React from 'react';
-import { trustPoints } from '@/data/content';
+import { useTenant } from '@/contexts/TenantContext';
 
 export function TrustPoints() {
+  const { tenant } = useTenant();
+  const trustPoints: { title: string; body: string }[] =
+    Array.isArray((tenant as any)?.settings?.trustPoints)
+      ? (tenant as any).settings.trustPoints
+      : [];
+
+  if (trustPoints.length === 0) return null;
+
   return (
     <section
       className="mt-24 border-y border-line bg-surface"
-      aria-label="Why Tanti"
+      aria-label="Store Promises"
     >
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
         {trustPoints.map((t) => (

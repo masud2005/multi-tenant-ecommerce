@@ -1,5 +1,6 @@
 export type ReviewStatus =
   | 'PUBLISHED'
+  | 'PENDING'
   | 'HIDDEN'
   | 'REJECTED'
   | 'published'
@@ -104,4 +105,26 @@ export interface OwnerReviewsQuery {
   search?: string;
   sortBy?: 'createdAt' | 'rating' | 'helpful';
   sortOrder?: 'desc' | 'asc';
+}
+
+export interface CreateOwnerReviewPayload {
+  author: string;
+  rating: number;
+  title?: string;
+  body: string;
+  productId?: string;
+  verified?: boolean;
+  size?: string;
+  status?: ReviewStatus;
+}
+
+export interface UpdateOwnerReviewPayload {
+  author?: string;
+  rating?: number;
+  title?: string;
+  body?: string;
+  productId?: string;
+  verified?: boolean;
+  size?: string;
+  status?: ReviewStatus;
 }

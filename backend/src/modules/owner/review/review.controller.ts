@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -17,7 +19,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ReviewService } from './review.service';
-import { OwnerReviewQueryDto, ReplyReviewDto } from './dto';
+import {
+  CreateOwnerReviewDto,
+  OwnerReviewQueryDto,
+  ReplyReviewDto,
+  UpdateOwnerReviewDto,
+  UpdateReviewStatusDto,
+} from './dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -77,5 +85,63 @@ export class ReviewController {
   ) {
     const tenantId = tenantHeader || user?.tenantId;
     return this.reviewService.replyToReview(id, dto, tenantId, user);
+  }
+
+  // 4. Create a new review manually (by store admin / owner)
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new review manually by store admin' })
+  @ApiResponse({ status: 201, description: 'Review created successfully' })
+  async createReview(
+    @Body() dto: CreateOwnerReviewDto,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.reviewService.createReviewManually(dto, tenantId, user);
+  }
+
+  // 5. Update review moderation status (PUBLISHED, HIDDEN, REJECTED, PENDING)
+  @Patch(':id/status')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update review moderation status' })
+  @ApiResponse({ status: 200, description: 'Review status updated successfully' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateReviewStatusDto,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.reviewService.updateReviewStatus(id, dto, tenantId);
+  }
+
+  // 6. Update review details
+  @Patch(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update review details' })
+  @ApiResponse({ status: 200, description: 'Review updated successfully' })
+  async updateReview(
+    @Param('id') id: string,
+    @Body() dto: UpdateOwnerReviewDto,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.reviewService.updateReview(id, dto, tenantId);
+  }
+
+  // 7. Delete review (soft delete)
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Soft delete review' })
+  @ApiResponse({ status: 200, description: 'Review deleted successfully' })
+  async deleteReview(
+    @Param('id') id: string,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.reviewService.deleteReview(id, tenantId);
   }
 }

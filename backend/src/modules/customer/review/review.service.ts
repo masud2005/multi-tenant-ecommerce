@@ -379,4 +379,59 @@ export class ReviewService {
 
     return ResponseHelper.success(updated, 'Review marked as helpful');
   }
+
+  // 4. Fetch all published store reviews (for storefront landing page / testimonials carousel)
+  async getStoreReviews(
+    query: { page?: number; limit?: number; rating?: number } = {},
+    tenantId?: string,
+  ) {
+    const resolvedTenantId = await this.resolveTenantId(tenantId);
+
+    const page = query.page && Number(query.page) > 0 ? Number(query.page) : 1;
+    const limit = query.limit && Number(query.limit) > 0 ? Number(query.limit) : 15;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      tenantId: resolvedTenantId,
+      status: ReviewStatus.PUBLISHED,
+      deletedAt: null,
+    };
+
+    if (query.rating && query.rating >= 1 && query.rating <= 5) {
+      where.rating = Number(query.rating);
+    }
+
+    const [reviews, totalCount] = await Promise.all([
+      this.prisma.review.findMany({
+        where,
+        include: {
+          product: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              images: true,
+            },
+          },
+        },
+        orderBy: [{ rating: 'desc' }, { createdAt: 'desc' }],
+        skip,
+        take: limit,
+      }),
+      this.prisma.review.count({ where }),
+    ]);
+
+    return ResponseHelper.success(
+      {
+        reviews,
+        pagination: {
+          total: totalCount,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount / limit) || 1,
+        },
+      },
+      'Store reviews retrieved successfully',
+    );
+  }
 }

@@ -8,13 +8,13 @@ This document outlines all remaining mock, static, and hardcoded data in the cod
 
 | Section / Feature | Type | Status | File Location | Mock Source | Priority |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Top Announcement Bar** | Storefront | Hardcoded String | `frontend/src/components/store/layout/StoreHeader.tsx` | `data/content.ts` | High |
-| **Homepage Testimonials** | Storefront | Hardcoded Array | `frontend/src/components/store/landing/useLandingModel.ts` | `data/content.ts` | High |
+| **Top Announcement Bar** | Storefront | ✅ **COMPLETED (Dynamic DB)** | `frontend/src/components/store/layout/StoreHeader.tsx` | Tenant DB Settings | High |
+| **Homepage Testimonials** | Storefront | ✅ **COMPLETED (Dynamic DB Carousel)** | `frontend/src/components/store/landing/LandingSections.tsx` | Database Reviews API | High |
 | **Homepage Trust Points** | Storefront | Hardcoded Array | `frontend/src/components/store/landing/LandingSections.tsx` | `data/content.ts` | Medium |
 | **Journal / Blog Pages** | Storefront | Static Content | `frontend/src/app/(store)/journal/page.tsx` | `data/content.ts` | High |
 | **Policy Pages** | Storefront | Static Content | `frontend/src/app/(store)/policies/[slug]/page.tsx` | `data/content.ts` | Medium |
 | **Search Popular Searches** | Storefront | Static Array | `frontend/src/components/store/layout/SearchOverlay.tsx` | `data/content.ts` | Medium |
-| **Discount Coupons** | Checkout | Hardcoded Array | `frontend/src/utils/pricing.ts` | `data/shipping.ts` | High |
+| **Discount Coupons** | Checkout | ✅ **COMPLETED (Dynamic Engine)** | `frontend/src/app/(store)/cart/page.tsx`, `checkout/page.tsx` | Backend Discount Engine (`/discounts/apply`) | High |
 | **Product Size Guide** | Storefront | Hardcoded Table | `frontend/src/components/store/product/ProductDetailView.tsx` | `data/products.ts` | Low |
 | **About Page Fallback** | Storefront | Fallback Constant | `frontend/src/app/(store)/about/page.tsx` | `DEFAULT_ABOUT` | Low |
 | **FAQ Page Fallback** | Storefront | Fallback Constant | `frontend/src/app/(store)/faq/page.tsx` | `data/content.ts` | Low |
@@ -23,7 +23,7 @@ This document outlines all remaining mock, static, and hardcoded data in the cod
 | **Admin Content Management**| Dashboard | Static Pages/Menus | `frontend/src/app/(dashboard)/admin/content/page.tsx` | `data/admin.ts` | Medium |
 | **Admin Inventory Ledger** | Dashboard | Initial State Mock | `frontend/src/components/dashboard/admin/inventory/InventoryManager.tsx` | `data/admin.ts` | Medium |
 | **Admin Staff & Roles** | Dashboard | Initial State Mock | `frontend/src/app/(dashboard)/admin/staff/page.tsx` | `data/admin.ts` | Medium |
-| **Admin Reviews Initial** | Dashboard | Initial State Mock | `frontend/src/app/(dashboard)/admin/reviews/page.tsx` | `data/reviews.ts` | Medium |
+| **Admin Reviews Initial** | Dashboard | ✅ **COMPLETED (Real State & CRUD)** | `frontend/src/app/(dashboard)/admin/reviews/page.tsx` | Clean server state | Medium |
 | **Admin Analytics Region** | Dashboard | Initial State Mock | `frontend/src/app/(dashboard)/admin/analytics/page.tsx` | `data/analytics.ts` | Medium |
 
 ---
@@ -243,10 +243,16 @@ flowchart TD
     I --> L["3.3 Marketing & Campaign Backend"]
 ```
 
-1. **Phase 1 (Storefront Polish):**
-   - Connect Announcement Bar to tenant settings.
-   - Wire Coupon input to real backend discount validator.
-   - Replace or make optional the hardcoded Testimonials and Trust Points.
+1. **Phase 1 (Storefront Polish) - [COMPLETED]:**
+   - ✅ **Announcement Bar**: Dynamic from Tenant DB store settings (`tenant.announcement`, `tenant.announcementEnabled`).
+   - ✅ **Reviews & Testimonials Carousel**:
+     - Customer reviews fetched dynamically from database (`GET /customer/reviews` with pagination `limit: 15`).
+     - Responsive multi-card auto-playing carousel with hover pause and click navigation.
+     - Carousel slide change arrows (`<` and `>`) placed at the top-right of the header beside the title.
+     - Dynamic star ratings and reviewer details.
+     - Supports both `cards` and `quotes` design styles from `landing-config.ts`.
+     - Admin dashboard allows manual creation (`CreateReviewModal`), hide/show toggle (`PUBLISHED`/`HIDDEN`), review customization, and deletion.
+   - ✅ **Coupons & Discounts**: Connected Cart and Checkout directly to backend discount engine (`POST /discounts/apply`).
 
 2. **Phase 2 (Content & Policies):**
    - Create database models for Blog Posts and Policies.

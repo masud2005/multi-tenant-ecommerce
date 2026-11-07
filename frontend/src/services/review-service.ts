@@ -3,12 +3,14 @@ import type { ApiResponse } from '@/types';
 import type {
   Review,
   ReviewStats,
+  ReviewStatus,
   ProductReviewsResponse,
   CreateReviewPayload,
+  CreateOwnerReviewPayload,
+  UpdateOwnerReviewPayload,
   ProductReviewsQuery,
   OwnerReviewsQuery,
 } from '@/types/review';
-import { reviews as seedReviews } from '@/data/reviews';
 
 // Mapper to normalize raw backend review to frontend format
 export function mapBackendReviewToFrontend(raw: any): Review {
@@ -168,6 +170,52 @@ export const reviewService = {
     }
   },
 
+  // 3.1 Fetch published reviews for store testimonials (GET /customer/reviews)
+  async getStoreReviews(
+    query: { page?: number; limit?: number; rating?: number } = {},
+  ): Promise<ApiResponse<{
+    reviews: Review[];
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+  }>> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.rating) params.set('rating', String(query.rating));
+
+    const qs = params.toString();
+    const endpoint = `/customer/reviews${qs ? `?${qs}` : ''}`;
+
+    try {
+      const res = await apiClient.get<ApiResponse<any>>(endpoint);
+      if (res?.data) {
+        const rawReviews = Array.isArray(res.data.reviews) ? res.data.reviews : [];
+        return {
+          ...res,
+          data: {
+            reviews: rawReviews.map(mapBackendReviewToFrontend),
+            pagination: res.data.pagination || {
+              total: rawReviews.length,
+              page: 1,
+              limit: query.limit || 15,
+              totalPages: 1,
+            },
+          },
+        };
+      }
+      throw new Error('No data received');
+    } catch (error: any) {
+      console.warn('[review-service] Failed to fetch store reviews:', error?.message || error);
+      return {
+        success: false,
+        data: {
+          reviews: [],
+          pagination: { total: 0, page: 1, limit: query.limit || 15, totalPages: 1 },
+        },
+        message: error?.message || 'Failed to load reviews',
+      };
+    }
+  },
+
   // ----------------------------------------------------
   // Owner Endpoints (/owner/reviews)
   // ----------------------------------------------------
@@ -220,27 +268,28 @@ export const reviewService = {
         };
       }
       throw new Error('No data received');
-    } catch {
+    } catch (error: any) {
+      console.warn('[review-service] Failed to fetch owner reviews:', error?.message || error);
       return {
-        success: true,
+        success: false,
         data: {
-          reviews: seedReviews.map(mapBackendReviewToFrontend),
+          reviews: [],
           stats: {
-            totalReviews: seedReviews.length,
-            averageRating: 4.8,
-            distribution: { 5: seedReviews.length, 4: 0, 3: 0, 2: 0, 1: 0 },
+            totalReviews: 0,
+            averageRating: 5.0,
+            distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
             withPhotosCount: 0,
             repliedCount: 0,
-            pendingReplyCount: seedReviews.length,
+            pendingReplyCount: 0,
           },
           pagination: {
-            total: seedReviews.length,
+            total: 0,
             page: 1,
             limit: 20,
             totalPages: 1,
           },
         },
-        message: 'Mock store reviews fallback',
+        message: error?.message || 'Failed to fetch reviews',
       };
     }
   },
@@ -269,5 +318,56 @@ export const reviewService = {
       };
     }
     return res;
+  },
+
+  // 7. Create review manually (POST /owner/reviews)
+  async createOwnerReview(
+    payload: CreateOwnerReviewPayload,
+  ): Promise<ApiResponse<Review>> {
+    const res = await apiClient.post<ApiResponse<any>>('/owner/reviews', payload);
+    if (res?.data) {
+      return {
+        ...res,
+        data: mapBackendReviewToFrontend(res.data),
+      };
+    }
+    return res;
+  },
+
+  // 8. Update review status (PATCH /owner/reviews/:id/status)
+  async updateReviewStatus(
+    id: string,
+    status: ReviewStatus,
+  ): Promise<ApiResponse<Review>> {
+    const res = await apiClient.patch<ApiResponse<any>>(`/owner/reviews/${id}/status`, {
+      status,
+    });
+    if (res?.data) {
+      return {
+        ...res,
+        data: mapBackendReviewToFrontend(res.data),
+      };
+    }
+    return res;
+  },
+
+  // 9. Update review details (PATCH /owner/reviews/:id)
+  async updateOwnerReview(
+    id: string,
+    payload: UpdateOwnerReviewPayload,
+  ): Promise<ApiResponse<Review>> {
+    const res = await apiClient.patch<ApiResponse<any>>(`/owner/reviews/${id}`, payload);
+    if (res?.data) {
+      return {
+        ...res,
+        data: mapBackendReviewToFrontend(res.data),
+      };
+    }
+    return res;
+  },
+
+  // 10. Delete review (DELETE /owner/reviews/:id)
+  async deleteOwnerReview(id: string): Promise<ApiResponse<{ id: string }>> {
+    return apiClient.delete<ApiResponse<{ id: string }>>(`/owner/reviews/${id}`);
   },
 };

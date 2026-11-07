@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { SearchIcon, XIcon, ClockIcon, TrendingUpIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
-import { popularSearches } from '@/data/content';
 import { searchProducts } from '@/utils/search';
 import { productPrice } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
@@ -35,6 +34,16 @@ export function SearchOverlay() {
     () => searchProducts(live, q),
     [live, q]
   );
+
+  const liveSearches = useMemo(() => {
+    if (categories && categories.length > 0) {
+      return categories.slice(0, 6).map((c) => c.name);
+    }
+    if (live && live.length > 0) {
+      return live.slice(0, 6).map((p) => p.title);
+    }
+    return [];
+  }, [categories, live]);
 
   const matchingCats =
     q.length > 1
@@ -116,25 +125,27 @@ export function SearchOverlay() {
               <div id="search-results" className="py-6">
                 {!q && (
                   <div className="grid gap-8 md:grid-cols-[200px_1fr]">
-                    <div>
-                      <p className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
-                        <TrendingUpIcon className="h-3.5 w-3.5" aria-hidden />{' '}
-                        Popular
-                      </p>
-                      <ul className="mt-3 space-y-2">
-                        {popularSearches.map((s) => (
-                          <li key={s}>
-                            <button
-                              type="button"
-                              onClick={() => go(s)}
-                              className="text-sm text-ink hover:text-clay cursor-pointer"
-                            >
-                              {s}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    {liveSearches.length > 0 && (
+                      <div>
+                        <p className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
+                          <TrendingUpIcon className="h-3.5 w-3.5" aria-hidden />{' '}
+                          Trending Categories
+                        </p>
+                        <ul className="mt-3 space-y-2">
+                          {liveSearches.map((s) => (
+                            <li key={s}>
+                              <button
+                                type="button"
+                                onClick={() => go(s)}
+                                className="text-sm text-ink hover:text-clay cursor-pointer"
+                              >
+                                {s}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     {recent.length > 0 && (
                       <div>
                         <p className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
