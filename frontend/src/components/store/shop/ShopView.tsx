@@ -61,10 +61,13 @@ export function ShopView({ mode = 'shop', slug }: ShopViewProps) {
         q={q}
       />
 
-      <div className="grid gap-10 lg:grid-cols-[232px_1fr]">
-        {/* 2. Desktop Filters Sidebar — sticky; own scroll only when filters overflow */}
-        <aside className="hidden lg:block" aria-label="Filters">
-          <div className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain pr-1">
+      <div className="grid gap-10 lg:grid-cols-[232px_1fr] lg:items-start">
+        {/* 2. Desktop filters — sticky viewport panel; wheel over sidebar scrolls filters only */}
+        <aside
+          aria-label="Filters"
+          className="sticky top-28 hidden h-[calc(100vh-8rem)] self-start overflow-hidden lg:block"
+        >
+          <div className="scrollbar-none h-full overflow-y-auto overscroll-y-contain">
             <ShopFilters
               value={filters}
               onChange={(f) => {
