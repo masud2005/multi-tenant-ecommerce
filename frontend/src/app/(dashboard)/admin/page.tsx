@@ -17,16 +17,18 @@ import { available } from '@/utils/pricing';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth';
 import { analyticsService, AnalyticsOverviewResponse } from '@/services/analytics-service';
+import { reviewService } from '@/services/review-service';
 
 type Range = '7d' | '30d';
 
 export default function AdminDashboardPage() {
-  const { orders, returns, reviews, products } = useStore();
+  const { orders, returns, products } = useStore();
   const { role, can } = useAdmin();
   const [userName, setUserName] = useState<string>('');
   const [range, setRange] = useState<Range>('30d');
   const [realOverview, setRealOverview] = useState<AnalyticsOverviewResponse | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [pendingReplyCount, setPendingReplyCount] = useState(0);
 
   const fetchOverview = () => {
     setIsLoadingAnalytics(true);
@@ -46,6 +48,25 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchOverview();
   }, [range]);
+
+  useEffect(() => {
+    if (!can('reviews')) return;
+    let cancelled = false;
+    reviewService
+      .getOwnerReviews({ page: 1, limit: 1 })
+      .then((res) => {
+        if (!cancelled) {
+          setPendingReplyCount(res?.data?.stats?.pendingReplyCount || 0);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPendingReplyCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Compute 100% Dynamic DB-driven Time Series
   const series = useMemo(() => {
@@ -117,7 +138,6 @@ export default function AdminDashboardPage() {
   const toFulfill = orders.filter((o) => ['confirmed', 'processing'].includes(o.status));
   const toShip = orders.filter((o) => o.status === 'packed');
   const pendingReturns = returns.filter((r) => r.status === 'requested' || r.status === 'received');
-  const pendingReviews = reviews.filter((r) => r.status === 'pending');
   const unpaid = orders.filter((o) => o.status === 'pending_payment' || o.paymentStatus === 'failed');
   const lowStock = products
     .flatMap((p) => p.variants.filter((v) => !p.preorder && available(v) <= 3).map((v) => ({ p, v })))
@@ -132,7 +152,7 @@ export default function AdminDashboardPage() {
     { label: 'Packed, awaiting courier', count: toShip.length, to: '/admin/orders?tab=packed', icon: Package, show: can('orders') },
     { label: 'Returns to review', count: pendingReturns.length, to: '/admin/returns', icon: RotateCcw, show: can('returns') },
     { label: 'Payments needing attention', count: unpaid.length, to: '/admin/orders?tab=unpaid', icon: CreditCard, show: can('orders') },
-    { label: 'Reviews to moderate', count: pendingReviews.length, to: '/admin/reviews', icon: Star, show: can('reviews') },
+    { label: 'Reviews awaiting reply', count: pendingReplyCount, to: '/admin/reviews', icon: Star, show: can('reviews') },
   ].filter((t) => t.show);
 
   return (

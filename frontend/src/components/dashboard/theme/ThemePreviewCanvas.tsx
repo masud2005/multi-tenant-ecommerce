@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Monitor, Smartphone, ExternalLink, RotateCw, Lock, Sparkles } from 'lucide-react';
+import { Monitor, Smartphone, ExternalLink, RotateCw } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
 import { useStore } from '@/contexts/StoreContext';
 import { products as seedProducts } from '@/data/products';
@@ -20,6 +20,7 @@ import {
   Recommended,
 } from '@/components/store/home';
 import { LandingHome } from '@/components/store/landing';
+import { StoreFooter, StoreHeader } from '@/components/store/layout';
 
 interface ThemePreviewCanvasProps {
   theme: TenantTheme;
@@ -306,81 +307,15 @@ export function ThemePreviewCanvas({ theme, focus = 'landing' }: ThemePreviewCan
       style={themeStyles}
       data-card-style={theme.cardStyle || 'portrait-hover'}
       onClickCapture={handlePreventNavigation}
-      className="min-h-screen pb-16 transition-colors duration-200"
+      className="relative min-h-full bg-canvas text-ink"
     >
-      {/* Storefront Mini Header */}
-      <header
-        className="sticky top-0 z-30 border-b border-line px-4 py-3 backdrop-blur-md transition-colors"
-        style={{
-          backgroundColor: theme.surfaceColor || '#ffffff',
-        }}
-      >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <span
-              className="text-xl font-bold tracking-tight text-ink"
-              style={{
-                fontFamily: theme.fontHeading
-                  ? `'${theme.fontHeading}', Georgia, serif`
-                  : undefined,
-              }}
-            >
-              {storeName}
-            </span>
-            {device === 'desktop' && (
-              <nav className="flex items-center gap-4 text-xs font-medium text-ink-muted">
-                {(categories && categories.length > 0
-                  ? categories.slice(0, 5).map((c) => c.name)
-                  : ['Women', 'Men', 'Heritage', 'Occasion', 'Sale']
-                ).map((catName) => (
-                  <span
-                    key={catName}
-                    className="cursor-default hover:text-ink transition-colors"
-                  >
-                    {catName}
-                  </span>
-                ))}
-              </nav>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span
-              className="rounded px-2.5 py-1 text-xs font-medium text-white shadow-xs"
-              style={{
-                backgroundColor: theme.primaryColor,
-                borderRadius: theme.borderRadius,
-              }}
-            >
-              Shop Collection
-            </span>
-          </div>
-        </div>
-      </header>
-
-      {/* Landing page sections rendered in order */}
-      <main className="transition-opacity duration-300">
-        {focus === 'landing' ? (
-          <LandingHome />
-        ) : activeSections.length > 0 ? (
-          activeSections.map((s) => renderSection(s.sectionType, s.id, s.label))
-        ) : (
-          <div className="flex min-h-[400px] flex-col items-center justify-center p-8 text-center">
-            <p className="text-base font-semibold text-ink">No active sections</p>
-            <p className="mt-1 text-sm text-ink-muted">
-              Toggle on section visibility in the Sections tab to preview them here.
-            </p>
-          </div>
-        )}
+      <Suspense fallback={null}>
+        <StoreHeader />
+      </Suspense>
+      <main>
+        <LandingHome />
       </main>
-
-      {/* Mini Footer */}
-      <footer
-        className="mt-20 border-t border-line py-8 text-center text-xs text-ink-muted"
-        style={{ backgroundColor: theme.surfaceColor || '#ffffff' }}
-      >
-        <p>© {new Date().getFullYear()} {storeName}. Powered by Tanti Platform.</p>
-      </footer>
+      <StoreFooter />
     </div>
   );
 
@@ -388,13 +323,7 @@ export function ThemePreviewCanvas({ theme, focus = 'landing' }: ThemePreviewCan
     <div className="rounded-lg border border-line bg-subtle p-4">
       {/* Top Preview Control Bar */}
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold text-ink">Live Storefront Preview</p>
-          <span className="flex items-center gap-1 rounded bg-success-soft px-1.5 py-0.5 text-xs font-medium text-success">
-            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-            Live Sync
-          </span>
-        </div>
+        <p className="text-xs font-semibold text-ink">Live Storefront Preview</p>
 
         <div className="flex items-center gap-2">
           {/* Device Toggle */}
@@ -463,31 +392,7 @@ export function ThemePreviewCanvas({ theme, focus = 'landing' }: ThemePreviewCan
             : 'w-full rounded-md border border-line bg-surface shadow-xs'
         )}
       >
-        {/* Device Top Bar (Desktop Browser Bar or Mobile Notch) */}
-        {device === 'desktop' ? (
-          <div className="flex items-center justify-between border-b border-line bg-subtle px-3 py-2 text-xs text-ink-muted">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-danger/80" />
-              <span className="h-2.5 w-2.5 rounded-full bg-warning/80" />
-              <span className="h-2.5 w-2.5 rounded-full bg-success/80" />
-            </div>
-            <div className="flex items-center gap-1.5 rounded bg-surface px-3 py-0.5 text-xs font-mono text-ink-soft border border-line/60">
-              <Lock className="h-2.5 w-2.5 text-success" />
-              <span>https://store.orvio.test</span>
-            </div>
-            <div className="text-xs text-ink-muted font-mono">100% responsive</div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center bg-ink/80 py-1.5">
-            <div className="h-3.5 w-24 rounded-full bg-ink-muted/40 flex items-center justify-center">
-              <span className="h-1.5 w-1.5 rounded-full bg-black/60 mr-2" />
-              <span className="h-1 w-6 rounded-full bg-black/40" />
-            </div>
-          </div>
-        )}
-
-        {/* Viewport Frame with Iframe Portal */}
-        <div className="relative h-[720px] w-full bg-canvas overflow-hidden">
+        <div className="relative h-[calc(100dvh-11rem)] min-h-[560px] w-full overflow-hidden bg-canvas">
           <iframe
             ref={iframeRef}
             title="Theme Live Storefront Preview"

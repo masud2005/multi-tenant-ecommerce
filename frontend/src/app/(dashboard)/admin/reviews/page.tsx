@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import { initialReviews } from '@/data/reviews';
 import { ReviewsManager } from '@/components/dashboard/admin/reviews';
 
 export const metadata: Metadata = {
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 export default function AdminReviewsPage() {
   return (
     <div className="w-full">
-      <ReviewsManager initialReviews={initialReviews} />
+      <ReviewsManager />
     </div>
   );
 }

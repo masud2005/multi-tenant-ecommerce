@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/contexts/StoreContext';
-import { testimonials, trustPoints } from '@/data/content';
+import { useTenant } from '@/contexts/TenantContext';
+import { reviewService } from '@/services/review-service';
 import type { Product } from '@/types';
 
 export interface LandingSlide {
@@ -26,6 +27,15 @@ export interface LandingCategoryLink {
   image: string;
 }
 
+export interface LandingTestimonial {
+  id?: string;
+  name: string;
+  location: string;
+  quote: string;
+  rating: number;
+  productTitle?: string;
+}
+
 function uniqueSlides(slides: LandingSlide[]) {
   const seen = new Set<string>();
   return slides.filter((slide) => {
@@ -36,6 +46,7 @@ function uniqueSlides(slides: LandingSlide[]) {
 }
 
 export function useLandingModel() {
+  const { tenant } = useTenant();
   const {
     products,
     categories,
@@ -45,6 +56,44 @@ export function useLandingModel() {
     isCategoriesLoading,
     isCollectionsLoading,
   } = useStore();
+
+  const [dbReviews, setDbReviews] = useState<LandingTestimonial[]>([]);
+  const [isReviewsLoading, setIsReviewsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    reviewService
+      .getStoreReviews({ page: 1, limit: 15 })
+      .then((res) => {
+        if (!mounted) return;
+        if (res?.data?.reviews && res.data.reviews.length > 0) {
+          const mapped = res.data.reviews.map((r) => ({
+            id: r.id,
+            name: r.author || 'Verified Customer',
+            location:
+              r.size ||
+              (r.product?.title ? `Purchased ${r.product.title}` : 'Verified Buyer'),
+            quote: r.body,
+            rating: Number(r.rating) || 5,
+            productTitle: r.product?.title,
+          }));
+          setDbReviews(mapped);
+        } else {
+          setDbReviews([]);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch store testimonials:', err);
+        if (mounted) setDbReviews([]);
+      })
+      .finally(() => {
+        if (mounted) setIsReviewsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return useMemo(() => {
     // 1. Dynamic Published Products (Server-only)
@@ -105,6 +154,15 @@ export function useLandingModel() {
       products.find((product) => product.images && product.images[0])?.images[0] ||
       '';
 
+    // Strictly real DB reviews (zero mock fallback)
+    const testimonials: LandingTestimonial[] = dbReviews;
+
+    // Real trust points from tenant settings in DB (zero mock fallback)
+    const trustPoints: { title: string; body: string }[] =
+      Array.isArray((tenant as any)?.settings?.trustPoints)
+        ? (tenant as any).settings.trustPoints
+        : [];
+
     return {
       picks,
       categoryLinks,
@@ -117,15 +175,19 @@ export function useLandingModel() {
       isProductsLoading: !!isProductsLoading,
       isCategoriesLoading: !!isCategoriesLoading,
       isCollectionsLoading: !!isCollectionsLoading,
+      isReviewsLoading,
     };
   }, [
     products,
     categories,
     collections,
+    dbReviews,
+    tenant,
     isStoreLoading,
     isProductsLoading,
     isCategoriesLoading,
     isCollectionsLoading,
+    isReviewsLoading,
   ]);
 }
 

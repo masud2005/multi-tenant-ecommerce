@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { Switch } from '@/components/ui/Switch';
@@ -16,36 +16,54 @@ import {
 } from '@/lib/landing-config';
 import { cn } from '@/utils/cn';
 
-const COPY_FIELDS: { key: keyof LandingConfig; label: string; multiline?: boolean }[] = [
-  { key: 'heroEyebrow', label: 'Hero eyebrow' },
-  { key: 'heroTitle', label: 'Hero headline' },
-  { key: 'heroSubtitle', label: 'Hero description', multiline: true },
-  { key: 'heroCta', label: 'Hero button' },
-  { key: 'heroScript', label: 'Hero script line' },
-  { key: 'featuredEyebrow', label: 'Featured eyebrow' },
-  { key: 'featuredTitle', label: 'Featured headline' },
-  { key: 'featuredSubtitle', label: 'Featured description', multiline: true },
-  { key: 'featuredCta', label: 'Featured button' },
-  { key: 'promoEyebrow', label: 'Offer eyebrow' },
-  { key: 'promoTitle', label: 'Offer headline' },
-  { key: 'promoSubtitle', label: 'Offer detail' },
-  { key: 'promoCta', label: 'Offer button' },
-  { key: 'promoScript', label: 'Offer script line' },
-  { key: 'picksEyebrow', label: 'Picks eyebrow' },
-  { key: 'picksTitle', label: 'Picks headline' },
-  { key: 'picksSubtitle', label: 'Picks description' },
-  { key: 'reviewsEyebrow', label: 'Reviews eyebrow' },
-  { key: 'reviewsTitle', label: 'Reviews headline' },
-  { key: 'reviewsSubtitle', label: 'Reviews description' },
-  { key: 'newsletterEyebrow', label: 'Newsletter eyebrow' },
-  { key: 'newsletterTitle', label: 'Newsletter headline' },
-  { key: 'newsletterSubtitle', label: 'Newsletter description', multiline: true },
-];
+const SECTION_COPY: Record<
+  LandingSectionId,
+  { key: keyof LandingConfig; label: string; multiline?: boolean }[]
+> = {
+  hero: [
+    { key: 'heroEyebrow', label: 'Eyebrow' },
+    { key: 'heroTitle', label: 'Headline' },
+    { key: 'heroSubtitle', label: 'Description', multiline: true },
+    { key: 'heroCta', label: 'Button' },
+    { key: 'heroScript', label: 'Script line' },
+  ],
+  categories: [],
+  featured: [
+    { key: 'featuredEyebrow', label: 'Eyebrow' },
+    { key: 'featuredTitle', label: 'Headline' },
+    { key: 'featuredSubtitle', label: 'Description', multiline: true },
+    { key: 'featuredCta', label: 'Button' },
+  ],
+  promo: [
+    { key: 'promoEyebrow', label: 'Eyebrow' },
+    { key: 'promoTitle', label: 'Headline' },
+    { key: 'promoSubtitle', label: 'Detail' },
+    { key: 'promoCta', label: 'Button' },
+    { key: 'promoScript', label: 'Script line' },
+  ],
+  picks: [
+    { key: 'picksEyebrow', label: 'Eyebrow' },
+    { key: 'picksTitle', label: 'Headline' },
+    { key: 'picksSubtitle', label: 'Description' },
+  ],
+  trust: [],
+  reviews: [
+    { key: 'reviewsEyebrow', label: 'Eyebrow' },
+    { key: 'reviewsTitle', label: 'Headline' },
+    { key: 'reviewsSubtitle', label: 'Description' },
+  ],
+  newsletter: [
+    { key: 'newsletterEyebrow', label: 'Eyebrow' },
+    { key: 'newsletterTitle', label: 'Headline' },
+    { key: 'newsletterSubtitle', label: 'Description', multiline: true },
+  ],
+};
 
 export function LandingTemplateStudio() {
   const { config, ready, save } = useLandingConfig();
   const [draft, setDraft] = useState<LandingConfig>(DEFAULT_LANDING_CONFIG);
   const [hydrated, setHydrated] = useState(false);
+  const [editing, setEditing] = useState<LandingSectionId | null>(null);
 
   useEffect(() => {
     if (!ready || hydrated) return;
@@ -84,112 +102,139 @@ export function LandingTemplateStudio() {
     });
   };
 
-  const restoreCopy = () => {
-    commit(
-      { ...DEFAULT_LANDING_CONFIG, designs: draft.designs },
-      'Landing copy restored to the suggested text.'
-    );
+  const saveField = (key: keyof LandingConfig, value: string) => {
+    const next = { ...draft, [key]: value };
+    setDraft(next);
+    save(next);
   };
 
-  return (
-    <div className="space-y-4">
-      <Panel
-        title="Section designs"
-        description="One homepage. Pick a design for each section. Saved on this browser until the backend is connected."
-      >
-        <div className="space-y-3">
-          {LANDING_SECTION_IDS.map((sectionId) => {
-            const setting = draft.designs[sectionId];
-            const options = SECTION_DESIGNS[sectionId];
-            const active = options.find((option) => option.id === setting.design) || options[0];
-            return (
-              <div key={sectionId} className="rounded-lg border border-line bg-canvas p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-ink">{SECTION_LABELS[sectionId]}</p>
-                  <Switch
-                    checked={setting.visible}
-                    onChange={(visible) => toggleSection(sectionId, visible)}
-                    label={`${SECTION_LABELS[sectionId]} visibility`}
-                    hideLabel
-                  />
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {options.map((option) => {
-                    const selected = setting.design === option.id;
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => chooseDesign(sectionId, option.id)}
-                        className={cn(
-                          'rounded-lg border px-2 py-2 text-xs font-semibold',
-                          selected
-                            ? 'border-clay bg-clay-soft/50 text-ink'
-                            : 'border-line bg-surface text-ink-muted hover:text-ink'
-                        )}
-                      >
-                        {option.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-xs leading-relaxed text-ink-muted">{active.summary}</p>
-              </div>
-            );
-          })}
-        </div>
-      </Panel>
+  if (editing) {
+    const sectionId = editing;
+    const setting = draft.designs[sectionId];
+    const options = SECTION_DESIGNS[sectionId];
+    const fields = SECTION_COPY[sectionId];
+    const inputClass =
+      'mt-1 w-full rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink outline-none focus:border-ink';
 
+    return (
       <Panel
-        title="Landing copy"
-        description="The same text is used by every design of a section. Edits apply when you leave a field."
+        title={SECTION_LABELS[sectionId]}
+        description="Choose a design, then edit only this section’s text."
         actions={
           <button
             type="button"
-            onClick={restoreCopy}
-            className="inline-flex items-center gap-1 text-xs font-medium text-ink-muted hover:text-ink"
+            onClick={() => setEditing(null)}
+            className="inline-flex items-center gap-1 text-sm font-medium text-ink"
           >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Restore
+            <ChevronLeft className="h-4 w-4" />
+            Sections
           </button>
         }
       >
-        <div className="space-y-3">
-          {COPY_FIELDS.map((field) => {
-            const value = String(draft[field.key] ?? '');
-            const shared =
-              'mt-1 w-full rounded-lg border border-line bg-canvas px-3 py-2 text-sm text-ink outline-none focus:border-ink';
-            return (
-              <label key={field.key} className="block">
-                <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-                  {field.label}
-                </span>
-                {field.multiline ? (
-                  <textarea
-                    value={value}
-                    rows={3}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, [field.key]: event.target.value }))
-                    }
-                    onBlur={(event) => save({ ...draft, [field.key]: event.currentTarget.value })}
-                    className={shared}
-                  />
-                ) : (
-                  <input
-                    value={value}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, [field.key]: event.target.value }))
-                    }
-                    onBlur={(event) => save({ ...draft, [field.key]: event.currentTarget.value })}
-                    className={shared}
-                  />
-                )}
-              </label>
-            );
-          })}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-ink">Show on the homepage</p>
+            <Switch
+              checked={setting.visible}
+              onChange={(visible) => toggleSection(sectionId, visible)}
+              label={`${SECTION_LABELS[sectionId]} visibility`}
+              hideLabel
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {options.map((option) => {
+              const selected = setting.design === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => chooseDesign(sectionId, option.id)}
+                  className={cn(
+                    'rounded-lg border px-3 py-3 text-left',
+                    selected
+                      ? 'border-clay bg-clay-soft/40 text-ink'
+                      : 'border-line bg-surface text-ink-muted hover:text-ink'
+                  )}
+                >
+                  <span className="block text-sm font-semibold">{option.name}</span>
+                  <span className="mt-1 block text-xs leading-relaxed">{option.summary}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {fields.length > 0 && (
+            <div className="space-y-3 border-t border-line pt-4">
+              {fields.map((field) => {
+                const value = String(draft[field.key] ?? '');
+                return (
+                  <label key={field.key} className="block">
+                    <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+                      {field.label}
+                    </span>
+                    {field.multiline ? (
+                      <textarea
+                        value={value}
+                        rows={3}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, [field.key]: event.target.value }))
+                        }
+                        onBlur={(event) => saveField(field.key, event.currentTarget.value)}
+                        className={inputClass}
+                      />
+                    ) : (
+                      <input
+                        value={value}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, [field.key]: event.target.value }))
+                        }
+                        onBlur={(event) => saveField(field.key, event.currentTarget.value)}
+                        className={inputClass}
+                      />
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
       </Panel>
-    </div>
+    );
+  }
+
+  return (
+    <Panel
+      title="Homepage sections"
+      description="Open a section to choose its design and edit its text."
+    >
+      <ul className="divide-y divide-line">
+        {LANDING_SECTION_IDS.map((sectionId) => {
+          const setting = draft.designs[sectionId];
+          const options = SECTION_DESIGNS[sectionId];
+          const active = options.find((option) => option.id === setting.design) || options[0];
+          return (
+            <li key={sectionId}>
+              <button
+                type="button"
+                onClick={() => setEditing(sectionId)}
+                className="flex w-full items-center justify-between gap-3 py-3 text-left"
+              >
+                <span>
+                  <span className="block text-sm font-semibold text-ink">
+                    {SECTION_LABELS[sectionId]}
+                  </span>
+                  <span className="block text-xs text-ink-muted">
+                    {setting.visible ? active.name : 'Hidden'}
+                  </span>
+                </span>
+                <span className="text-sm font-medium text-ink-muted">Edit</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Panel>
   );
 }

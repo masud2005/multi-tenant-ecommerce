@@ -27,6 +27,9 @@ model User {
   // Customer login logs for conversion rate analytics
   customerLoginLogs CustomerLoginLog[]
 
+  // Review helpful votes
+  reviewHelpfulVotes ReviewHelpfulVote[]
+
   @@index([deletedAt])
   @@map("users")
 }

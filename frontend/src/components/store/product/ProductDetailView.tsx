@@ -29,16 +29,44 @@ import { available, discountPercent, variantPrice } from '@/utils/pricing';
 import { formatBDT } from '@/utils/format';
 import { cn } from '@/lib/utils';
 
-const galleryPositions = [
-  'object-center',
-  'object-top scale-[1.35] origin-top',
-  'object-bottom scale-[1.5] origin-center',
-];
+function ProductDetailSkeleton() {
+  return (
+    <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8 pb-16" aria-busy="true" aria-label="Loading product">
+      <div className="h-3 w-48 animate-pulse rounded bg-subtle" />
+      <div className="mt-8 grid gap-10 lg:grid-cols-2 lg:gap-14">
+        <div className="space-y-3">
+          <div className="min-h-[420px] w-full animate-pulse rounded-lg bg-subtle" />
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="aspect-square animate-pulse rounded-md bg-subtle" />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-5">
+          <div className="h-4 w-28 animate-pulse rounded bg-subtle" />
+          <div className="h-9 w-4/5 max-w-md animate-pulse rounded bg-subtle" />
+          <div className="h-5 w-36 animate-pulse rounded bg-subtle" />
+          <div className="h-8 w-32 animate-pulse rounded bg-subtle" />
+          <div className="space-y-2 pt-2">
+            <div className="h-3 w-full animate-pulse rounded bg-subtle" />
+            <div className="h-3 w-5/6 animate-pulse rounded bg-subtle" />
+            <div className="h-3 w-2/3 animate-pulse rounded bg-subtle" />
+          </div>
+          <div className="flex gap-2 pt-4">
+            <div className="h-11 flex-1 animate-pulse rounded-lg bg-subtle" />
+            <div className="h-11 w-11 animate-pulse rounded-lg bg-subtle" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ProductDetailView({ slug }: { slug: string }) {
   const {
     user,
     products,
+    isProductsLoading,
     addToCart,
     setMiniCartOpen,
     wishlist,
@@ -143,6 +171,11 @@ export function ProductDetailView({ slug }: { slug: string }) {
       }
     }
   };
+
+  // Wait for catalog fetch — empty products on refresh is loading, not missing
+  if (isProductsLoading) {
+    return <ProductDetailSkeleton />;
+  }
 
   if (!product) {
     return (
@@ -311,8 +344,8 @@ export function ProductDetailView({ slug }: { slug: string }) {
 
       {/* Main PDP Grid */}
       <div className="mt-6 grid gap-10 lg:grid-cols-[1fr_440px] lg:gap-14">
-        {/* Left: Gallery */}
-        <div className="grid gap-3 sm:grid-cols-[72px_1fr]">
+        {/* Left: Gallery — frame hugs the real image (no forced tall gray box) */}
+        <div className="grid gap-3 sm:grid-cols-[72px_1fr] sm:items-start">
           <div className="order-2 flex gap-2 sm:order-1 sm:flex-col">
             {product.images.map((src, i) => (
               <button
@@ -333,15 +366,12 @@ export function ProductDetailView({ slug }: { slug: string }) {
                   onError={(e) => {
                     e.currentTarget.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80';
                   }}
-                  className={cn(
-                    'aspect-[3/4] w-16 object-cover sm:w-full bg-subtle',
-                    galleryPositions[i]
-                  )}
+                  className="h-16 w-16 object-cover sm:h-auto sm:w-full sm:aspect-square"
                 />
               </button>
             ))}
           </div>
-          <div className="relative order-1 overflow-hidden rounded-lg bg-subtle sm:order-2">
+          <div className="relative order-1 overflow-hidden rounded-lg sm:order-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={product.images[image] || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80'}
@@ -349,10 +379,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
               onError={(e) => {
                 e.currentTarget.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80';
               }}
-              className={cn(
-                'aspect-[3/4] w-full object-cover bg-subtle',
-                galleryPositions[image]
-              )}
+              className="block h-auto w-full"
             />
             {off > 0 && (
               <span className="absolute left-4 top-4 rounded bg-clay px-2 py-1 text-xs font-semibold text-white">

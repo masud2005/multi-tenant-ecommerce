@@ -5,7 +5,7 @@ model Review {
   customerId String?
   author     String
   rating     Int          @default(5)
-  title      String
+  title      String       @default("")
   body       String       @db.Text
   verified   Boolean      @default(true)
   photos     String[]     @default([])
@@ -23,9 +23,24 @@ model Review {
   tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   product  Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
   customer CustomerProfile? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  helpfulVotes ReviewHelpfulVote[]
 
   @@index([tenantId, productId])
   @@index([tenantId, status])
   @@index([tenantId, createdAt(sort: Desc)])
   @@map("reviews")
+}
+
+model ReviewHelpfulVote {
+  id        String   @id @default(uuid())
+  reviewId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, userId])
+  @@index([userId])
+  @@map("review_helpful_votes")
 }
