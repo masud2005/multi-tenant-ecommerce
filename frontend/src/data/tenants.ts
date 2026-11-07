@@ -45,7 +45,7 @@ export const mockTenants: Record<string, Tenant> = {
       facebook: 'https://facebook.com/tanti',
       instagram: 'https://instagram.com/tanti',
       twitter: 'https://twitter.com/tanti',
-    }
+    },
   },
   'orvio-demo': {
     id: 'tenant-orvio-02',

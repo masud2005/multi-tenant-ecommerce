@@ -73,8 +73,8 @@ export default function AdminSettingsPage() {
     timezone: '(GMT+06:00) Dhaka',
     language: 'English',
     orderNumberFormat: 'TN-{number}',
-    announcement: 'Use EID500 for ৳500 off orders over ৳3,000.',
-    announcementEnabled: true,
+    announcement: '',
+    announcementEnabled: false,
   });
 
   // 2. Public Contact Details Form State
@@ -152,11 +152,9 @@ export default function AdminSettingsPage() {
             currencyPosition: d.currencyPosition || prev.currencyPosition,
             orderNumberFormat:
               d.settings?.orderNumberFormat || prev.orderNumberFormat,
-            announcement: d.announcement || prev.announcement,
-            announcementEnabled:
-              d.announcementEnabled !== undefined
-                ? d.announcementEnabled
-                : prev.announcementEnabled,
+            announcement:
+              typeof d.announcement === 'string' ? d.announcement : '',
+            announcementEnabled: Boolean(d.announcementEnabled),
           }));
 
           if (d.contact) {

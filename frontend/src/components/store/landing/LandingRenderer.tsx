@@ -10,7 +10,7 @@ import { useLandingModel } from './useLandingModel';
 export function LandingRenderer({ config }: { config?: LandingConfig }) {
   const stored = useLandingConfig();
   const active = config || stored.config;
-  const model = useLandingModel();
+  const model = useLandingModel(active);
   return <LandingSections config={active} model={model} />;
 }
 

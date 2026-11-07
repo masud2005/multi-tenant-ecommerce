@@ -12,6 +12,19 @@ import type {
   OwnerReviewsQuery,
 } from '@/types/review';
 
+function mapProductImageUrls(images: unknown): string[] {
+  if (!Array.isArray(images)) return [];
+  return images
+    .map((img) => {
+      if (typeof img === 'string') return img;
+      if (img && typeof img === 'object' && 'url' in img) {
+        return String((img as { url?: string }).url || '');
+      }
+      return '';
+    })
+    .filter(Boolean);
+}
+
 // Mapper to normalize raw backend review to frontend format
 export function mapBackendReviewToFrontend(raw: any): Review {
   const photos = Array.isArray(raw.photos)
@@ -48,7 +61,7 @@ export function mapBackendReviewToFrontend(raw: any): Review {
           id: raw.product.id,
           title: raw.product.title,
           slug: raw.product.slug,
-          images: Array.isArray(raw.product.images) ? raw.product.images : [],
+          images: mapProductImageUrls(raw.product.images),
           price: Number(raw.product.price) || 0,
           salePrice: raw.product.salePrice ? Number(raw.product.salePrice) : null,
         }
@@ -195,7 +208,7 @@ export const reviewService = {
               id: p.id,
               title: p.title,
               slug: p.slug,
-              images: Array.isArray(p.images) ? p.images : [],
+              images: mapProductImageUrls(p.images),
               price: Number(p.price) || 0,
               salePrice: p.salePrice != null ? Number(p.salePrice) : null,
             })),

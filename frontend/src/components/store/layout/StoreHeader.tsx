@@ -23,7 +23,7 @@ export function StoreHeader() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategory = searchParams.get('category');
-  const { tenant } = useTenant();
+  const { tenant, isLoading: tenantLoading } = useTenant();
   const {
     cart,
     wishlist,
@@ -75,8 +75,9 @@ export function StoreHeader() {
   return (
     <>
     <header className="fixed inset-x-0 top-0 z-40">
-      {/* Top Announcement Bar - Dynamic from Store Tenant Settings in DB */}
-      {Boolean(tenant.announcementEnabled && tenant.announcement?.trim()) && (
+      {/* Top Announcement Bar — only after live tenant settings load (no mock flash) */}
+      {!tenantLoading &&
+        Boolean(tenant.announcementEnabled && tenant.announcement?.trim()) && (
         <div className="bg-ink text-canvas px-4 py-1.5 text-center text-xs font-medium tracking-wide border-b border-ink-soft/20 shadow-xs">
           {tenant.announcement}
         </div>
