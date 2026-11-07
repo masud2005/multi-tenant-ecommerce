@@ -8,7 +8,6 @@ export const mockTenants: Record<string, Tenant> = {
     tagline: 'Handloom & Contemporary Bangladeshi Fashion',
     domain: 'tanti.com.bd',
     customDomain: 'tanti.com.bd',
-    logoUrl: '/images/tanti-logo.svg',
     plan: 'growth',
     planState: 'active',
     currency: {

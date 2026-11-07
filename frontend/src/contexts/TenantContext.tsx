@@ -50,12 +50,24 @@ export function TenantProvider({
         const mapped: Tenant = {
           id: raw.id || fallbackTenant.id,
           slug: raw.slug || slug,
-          name: raw.name || fallbackTenant.name,
-          tagline: raw.tagline || fallbackTenant.tagline,
+          name: typeof raw.name === 'string' ? raw.name : fallbackTenant.name,
+          tagline:
+            typeof raw.tagline === 'string' ? raw.tagline : undefined,
           domain: raw.domain || fallbackTenant.domain,
           customDomain: raw.customDomain || fallbackTenant.customDomain,
-          logoUrl: raw.logo || raw.logoUrl || fallbackTenant.logoUrl,
-          faviconUrl: raw.favicon || raw.faviconUrl || fallbackTenant.faviconUrl,
+          // Branding is backend-only — never fall back to mock logo assets.
+          logoUrl:
+            typeof raw.logo === 'string' && raw.logo.trim()
+              ? raw.logo.trim()
+              : typeof raw.logoUrl === 'string' && raw.logoUrl.trim()
+                ? raw.logoUrl.trim()
+                : undefined,
+          faviconUrl:
+            typeof raw.favicon === 'string' && raw.favicon.trim()
+              ? raw.favicon.trim()
+              : typeof raw.faviconUrl === 'string' && raw.faviconUrl.trim()
+                ? raw.faviconUrl.trim()
+                : undefined,
           plan: (raw.plan as any) || fallbackTenant.plan,
           planState: (raw.planState as any) || fallbackTenant.planState,
           currency: {
@@ -103,11 +115,14 @@ export function TenantProvider({
     fetchTenantData(currentSlug);
   }, [currentSlug, fetchTenantData]);
 
-  // Fallback tenant never carries announcement — only live API data may.
+  // Fallback tenant never carries branding/announcement — only live API data may.
   const activeTenant = useMemo<Tenant>(() => {
     if (liveTenant) return liveTenant;
     return {
       ...fallbackTenant,
+      name: '',
+      logoUrl: undefined,
+      faviconUrl: undefined,
       announcement: undefined,
       announcementEnabled: false,
     };
@@ -175,6 +190,9 @@ export function useTenant(): TenantContextValue {
     return {
       tenant: {
         ...fallback,
+        name: '',
+        logoUrl: undefined,
+        faviconUrl: undefined,
         announcement: undefined,
         announcementEnabled: false,
       },

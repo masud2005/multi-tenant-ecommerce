@@ -104,9 +104,24 @@ export function StoreHeader() {
             <MenuIcon className="h-6 w-6" />
           </button>
 
-          {/* Store Logo */}
-          <Link href="/" className="font-display text-2xl font-bold tracking-tight text-ink">
-            {tenant.name}
+          {/* Store brand: uploaded logo, else name, else empty — no mock assets */}
+          <Link
+            href="/"
+            className="flex min-h-9 min-w-[2.5rem] items-center"
+            aria-label={tenant.name?.trim() || 'Store home'}
+          >
+            {!tenantLoading && tenant.logoUrl?.trim() ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tenant.logoUrl}
+                alt={tenant.name?.trim() || 'Store logo'}
+                className="h-9 w-auto max-w-[160px] object-contain"
+              />
+            ) : !tenantLoading && tenant.name?.trim() ? (
+              <span className="font-display text-2xl font-bold tracking-tight text-ink">
+                {tenant.name}
+              </span>
+            ) : null}
           </Link>
 
           {/* Desktop Navigation */}

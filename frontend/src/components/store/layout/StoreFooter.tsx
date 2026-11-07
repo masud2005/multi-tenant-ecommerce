@@ -60,10 +60,21 @@ export function StoreFooter() {
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <p className="font-display text-3xl">{tenant.name}</p>
-            <p className="mt-3 max-w-sm text-sm text-canvas/70">
-              {tenant.tagline}
-            </p>
+            {tenant.logoUrl?.trim() ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tenant.logoUrl}
+                alt={tenant.name?.trim() || 'Store logo'}
+                className="h-10 w-auto max-w-[180px] object-contain"
+              />
+            ) : tenant.name?.trim() ? (
+              <p className="font-display text-3xl">{tenant.name}</p>
+            ) : null}
+            {tenant.tagline?.trim() ? (
+              <p className="mt-3 max-w-sm text-sm text-canvas/70">
+                {tenant.tagline}
+              </p>
+            ) : null}
             <form onSubmit={subscribe} className="mt-8 max-w-sm" noValidate>
               <label htmlFor="newsletter" className="text-sm font-medium">
                 Get 10% off your first order
@@ -119,7 +130,11 @@ export function StoreFooter() {
             ))}
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-canvas/60">
-            <span>© 2026 {tenant.name} · {tenant.contact?.address}</span>
+            <span>
+              © 2026
+              {tenant.name?.trim() ? ` ${tenant.name}` : ''}
+              {tenant.contact?.address ? ` · ${tenant.contact.address}` : ''}
+            </span>
             <Link href="/policies/privacy" className="hover:text-canvas">
               Privacy
             </Link>
