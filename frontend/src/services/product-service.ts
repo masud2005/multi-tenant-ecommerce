@@ -1,5 +1,4 @@
 import { apiClient, ApiResponse } from './api-client';
-import { products as seedProducts } from '@/data/products';
 import type {
   Product,
   ProductStatus,
@@ -174,7 +173,7 @@ export const productService = {
       }
       return undefined;
     } catch {
-      return seedProducts.find((p) => p.id === idOrSlug || p.slug === idOrSlug);
+      return undefined;
     }
   },
 

@@ -75,25 +75,23 @@ export function StoreHeader() {
 
   return (
     <>
-    <header
-      className={cn(
-        'fixed inset-x-0 top-0 z-40 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-500 ease-out',
-        overHero
-          ? 'border-transparent bg-transparent shadow-none'
-          : 'border-line bg-canvas/95 shadow-sm backdrop-blur-md'
-      )}
-    >
-      <div
-        className={cn(
-          'px-4 py-1.5 text-center text-xs font-medium tracking-wide transition-colors duration-500',
-          overHero ? 'bg-transparent text-ink' : 'bg-ink text-canvas'
-        )}
-      >
+    <header className="fixed inset-x-0 top-0 z-40">
+      {/* Top Announcement Bar - fixed from the start with solid background */}
+      <div className="bg-ink text-canvas px-4 py-1.5 text-center text-xs font-medium tracking-wide border-b border-ink-soft/20 shadow-xs">
         {announcement}
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-4">
+      {/* Main Navbar - Frosted Glassmorphism on scroll */}
+      <div
+        className={cn(
+          'transition-[background-color,border-color,box-shadow,backdrop-filter] duration-500 ease-out',
+          overHero
+            ? 'border-b border-transparent bg-transparent shadow-none'
+            : 'border-b border-line/60 bg-canvas/75 backdrop-blur-2xl backdrop-saturate-150 shadow-sm'
+        )}
+      >
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between gap-4">
           {/* Mobile Menu Button */}
           <button
             type="button"
@@ -118,7 +116,7 @@ export function StoreHeader() {
                 pathname === '/shop' && !currentCategory ? 'text-clay' : 'text-ink'
               )}
             >
-              All Products
+              Shop
             </Link>
             {categories.slice(0, 4).map((cat) => (
               <div
@@ -259,6 +257,7 @@ export function StoreHeader() {
           </div>
         </div>
       </div>
+    </div>
 
       {/* Mobile Menu Drawer */}
       <Drawer
@@ -316,7 +315,7 @@ export function StoreHeader() {
             onClick={() => setMobileOpen(false)}
             className="block text-base font-medium text-ink hover:text-clay"
           >
-            All Products
+            Shop
           </Link>
           <div className="border-t border-line pt-4 space-y-3">
             <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider">

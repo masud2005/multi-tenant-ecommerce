@@ -15,13 +15,6 @@ export function LandingRenderer({ config }: { config?: LandingConfig }) {
 }
 
 export function LandingHome() {
-  const { config, ready } = useLandingConfig();
-  if (!ready) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <LoadingSpinner size="md" label="Loading homepage..." />
-      </div>
-    );
-  }
+  const { config } = useLandingConfig();
   return <LandingRenderer config={config} />;
 }

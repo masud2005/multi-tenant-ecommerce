@@ -35,6 +35,7 @@ export async function seedCustomers(prisma: PrismaClient) {
     update: {
       name: customerName,
       phone: customerPhone,
+      password: hashedPassword,
       role: UserRole.CUSTOMER,
       status: UserStatus.ACTIVE,
     },

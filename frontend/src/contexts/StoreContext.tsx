@@ -49,6 +49,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     () => ({
       // Catalog
       isStoreLoading: catalog.isStoreLoading,
+      isProductsLoading: catalog.isProductsLoading,
+      isCategoriesLoading: catalog.isCategoriesLoading,
+      isCollectionsLoading: catalog.isCollectionsLoading,
       products: catalog.products,
       categories: catalog.categories,
       collections: catalog.collections,

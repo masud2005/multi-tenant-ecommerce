@@ -162,6 +162,42 @@ function LoginFormContent() {
       >
         <span className="font-bold text-[#4285F4] mr-2">G</span> Continue with Google
       </Button>
+
+      {/* Demo Credentials Helper */}
+      <div className="mt-6 rounded-lg border border-line bg-surface p-3.5 text-xs">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold text-ink">Demo Accounts:</span>
+          <span className="text-[11px] text-ink-muted">Click to auto-fill</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mt-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              setEmail('owner@gmail.com');
+              setPassword('123456');
+              setMode('email');
+              setErrors({});
+            }}
+            className="flex flex-col items-start rounded-md border border-line bg-canvas p-2 text-left transition-colors hover:border-ink/40 cursor-pointer"
+          >
+            <span className="font-semibold text-ink">Owner (Admin)</span>
+            <span className="text-[11px] text-ink-muted truncate w-full">owner@gmail.com</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail('customer@gmail.com');
+              setPassword('123456');
+              setMode('email');
+              setErrors({});
+            }}
+            className="flex flex-col items-start rounded-md border border-line bg-canvas p-2 text-left transition-colors hover:border-ink/40 cursor-pointer"
+          >
+            <span className="font-semibold text-ink">Customer (Store)</span>
+            <span className="text-[11px] text-ink-muted truncate w-full">customer@gmail.com</span>
+          </button>
+        </div>
+      </div>
     </>
   );
 }

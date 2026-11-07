@@ -119,12 +119,18 @@ export function CategoryLinks({
           )}
         >
           <span className="block overflow-hidden rounded-lg bg-subtle">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={category.image}
-              alt=""
-              className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-            />
+            {category.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={category.image}
+                alt={category.name}
+                className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              />
+            ) : (
+              <span className="flex aspect-[4/3] w-full items-center justify-center bg-subtle text-ink-muted text-sm font-medium">
+                {category.name}
+              </span>
+            )}
           </span>
           <span className="mt-3 block text-sm font-medium text-ink">{category.name}</span>
         </Link>
@@ -146,12 +152,18 @@ export function ProductPick({ product }: { product: Product }) {
     <article className="group">
       <div className="relative overflow-hidden rounded-lg bg-subtle">
         <Link href={`/products/${product.slug}`} className="block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={image}
-            alt={product.title}
-            className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          />
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={image}
+              alt={product.title}
+              className="aspect-[4/5] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            />
+          ) : (
+            <div className="flex aspect-[4/5] w-full items-center justify-center bg-subtle text-xs text-ink-muted p-4 text-center">
+              {product.title}
+            </div>
+          )}
         </Link>
         {badge && (
           <span className="absolute left-3 top-3 rounded-lg bg-surface px-2.5 py-1 text-xs font-semibold text-ink shadow-xs">

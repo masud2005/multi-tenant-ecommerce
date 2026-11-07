@@ -39,6 +39,9 @@ export interface PlaceOrderInput {
 
 export interface StoreContextValue {
   isStoreLoading: boolean;
+  isProductsLoading?: boolean;
+  isCategoriesLoading?: boolean;
+  isCollectionsLoading?: boolean;
   products: Product[];
   orders: Order[];
   returns: ReturnRequest[];

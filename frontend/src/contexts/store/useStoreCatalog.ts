@@ -4,12 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import type { CategoryItemData, Product } from '@/types/commerce';
 import type { CollectionItem } from '@/types/collection';
 import {
-  products as seedProducts,
-  categories as seedCategories,
-  collections as seedCollections,
-} from '@/data/products';
-import { images } from '@/data/images';
-import {
   categoryService,
   productService,
   cartService,
@@ -17,115 +11,117 @@ import {
   type CategoryResponseData,
   type CollectionResponseData,
 } from '@/services';
-import { load } from './utils';
 
 export function useStoreCatalog() {
   const [isStoreLoading, setIsStoreLoading] = useState(true);
-  const [products, setProducts] = useState<Product[]>(() =>
-    load('tanti.products', seedProducts)
-  );
-  const [categories, setCategories] = useState<CategoryItemData[]>(() =>
-    load('tanti.categories', seedCategories as CategoryItemData[])
-  );
-  const [collections, setCollections] = useState<CollectionItem[]>(() =>
-    load('tanti.collections', seedCollections as CollectionItem[])
-  );
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+  const [isCollectionsLoading, setIsCollectionsLoading] = useState(true);
 
-  // Sync products, categories, and collections to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('tanti.products', JSON.stringify(products));
-    } catch {}
-  }, [products]);
+  // Initialize with strictly empty state - NO mock/fake seed data!
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<CategoryItemData[]>([]);
+  const [collections, setCollections] = useState<CollectionItem[]>([]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('tanti.categories', JSON.stringify(categories));
-    } catch {}
-  }, [categories]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('tanti.collections', JSON.stringify(collections));
-    } catch {}
-  }, [collections]);
-
-  // Fetch real categories, products, and collections on mount
+  // Fetch real categories, products, and collections dynamically from server
   useEffect(() => {
     let isMounted = true;
+
     async function initializeStore() {
-      try {
-        const [catRes, prodRes, colRes] = await Promise.allSettled([
-          categoryService.getCategories(),
-          productService.getProducts(),
-          collectionService.getCollections(),
-        ]);
+      // 1. Fetch Categories independently so it displays as soon as ready
+      const fetchCategories = async () => {
+        try {
+          const catRes = await categoryService.getCategories();
+          if (!isMounted) return;
 
-        if (!isMounted) return;
+          if (catRes && catRes.data && Array.isArray(catRes.data) && catRes.data.length > 0) {
+            const parentCategories = catRes.data.filter(
+              (c: CategoryResponseData) => !c.parentId && c.isActive !== false
+            );
+            const targetList = parentCategories.length > 0 ? parentCategories : catRes.data;
 
-        // 1. Process Categories
-        if (catRes.status === 'fulfilled' && catRes.value?.data && catRes.value.data.length > 0) {
-          const parentCategories = catRes.value.data.filter(
-            (c: CategoryResponseData) => !c.parentId && c.isActive !== false
-          );
-          const targetList = parentCategories.length > 0 ? parentCategories : catRes.value.data;
+            const mapped: CategoryItemData[] = targetList.map((c: CategoryResponseData) => {
+              const childrenNames = (c.children || []).map((ch: any) => ch.name);
+              return {
+                key: c.slug || c.id,
+                name: c.name,
+                image: c.image || '',
+                blurb: c.description || `${c.name} collection`,
+                subcategories: childrenNames,
+              };
+            });
 
-          const mapped: CategoryItemData[] = targetList.map((c: CategoryResponseData) => {
-            const childrenNames = (c.children || []).map((ch: any) => ch.name);
-            return {
-              key: c.slug || c.id,
+            if (mapped.length > 0) {
+              setCategories(mapped);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load real categories:', err);
+        } finally {
+          if (isMounted) setIsCategoriesLoading(false);
+        }
+      };
+
+      // 2. Fetch Products independently
+      const fetchProducts = async () => {
+        try {
+          const prodRes = await productService.getProducts();
+          if (!isMounted) return;
+
+          if (prodRes && Array.isArray(prodRes) && prodRes.length > 0) {
+            setProducts(prodRes);
+          }
+        } catch (err) {
+          console.error('Failed to load real products:', err);
+        } finally {
+          if (isMounted) setIsProductsLoading(false);
+        }
+      };
+
+      // 3. Fetch Collections independently
+      const fetchCollections = async () => {
+        try {
+          const colRes = await collectionService.getCollections();
+          if (!isMounted) return;
+
+          if (colRes && colRes.data && Array.isArray(colRes.data) && colRes.data.length > 0) {
+            const activeCols = colRes.data.filter(
+              (c: CollectionResponseData) => c.isActive !== false
+            );
+            const mappedCols: CollectionItem[] = activeCols.map((c: CollectionResponseData) => ({
+              id: c.id,
+              slug: c.slug,
               name: c.name,
-              image: c.image || images.kurta,
-              blurb: c.description || `${c.name} collection`,
-              subcategories: childrenNames,
-            };
-          });
+              description: c.description || '',
+              image: c.image || '',
+              type: (c.type?.toLowerCase() === 'rule' ? 'rule' : 'manual') as any,
+              ruleDetails: c.rule || undefined,
+              rule:
+                c.rule && typeof c.rule === 'object'
+                  ? `${c.rule.field || 'Tag'} ${c.rule.op || c.rule.condition || 'contains'} "${c.rule.value || ''}"`
+                  : undefined,
+              isFeatured: c.isFeatured,
+              isActive: c.isActive,
+              seoTitle: c.seoTitle || undefined,
+              seoDescription: c.seoDescription || undefined,
+              startsAt: c.startsAt || undefined,
+              endsAt: c.endsAt || undefined,
+            }));
 
-          if (mapped.length > 0) {
-            setCategories(mapped);
+            if (mappedCols.length > 0) {
+              setCollections(mappedCols);
+            }
           }
+        } catch (err) {
+          console.error('Failed to load real collections:', err);
+        } finally {
+          if (isMounted) setIsCollectionsLoading(false);
         }
+      };
 
-        // 2. Process Products
-        if (prodRes.status === 'fulfilled' && prodRes.value && prodRes.value.length > 0) {
-          setProducts(prodRes.value);
-        }
-
-        // 3. Process Collections from Database
-        if (colRes.status === 'fulfilled' && colRes.value?.data && colRes.value.data.length > 0) {
-          const activeCols = colRes.value.data.filter(
-            (c: CollectionResponseData) => c.isActive !== false
-          );
-          const mappedCols: CollectionItem[] = activeCols.map((c: CollectionResponseData) => ({
-            id: c.id,
-            slug: c.slug,
-            name: c.name,
-            description: c.description || '',
-            image: c.image || images.hero,
-            type: (c.type?.toLowerCase() === 'rule' ? 'rule' : 'manual') as any,
-            ruleDetails: c.rule || undefined,
-            rule:
-              c.rule && typeof c.rule === 'object'
-                ? `${c.rule.field || 'Tag'} ${c.rule.op || c.rule.condition || 'contains'} "${c.rule.value || ''}"`
-                : undefined,
-            isFeatured: c.isFeatured,
-            isActive: c.isActive,
-            seoTitle: c.seoTitle || undefined,
-            seoDescription: c.seoDescription || undefined,
-            startsAt: c.startsAt || undefined,
-            endsAt: c.endsAt || undefined,
-          }));
-
-          if (mappedCols.length > 0) {
-            setCollections(mappedCols);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to initialize store data:', err);
-      } finally {
-        if (isMounted) {
-          setIsStoreLoading(false);
-        }
+      await Promise.allSettled([fetchCategories(), fetchProducts(), fetchCollections()]);
+      if (isMounted) {
+        setIsStoreLoading(false);
       }
     }
 
@@ -272,6 +268,9 @@ export function useStoreCatalog() {
 
   return {
     isStoreLoading,
+    isProductsLoading,
+    isCategoriesLoading,
+    isCollectionsLoading,
     products,
     setProducts,
     categories,

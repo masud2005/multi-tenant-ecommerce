@@ -11,8 +11,15 @@ import {
 } from '@/lib/landing-config';
 
 export function useLandingConfig() {
-  const [config, setConfig] = useState<LandingConfig>(DEFAULT_LANDING_CONFIG);
-  const [ready, setReady] = useState(false);
+  const [config, setConfig] = useState<LandingConfig>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return readLandingConfig();
+      } catch {}
+    }
+    return DEFAULT_LANDING_CONFIG;
+  });
+  const [ready, setReady] = useState(true);
 
   useEffect(() => {
     setConfig(readLandingConfig());
