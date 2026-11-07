@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Rating } from '@/components/ui/Rating';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/utils/format';
+import { getDisplayReviewTitle } from '@/utils/review';
 import { reviewService } from '@/services/review-service';
 import type { Review, ReviewStatus } from '@/types/review';
 import { cn } from '@/utils/cn';
@@ -452,7 +453,12 @@ export function ReviewDetailDrawer({
 
                 {/* Review Title & Body */}
                 <div className="pt-2 border-t border-line/60">
-                  <h4 className="text-sm font-bold text-ink">{review.title}</h4>
+                  {(() => {
+                    const displayTitle = getDisplayReviewTitle(review.title, review.body);
+                    return displayTitle ? (
+                      <h4 className="text-sm font-bold text-ink">{displayTitle}</h4>
+                    ) : null;
+                  })()}
                   <p className="mt-1 text-sm text-ink-soft leading-relaxed whitespace-pre-line">
                     {review.body}
                   </p>

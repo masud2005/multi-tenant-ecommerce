@@ -85,6 +85,7 @@ export class ReviewController {
   @ApiOperation({ summary: 'Get all reviews and rating distribution for a product' })
   @ApiResponse({ status: 200, description: 'Product reviews retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Product not found' })
+  @UseGuards(OptionalJwtAuthGuard)
   async getProductReviews(
     @Param('productId') productId: string,
     @Query() query: ReviewQueryDto,
@@ -92,14 +93,16 @@ export class ReviewController {
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
-    return this.reviewService.getProductReviews(productId, query, tenantId);
+    const userId = user?.id || user?.sub;
+    return this.reviewService.getProductReviews(productId, query, tenantId, userId);
   }
 
   @Post('reviews/:id/helpful')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(OptionalJwtAuthGuard)
-  @ApiOperation({ summary: 'Mark a review as helpful' })
-  @ApiResponse({ status: 200, description: 'Review marked as helpful' })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Toggle helpful vote on a review' })
+  @ApiResponse({ status: 200, description: 'Helpful vote toggled' })
+  @ApiResponse({ status: 401, description: 'Authentication required' })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async markHelpful(
     @Param('id') id: string,
@@ -107,6 +110,7 @@ export class ReviewController {
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
-    return this.reviewService.markHelpful(id, tenantId);
+    const userId = user?.id || user?.sub;
+    return this.reviewService.toggleHelpful(id, tenantId, userId);
   }
 }

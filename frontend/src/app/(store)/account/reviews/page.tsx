@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate } from '@/utils/format';
+import { getDisplayReviewTitle } from '@/utils/review';
 import type { Review } from '@/types/review';
 
 type ReviewableProduct = {
@@ -179,7 +180,12 @@ export default function AccountReviewsPage() {
 
                       <div className="flex items-center gap-3">
                         <Rating value={r.rating} size="sm" />
-                        <h3 className="text-sm font-semibold text-ink">{r.title}</h3>
+                        {(() => {
+                          const displayTitle = getDisplayReviewTitle(r.title, r.body);
+                          return displayTitle ? (
+                            <h3 className="text-sm font-semibold text-ink">{displayTitle}</h3>
+                          ) : null;
+                        })()}
                       </div>
 
                       <p className="text-sm text-ink-soft leading-relaxed">{r.body}</p>

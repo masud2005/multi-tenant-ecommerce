@@ -286,7 +286,7 @@ export class ReviewService {
         productId: productExists.id,
         author: dto.author.trim(),
         rating: dto.rating,
-        title: dto.title?.trim() || 'Customer Review',
+        title: dto.title?.trim() || '',
         body: dto.body.trim(),
         verified: dto.verified === true,
         size: dto.size?.trim() || null,

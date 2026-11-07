@@ -40,6 +40,7 @@ export interface Review {
   verified: boolean;
   photos: string[];
   helpful: number;
+  helpfulVotedByMe?: boolean;
   status: ReviewStatus;
   size?: string | null;
   reply?: string | null;
@@ -78,8 +79,8 @@ export interface ProductReviewsResponse {
 export interface CreateReviewPayload {
   productId: string;
   rating: number;
-  title: string;
   body: string;
+  title?: string;
   author?: string;
   photos?: string[];
   size?: string;

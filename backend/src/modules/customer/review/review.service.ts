@@ -234,11 +234,14 @@ export class ReviewService {
       );
     }
 
+    // Customer form only collects review body — no separate title field
+    const trimmedBody = dto.body.trim();
+    const trimmedTitle = dto.title?.trim() || '';
     const resolvedTitle =
-      dto.title?.trim() ||
-      (dto.body.trim().length > 40
-        ? `${dto.body.trim().slice(0, 37)}...`
-        : dto.body.trim() || `${dto.rating} Star Review`);
+      trimmedTitle &&
+      trimmedTitle.toLowerCase() !== trimmedBody.toLowerCase()
+        ? trimmedTitle
+        : '';
 
     const review = await this.prisma.review.create({
       data: {
@@ -248,7 +251,7 @@ export class ReviewService {
         author: dto.author.trim(),
         rating: dto.rating,
         title: resolvedTitle,
-        body: dto.body.trim(),
+        body: trimmedBody,
         verified: verifiedBuyer,
         photos: dto.photos && Array.isArray(dto.photos) ? dto.photos : [],
         size: dto.size?.trim() || null,
@@ -288,7 +291,7 @@ export class ReviewService {
               tenantId: product.tenantId || resolvedTenantId,
               userId: member.userId,
               title: `New Review on "${product.title}"`,
-              message: `${dto.author.trim()} rated ${dto.rating} ★: "${resolvedTitle}"`,
+              message: `${dto.author.trim()} rated ${dto.rating} ★: "${trimmedBody.slice(0, 80)}"`,
               type: 'SYSTEM',
               link: `/admin/reviews`,
             });
@@ -403,6 +406,7 @@ export class ReviewService {
     productIdOrSlug: string,
     query: ReviewQueryDto = {},
     tenantId?: string,
+    userId?: string | null,
   ) {
     const resolvedTenantId = await this.resolveTenantId(tenantId);
     const product = await this.resolveProduct(productIdOrSlug, resolvedTenantId);
@@ -478,9 +482,24 @@ export class ReviewService {
     const averageRating =
       totalReviews > 0 ? Number((totalScore / totalReviews).toFixed(1)) : 0;
 
+    let votedReviewIds = new Set<string>();
+    if (userId && reviews.length > 0) {
+      const votes = await this.prisma.reviewHelpfulVote.findMany({
+        where: {
+          userId,
+          reviewId: { in: reviews.map((r) => r.id) },
+        },
+        select: { reviewId: true },
+      });
+      votedReviewIds = new Set(votes.map((v) => v.reviewId));
+    }
+
     return ResponseHelper.success(
       {
-        reviews,
+        reviews: reviews.map((r) => ({
+          ...r,
+          helpfulVotedByMe: votedReviewIds.has(r.id),
+        })),
         stats: {
           totalReviews,
           averageRating,
@@ -498,7 +517,15 @@ export class ReviewService {
     );
   }
 
-  async markHelpful(id: string, tenantId?: string) {
+  async toggleHelpful(
+    id: string,
+    tenantId: string | undefined,
+    userId: string | null | undefined,
+  ) {
+    if (!userId) {
+      throw new UnauthorizedException('Please sign in to mark a review as helpful');
+    }
+
     const resolvedTenantId = await this.resolveTenantId(tenantId);
 
     const review = await this.prisma.review.findFirst({
@@ -514,18 +541,61 @@ export class ReviewService {
       throw new NotFoundException(`Review with id "${id}" not found`);
     }
 
-    const updated = await this.prisma.review.update({
-      where: { id },
-      data: {
-        helpful: { increment: 1 },
-      },
-      select: {
-        id: true,
-        helpful: true,
+    const existing = await this.prisma.reviewHelpfulVote.findUnique({
+      where: {
+        reviewId_userId: {
+          reviewId: review.id,
+          userId,
+        },
       },
     });
 
-    return ResponseHelper.success(updated, 'Review marked as helpful');
+    if (existing) {
+      const nextHelpful = Math.max(0, review.helpful - 1);
+      await this.prisma.$transaction([
+        this.prisma.reviewHelpfulVote.delete({ where: { id: existing.id } }),
+        this.prisma.review.update({
+          where: { id: review.id },
+          data: { helpful: nextHelpful },
+        }),
+      ]);
+
+      return ResponseHelper.success(
+        {
+          id: review.id,
+          helpful: nextHelpful,
+          helpfulVotedByMe: false,
+        },
+        'Helpful vote removed',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.reviewHelpfulVote.create({
+        data: {
+          reviewId: review.id,
+          userId,
+        },
+      }),
+      this.prisma.review.update({
+        where: { id: review.id },
+        data: { helpful: { increment: 1 } },
+      }),
+    ]);
+
+    const updated = await this.prisma.review.findUnique({
+      where: { id: review.id },
+      select: { id: true, helpful: true },
+    });
+
+    return ResponseHelper.success(
+      {
+        id: updated!.id,
+        helpful: updated!.helpful,
+        helpfulVotedByMe: true,
+      },
+      'Review marked as helpful',
+    );
   }
 
   async getStoreReviews(

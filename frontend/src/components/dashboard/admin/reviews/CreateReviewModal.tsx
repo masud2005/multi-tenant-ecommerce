@@ -22,7 +22,6 @@ export function CreateReviewModal({
 }: CreateReviewModalProps) {
   const [author, setAuthor] = useState('');
   const [rating, setRating] = useState(5);
-  const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [locationOrSize, setLocationOrSize] = useState('');
   const [productId, setProductId] = useState('');
@@ -83,7 +82,6 @@ export function CreateReviewModal({
       const payload: CreateOwnerReviewPayload = {
         author: author.trim(),
         rating,
-        title: title.trim() || 'Customer Review',
         body: body.trim(),
         productId,
         size: locationOrSize.trim() || undefined,
@@ -98,7 +96,6 @@ export function CreateReviewModal({
         onClose();
         setAuthor('');
         setRating(5);
-        setTitle('');
         setBody('');
         setLocationOrSize('');
         setProductId('');
@@ -204,19 +201,6 @@ export function CreateReviewModal({
                 {rating}.0 out of 5
               </span>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-ink uppercase tracking-wider mb-1">
-              Review Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Exceptional handloom craftsmanship"
-              className="w-full rounded-xl border border-line bg-canvas px-3.5 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-ink focus:outline-none"
-            />
           </div>
 
           <div>

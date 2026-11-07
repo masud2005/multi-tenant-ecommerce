@@ -20,6 +20,7 @@ import { Rating } from '@/components/ui/Rating';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDate } from '@/utils/format';
+import { getDisplayReviewTitle } from '@/utils/review';
 import { reviewService } from '@/services/review-service';
 import { ReviewDetailDrawer } from './ReviewDetailDrawer';
 import { CreateReviewModal } from './CreateReviewModal';
@@ -352,9 +353,12 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
                         )}
                         <p className="truncate text-sm text-ink">{productTitle}</p>
                       </div>
-                      {review.title && (
-                        <p className="text-sm font-medium text-ink">{review.title}</p>
-                      )}
+                      {(() => {
+                        const displayTitle = getDisplayReviewTitle(review.title, review.body);
+                        return displayTitle ? (
+                          <p className="text-sm font-medium text-ink">{displayTitle}</p>
+                        ) : null;
+                      })()}
                       <p className="line-clamp-3 text-sm leading-relaxed text-ink-soft">{review.body}</p>
                       {review.photos && review.photos.length > 0 && (
                         <div className="flex flex-wrap gap-2">

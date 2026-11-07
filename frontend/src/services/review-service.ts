@@ -38,6 +38,7 @@ export function mapBackendReviewToFrontend(raw: any): Review {
     verified: Boolean(raw.verified),
     photos: photos,
     helpful: Number(raw.helpful) || 0,
+    helpfulVotedByMe: Boolean(raw.helpfulVotedByMe),
     status: raw.status || 'PUBLISHED',
     size: raw.size || undefined,
     reply: raw.reply || undefined,
@@ -151,21 +152,16 @@ export const reviewService = {
     }
   },
 
-  // 3. Increment helpful upvote count (POST /customer/reviews/:id/helpful)
-  async markReviewHelpful(reviewId: string): Promise<ApiResponse<Review>> {
+  // 3. Toggle helpful vote (POST /customer/reviews/:id/helpful)
+  async markReviewHelpful(reviewId: string): Promise<
+    ApiResponse<{ id: string; helpful: number; helpfulVotedByMe: boolean }>
+  > {
     try {
-      const res = await apiClient.post<ApiResponse<any>>(
-        `/customer/reviews/${reviewId}/helpful`,
-      );
-      if (res?.data) {
-        return {
-          ...res,
-          data: mapBackendReviewToFrontend(res.data),
-        };
-      }
-      return res;
+      return await apiClient.post<
+        ApiResponse<{ id: string; helpful: number; helpfulVotedByMe: boolean }>
+      >(`/customer/reviews/${reviewId}/helpful`);
     } catch (error: any) {
-      console.error('Failed to mark review helpful:', error);
+      console.error('Failed to toggle review helpful vote:', error);
       throw error;
     }
   },
