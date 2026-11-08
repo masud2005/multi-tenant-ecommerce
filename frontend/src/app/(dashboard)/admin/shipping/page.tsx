@@ -19,15 +19,15 @@ export default function AdminShippingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Dynamic Shipping Configuration
+  // Live Admin → Shipping config only (zeros until API load — no mock rates)
   const [shippingConfig, setShippingConfig] = useState({
-    insideDhaka: 60,
-    outsideDhaka: 120,
-    freeDeliveryThreshold: 3000,
-    insideDhakaEst: '1–2 business days',
-    outsideDhakaEst: '2–4 business days',
-    pickup: true,
-    rto: true,
+    insideDhaka: 0,
+    outsideDhaka: 0,
+    freeDeliveryThreshold: 0,
+    insideDhakaEst: '',
+    outsideDhakaEst: '',
+    pickup: false,
+    rto: false,
   });
 
   // Fetch store shipping configuration
@@ -41,7 +41,12 @@ export default function AdminShippingPage() {
           ...prev,
           insideDhaka: typeof sh.insideDhaka === 'number' ? sh.insideDhaka : prev.insideDhaka,
           outsideDhaka: typeof sh.outsideDhaka === 'number' ? sh.outsideDhaka : prev.outsideDhaka,
-          freeDeliveryThreshold: typeof sh.freeDeliveryThreshold === 'number' ? sh.freeDeliveryThreshold : prev.freeDeliveryThreshold,
+          freeDeliveryThreshold:
+            typeof sh.freeDeliveryThreshold === 'number'
+              ? sh.freeDeliveryThreshold
+              : typeof sh.freeShippingThreshold === 'number'
+                ? sh.freeShippingThreshold
+                : prev.freeDeliveryThreshold,
           insideDhakaEst: sh.insideDhakaEst || prev.insideDhakaEst,
           outsideDhakaEst: sh.outsideDhakaEst || prev.outsideDhakaEst,
           pickup: sh.pickup !== undefined ? !!sh.pickup : prev.pickup,
@@ -244,7 +249,7 @@ export default function AdminShippingPage() {
                     onChange={(e) =>
                       setShippingConfig({ ...shippingConfig, freeDeliveryThreshold: Number(e.target.value) })
                     }
-                    placeholder="3000"
+                    placeholder="0 = disabled"
                     className="mt-1"
                   />
                 </div>

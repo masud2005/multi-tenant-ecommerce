@@ -15,8 +15,13 @@ import {
   TagIcon,
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { sizeGuide } from '@/data/products';
-import { districts, deliveryEstimate, shippingMethods } from '@/data/shipping';
+import { districts } from '@/data/shipping';
+import {
+  storeDeliveryEstimate,
+  storeDeliveryFee,
+} from '@/utils/store-shipping';
 import { VariantPicker } from './VariantPicker';
 import { ProductCard } from './ProductCard';
 import { ProductReviews } from './ProductReviews';
@@ -74,6 +79,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
     trackView,
     recentlyViewed,
   } = useStore();
+  const { shipping } = useTenant();
 
   const product = products.find(
     (p) => p.slug === slug && p.status === 'published'
@@ -217,7 +223,9 @@ export function ProductDetailView({ slug }: { slug: string }) {
     .map((id) => products.find((p) => p.id === id)!)
     .filter(Boolean)
     .slice(0, 4);
-  const standard = shippingMethods[0];
+  const lineSubtotal = price * qty;
+  const deliveryFee = storeDeliveryFee(shipping, district, lineSubtotal);
+  const deliveryEta = storeDeliveryEstimate(shipping, district);
 
   const add = () => {
     const targetVariant = variant || product.variants[0];
@@ -429,7 +437,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
             )}
           </div>
           <p className="mt-1 text-xs text-ink-muted">
-            VAT included. Use <b>EID500</b> for ৳500 off orders over ৳3,000.
+            VAT included. Delivery and discounts are confirmed at checkout.
           </p>
           <p className="mt-5 text-sm leading-relaxed text-ink-soft">
             {product.shortDescription}
@@ -582,10 +590,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
                   </select>
                 </div>
                 <p className="mt-0.5 text-ink-muted">
-                  {deliveryEstimate(district)} ·{' '}
-                  {standard.price(district, price * qty) === 0
-                    ? 'Free'
-                    : formatBDT(standard.price(district, price * qty))}
+                  {deliveryEta} · {deliveryFee === 0 ? 'Free' : formatBDT(deliveryFee)}
                 </p>
               </div>
             </div>

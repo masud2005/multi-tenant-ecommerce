@@ -45,7 +45,7 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const cls = cn(
-    'inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium transition-[background-color,color,transform,opacity] duration-150 ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100',
+    'inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md font-medium transition-[background-color,color,transform,opacity] duration-150 ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100',
     variants[variant],
     variant !== 'link' && sizes[size],
     fullWidth && 'w-full',
@@ -56,7 +56,11 @@ export function Button({
 
   if (destination) {
     return (
-      <Link href={destination} className={cls}>
+      <Link
+        href={destination}
+        className={cls}
+        onClick={rest.onClick as React.MouseEventHandler<HTMLAnchorElement> | undefined}
+      >
         {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
         {children}
       </Link>

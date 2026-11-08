@@ -17,10 +17,9 @@ export interface UpdateCustomerStatusPayload {
   isActive?: boolean;
 }
 
-// Payload for updating customer tags, store credit, or profile info
+// Payload for updating customer tags or profile info
 export interface UpdateCustomerPayload {
   tags?: string[];
-  storeCredit?: number;
   name?: string;
   phone?: string;
 }
@@ -55,7 +54,6 @@ export function mapBackendCustomerToFrontend(item: any): Customer {
     segment: (item.segment || 'New') as any,
     status: item.isActive === false ? 'inactive' : 'active',
     marketingConsent: !!item.marketingConsent,
-    storeCredit: Number(item.storeCredit) || 0,
     avatar: item.avatar || undefined,
   };
 }
@@ -123,7 +121,7 @@ export const customerService = {
     return await apiClient.patch<ApiResponse<any>>(endpoint, payload || {});
   },
 
-  // 4. PATCH /api/v1/owner/customers/:id - Update tags, store credit, name, or phone
+  // 4. PATCH /api/v1/owner/customers/:id - Update tags, name, or phone
   async updateCustomerProfile(
     id: string,
     payload: UpdateCustomerPayload,

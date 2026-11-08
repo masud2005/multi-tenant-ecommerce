@@ -17,6 +17,9 @@ export function useStoreCart(user?: User | null) {
     }
     return loadCart();
   });
+  const [isCartLoading, setIsCartLoading] = useState(() =>
+    typeof window !== 'undefined' ? authService.isAuthenticated() : true
+  );
 
   // Keep localStorage continuously in sync with current cart state
   useEffect(() => {
@@ -27,42 +30,51 @@ export function useStoreCart(user?: User | null) {
     } catch {}
   }, [cart]);
 
-  // Reset cart to empty if unauthenticated visitor visits the store or when user logs out
+  // Reset cart only after auth is clearly guest (avoid wipe during session hydrate)
   useEffect(() => {
-    if (!user?.id && !authService.isAuthenticated()) {
-      setCart([]);
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.removeItem('tanti.cart');
-        } catch {}
-      }
+    if (user?.id || authService.isAuthenticated() || authService.hasValidRefreshToken()) {
+      return;
+    }
+    setCart([]);
+    setIsCartLoading(false);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('tanti.cart');
+      } catch {}
     }
   }, [user?.id]);
 
   // Sync cart with backend database when authenticated customer logs in or refreshes
   useEffect(() => {
     let isMounted = true;
-    if (user?.id) {
-      cartService
-        .getCart()
-        .then((res) => {
-          if (!isMounted) return;
-          if (res?.data?.items && Array.isArray(res.data.items)) {
-            const serverItems = res.data.items.map((item) => ({
-              key: `${item.variantId}-${item.id}`,
-              productId: item.productId,
-              variantId: item.variantId,
-              qty: item.qty,
-              savedForLater: item.savedForLater,
-            }));
-            setCart(serverItems);
-          }
-        })
-        .catch((err) => {
-          console.warn('Could not sync cart from server on load:', err);
-          // Preserve optimistic/cached cart on transient network errors
-        });
+    if (!user?.id) {
+      setIsCartLoading(false);
+      return;
     }
+
+    setIsCartLoading(true);
+    cartService
+      .getCart()
+      .then((res) => {
+        if (!isMounted) return;
+        if (res?.data?.items && Array.isArray(res.data.items)) {
+          const serverItems = res.data.items.map((item) => ({
+            key: `${item.variantId}-${item.id}`,
+            productId: item.productId,
+            variantId: item.variantId,
+            qty: item.qty,
+            savedForLater: item.savedForLater,
+          }));
+          setCart(serverItems);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not sync cart from server on load:', err);
+        // Preserve optimistic/cached cart on transient network errors
+      })
+      .finally(() => {
+        if (isMounted) setIsCartLoading(false);
+      });
 
     return () => {
       isMounted = false;
@@ -215,6 +227,7 @@ export function useStoreCart(user?: User | null) {
 
   return {
     cart,
+    isCartLoading,
     setCart,
     addToCart,
     updateQty,

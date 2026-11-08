@@ -27,7 +27,7 @@ export const faqs: { category: string; q: string; a: string }[] = [
   { category: 'Payments', q: 'My payment was deducted but the order failed. What now?', a: 'Do not worry — we verify every transaction with the gateway. If the payment is confirmed, your order will be placed automatically within 30 minutes; otherwise the amount is reversed within 5–7 working days.' },
   { category: 'Delivery', q: 'How long does delivery take?', a: '1–2 days inside Dhaka, 3–5 days to other districts. Express same/next-day delivery is available in Dhaka city.' },
   { category: 'Delivery', q: 'How much is delivery?', a: '৳70 inside Dhaka (free over ৳2,500), ৳100 in Gazipur & Narayanganj, ৳130 elsewhere. Store pickup is free.' },
-  { category: 'Returns', q: 'What is your return policy?', a: 'Unworn items with tags can be returned within 7 days of delivery. Sarees and jewellery can only be returned if damaged. Refunds go to your original payment method or as store credit.' },
+  { category: 'Returns', q: 'What is your return policy?', a: 'Unworn items with tags can be returned within 7 days of delivery. Sarees and jewellery can only be returned if damaged. Refunds go to your original payment method.' },
   { category: 'Returns', q: 'How do exchanges work?', a: 'Request an exchange from My Account → Orders. Our courier delivers the new size and collects the original at the same time.' },
   { category: 'Account', q: 'Do I need an account to order?', a: 'No — guest checkout is available. An account lets you track orders, save addresses and request returns in one click.' }
 ];
@@ -49,7 +49,7 @@ export const policies: Record<string, { title: string; updated: string; sections
     sections: [
       { heading: 'Return window', body: 'You may request a return within 7 days of delivery. Items must be unworn, unwashed and have all original tags attached.' },
       { heading: 'Non-returnable items', body: 'Sarees, jewellery and innerwear are non-returnable unless they arrive damaged or defective. Sale items marked “Final sale” cannot be returned.' },
-      { heading: 'How refunds work', body: 'Once we receive and inspect your item (usually within 2 working days), refunds are issued to your original payment method: bKash/Nagad within 3 days, cards within 7–10 days. You may choose store credit for an instant refund.' },
+      { heading: 'How refunds work', body: 'Once we receive and inspect your item (usually within 2 working days), refunds are issued to your original payment method: bKash/Nagad within 3 days, cards within 7–10 days.' },
       { heading: 'Exchanges', body: 'Size exchanges are free inside Dhaka. Our courier delivers the replacement and collects the original in a single visit.' }
     ]
   },

@@ -4,8 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { MinusIcon, PlusIcon, ShoppingBagIcon, TruckIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { useCartLines } from '@/hooks/useCartLines';
-import { FREE_SHIPPING_THRESHOLD } from '@/data/shipping';
 import { Drawer } from '@/components/ui/Drawer';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -13,9 +13,15 @@ import { formatBDT } from '@/utils/format';
 
 export function MiniCart() {
   const { user, miniCartOpen, setMiniCartOpen, updateQty, removeFromCart } = useStore();
+  const { shipping, isLoading: shippingLoading } = useTenant();
   const { active, subtotal, count, hasIssues } = useCartLines();
-  const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
-  const progress = Math.min(100, (subtotal / FREE_SHIPPING_THRESHOLD) * 100);
+
+  const threshold = shipping.freeDeliveryThreshold;
+  const freeShippingEnabled = threshold > 0;
+  const remaining = freeShippingEnabled ? Math.max(0, threshold - subtotal) : 0;
+  const progress = freeShippingEnabled
+    ? Math.min(100, (subtotal / threshold) * 100)
+    : 0;
   const close = () => setMiniCartOpen(false);
 
   return (
@@ -36,10 +42,17 @@ export function MiniCart() {
               Delivery and discounts calculated at checkout.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="secondary" href="/cart" onClick={close}>
+              <Button
+                variant="secondary"
+                href="/cart"
+                onClick={() => setMiniCartOpen(false)}
+              >
                 View bag
               </Button>
-              <Button href={hasIssues ? '/cart' : user ? '/checkout' : '/login?next=/checkout'} onClick={close}>
+              <Button
+                href={hasIssues ? '/cart' : user ? '/checkout' : '/login?next=/checkout'}
+                onClick={() => setMiniCartOpen(false)}
+              >
                 Checkout
               </Button>
             </div>
@@ -60,32 +73,35 @@ export function MiniCart() {
         />
       ) : (
         <>
-          <div className="border-b border-line bg-canvas px-5 py-3">
-            <p className="flex items-center gap-2 text-sm">
-              <TruckIcon className="h-4 w-4 text-ink-muted shrink-0" aria-hidden />
-              {remaining > 0 ? (
-                <span>
-                  Add <b className="tabular-nums font-semibold">{formatBDT(remaining)}</b> for free delivery in Dhaka
-                </span>
-              ) : (
-                <span className="text-success font-medium">
-                  You’ve unlocked free delivery in Dhaka
-                </span>
-              )}
-            </p>
-            <div
-              className="mt-2 h-1 overflow-hidden rounded-full bg-line"
-              role="progressbar"
-              aria-valuenow={Math.round(progress)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
+          {freeShippingEnabled && !shippingLoading && (
+            <div className="border-b border-line bg-canvas px-5 py-3">
+              <p className="flex items-center gap-2 text-sm">
+                <TruckIcon className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
+                {remaining > 0 ? (
+                  <span>
+                    Add <b className="tabular-nums font-semibold">{formatBDT(remaining)}</b> for
+                    free delivery in Dhaka
+                  </span>
+                ) : (
+                  <span className="font-medium text-success">
+                    You’ve unlocked free delivery in Dhaka
+                  </span>
+                )}
+              </p>
               <div
-                className="h-full bg-ink transition-[width] duration-300 ease-out"
-                style={{ width: `${progress}%` }}
-              />
+                className="mt-2 h-1 overflow-hidden rounded-full bg-line"
+                role="progressbar"
+                aria-valuenow={Math.round(progress)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="h-full bg-ink transition-[width] duration-300 ease-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
-          </div>
+          )}
           <ul className="divide-y divide-line">
             {active.map(({ item, product, variant, unitPrice, maxQty, issue }) => (
               <li key={item.key} className="flex gap-4 px-5 py-4">
@@ -98,7 +114,7 @@ export function MiniCart() {
                   <img
                     src={product.images[0]}
                     alt=""
-                    className="h-24 w-[72px] rounded object-cover border border-line bg-subtle"
+                    className="h-24 w-[72px] rounded border border-line bg-subtle object-cover"
                   />
                 </Link>
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -106,7 +122,7 @@ export function MiniCart() {
                     <Link
                       href={`/products/${product.slug}`}
                       onClick={close}
-                      className="text-sm font-medium leading-snug hover:underline text-ink line-clamp-1"
+                      className="line-clamp-1 text-sm font-medium leading-snug text-ink hover:underline"
                     >
                       {product.title}
                     </Link>
@@ -123,14 +139,12 @@ export function MiniCart() {
                     </p>
                   )}
                   {issue === 'limited' && (
-                    <p className="mt-1 text-xs font-medium text-warning">
-                      Only {maxQty} left
-                    </p>
+                    <p className="mt-1 text-xs font-medium text-warning">Only {maxQty} left</p>
                   )}
                   <div className="mt-auto flex items-center justify-between pt-2">
                     <div className="flex items-center rounded-md border border-line-strong">
                       <button
-                        className="p-1.5 disabled:opacity-40 cursor-pointer"
+                        className="cursor-pointer p-1.5 disabled:opacity-40"
                         disabled={item.qty <= 1}
                         onClick={() => updateQty(item.key, item.qty - 1)}
                         aria-label="Decrease quantity"
@@ -144,7 +158,7 @@ export function MiniCart() {
                         {item.qty}
                       </span>
                       <button
-                        className="p-1.5 disabled:opacity-40 cursor-pointer"
+                        className="cursor-pointer p-1.5 disabled:opacity-40"
                         disabled={item.qty >= maxQty}
                         onClick={() => updateQty(item.key, item.qty + 1)}
                         aria-label="Increase quantity"
@@ -154,7 +168,7 @@ export function MiniCart() {
                     </div>
                     <button
                       onClick={() => removeFromCart(item.key)}
-                      className="text-xs text-ink-muted underline-offset-2 hover:text-ink hover:underline cursor-pointer"
+                      className="cursor-pointer text-xs text-ink-muted underline-offset-2 hover:text-ink hover:underline"
                     >
                       Remove
                     </button>

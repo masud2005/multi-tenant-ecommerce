@@ -60,4 +60,14 @@ export interface Tenant {
     youtube?: string;
     tiktok?: string;
   };
+  /** Admin → Shipping rates (from tenant.settings.shipping) */
+  shipping?: {
+    insideDhaka: number;
+    outsideDhaka: number;
+    freeDeliveryThreshold: number;
+    insideDhakaEst: string;
+    outsideDhakaEst: string;
+    pickup: boolean;
+    rto: boolean;
+  };
 }

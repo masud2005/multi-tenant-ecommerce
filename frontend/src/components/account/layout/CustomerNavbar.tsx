@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { CustomerUserDropdown } from './CustomerUserDropdown';
-import { formatBDT } from '@/utils/format';
 
 interface CustomerNavbarProps {
   onOpenMobileSidebar: () => void;
@@ -38,7 +37,7 @@ export function CustomerNavbar({
   onLogoutClick,
 }: CustomerNavbarProps) {
   const pathname = usePathname();
-  const { cart, storeCredit, setMiniCartOpen, setSearchOpen } = useStore();
+  const { cart, setMiniCartOpen, setSearchOpen } = useStore();
 
   const currentTitle =
     routeTitles[pathname] ||
@@ -84,14 +83,8 @@ export function CustomerNavbar({
         </div>
       </div>
 
-      {/* Right: Store credit badge, Cart, Notification, Storefront Link & User Dropdown */}
       <div className="flex items-center gap-2 sm:gap-2.5">
-        {/* Store Credit Badge (Matching Admin's 'Growth plan' pill style exactly) */}
-        <div className="hidden whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-soft sm:inline-block">
-          Credit: <span className="font-semibold text-ink">{formatBDT(storeCredit || 500)}</span>
-        </div>
-
-        {/* Notification Bell (Matching Admin Navbar) */}
+        {/* Notification Bell */}
         <Link
           href="/account/notifications"
           className="relative rounded-md p-2 hover:bg-subtle text-ink cursor-pointer transition-all"

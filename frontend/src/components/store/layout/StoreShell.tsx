@@ -22,7 +22,7 @@ export function StoreShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Standard Storefront pages with Header & Footer
+  // Standard Storefront pages with Header & Footer (including checkout)
   return (
     <div className="flex min-h-screen w-full flex-col bg-canvas text-ink">
       <a

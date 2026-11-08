@@ -11,9 +11,15 @@ import React, {
 import type { Tenant, TenantModules } from '@/types/tenant';
 import { getTenantBySlug, mockTenants, DEFAULT_TENANT_SLUG } from '@/data/tenants';
 import { storeService } from '@/services/store-service';
+import {
+  EMPTY_STORE_SHIPPING,
+  parseStoreShipping,
+  type StoreShippingSettings,
+} from '@/utils/store-shipping';
 
 export interface TenantContextValue {
   tenant: Tenant;
+  shipping: StoreShippingSettings;
   isSuspended: boolean;
   isLoading: boolean;
   formatPrice: (amount: number) => string;
@@ -98,6 +104,7 @@ export function TenantProvider({
               raw.contact?.supportTeam || fallbackTenant.contact.supportTeam,
           },
           socials: raw.socials || fallbackTenant.socials,
+          shipping: parseStoreShipping(raw.settings?.shipping),
         };
         setLiveTenant(mapped);
       } else {
@@ -156,9 +163,15 @@ export function TenantProvider({
     await fetchTenantData(currentSlug);
   }, [currentSlug, fetchTenantData]);
 
+  const shipping = useMemo(
+    () => activeTenant.shipping ?? EMPTY_STORE_SHIPPING,
+    [activeTenant.shipping]
+  );
+
   const value = useMemo<TenantContextValue>(
     () => ({
       tenant: activeTenant,
+      shipping,
       isSuspended,
       isLoading,
       formatPrice,
@@ -169,6 +182,7 @@ export function TenantProvider({
     }),
     [
       activeTenant,
+      shipping,
       isSuspended,
       isLoading,
       formatPrice,
@@ -195,7 +209,9 @@ export function useTenant(): TenantContextValue {
         faviconUrl: undefined,
         announcement: undefined,
         announcementEnabled: false,
+        shipping: EMPTY_STORE_SHIPPING,
       },
+      shipping: EMPTY_STORE_SHIPPING,
       isSuspended: false,
       isLoading: true,
       formatPrice: (amount: number) => `৳${amount.toLocaleString()}`,

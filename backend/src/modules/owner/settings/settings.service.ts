@@ -163,12 +163,29 @@ export class SettingsService {
       };
     }
 
-    // Merge Settings JSON safely
+    // Merge Settings JSON safely (deep-merge nested payment/shipping so toggles never get wiped)
     if (dto.settings !== undefined) {
       const existingSettings = (existing.settings as Record<string, any>) || {};
+      const incoming = dto.settings as Record<string, any>;
       updateData.settings = {
         ...existingSettings,
-        ...dto.settings,
+        ...incoming,
+        payment: {
+          ...((existingSettings.payment as Record<string, any>) || {}),
+          ...((incoming.payment as Record<string, any>) || {}),
+        },
+        shipping: {
+          ...((existingSettings.shipping as Record<string, any>) || {}),
+          ...((incoming.shipping as Record<string, any>) || {}),
+        },
+        pm: {
+          ...((existingSettings.pm as Record<string, any>) || {}),
+          ...((incoming.pm as Record<string, any>) || {}),
+        },
+        flags: {
+          ...((existingSettings.flags as Record<string, any>) || {}),
+          ...((incoming.flags as Record<string, any>) || {}),
+        },
       };
     }
 

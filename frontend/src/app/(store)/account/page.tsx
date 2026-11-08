@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRightIcon, WalletIcon } from 'lucide-react';
+import { ArrowRightIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { orderStatusMeta, returnStatusMeta } from '@/utils/status';
 import { formatBDT, formatDate } from '@/utils/format';
 
 export default function AccountDashboardPage() {
-  const { user, orders, returns, wishlist, products, storeCredit, addresses, refreshOrders } = useStore();
+  const { user, orders, returns, wishlist, products, addresses, refreshOrders } = useStore();
   
   React.useEffect(() => {
     if (refreshOrders) refreshOrders();
@@ -95,32 +95,21 @@ export default function AccountDashboardPage() {
         </section>
       )}
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
-        <div className="rounded-lg border border-line bg-surface p-5">
-          <p className="flex items-center gap-2 text-sm text-ink-muted">
-            <WalletIcon className="h-4 w-4" aria-hidden /> Store credit
+      <div className="mt-6 rounded-lg border border-line bg-surface p-5">
+        <p className="text-sm text-ink-muted">Default address</p>
+        {defaultAddr ? (
+          <p className="mt-2 text-sm">
+            {defaultAddr.line1}, {defaultAddr.area}, {defaultAddr.district}
           </p>
-          <p className="mt-2 text-2xl font-semibold">{formatBDT(storeCredit)}</p>
-          <p className="mt-1 text-xs text-ink-muted">
-            Applied automatically at checkout if you choose
-          </p>
-        </div>
-        <div className="rounded-lg border border-line bg-surface p-5">
-          <p className="text-sm text-ink-muted">Default address</p>
-          {defaultAddr ? (
-            <p className="mt-2 text-sm">
-              {defaultAddr.line1}, {defaultAddr.area}, {defaultAddr.district}
-            </p>
-          ) : (
-            <p className="mt-2 text-sm">Not set</p>
-          )}
-          <Link
-            href="/account/addresses"
-            className="mt-1 inline-block text-xs font-medium underline"
-          >
-            Manage
-          </Link>
-        </div>
+        ) : (
+          <p className="mt-2 text-sm">Not set</p>
+        )}
+        <Link
+          href="/account/addresses"
+          className="mt-1 inline-block text-xs font-medium underline"
+        >
+          Manage
+        </Link>
       </div>
 
       {activeReturn && (
