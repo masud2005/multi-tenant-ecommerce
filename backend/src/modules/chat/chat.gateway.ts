@@ -249,10 +249,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('send_message')
   async handleSendMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { conversationId: string; text: string; senderName?: string },
+    @MessageBody()
+    data: {
+      conversationId: string;
+      text?: string;
+      senderName?: string;
+      attachments?: string[];
+    },
   ) {
     try {
-      const { conversationId, text, senderName } = data;
+      const { conversationId, text, senderName, attachments } = data;
       const user = client.user;
 
       const senderRole =
@@ -263,7 +269,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 🔒 AES-256 এনক্রিপ্ট করে ডাটাবেজে সেভ এবং ডিক্রিপ্ট করা মেসেজ রেসপন্স তৈরি
       const response = await this.chatService.saveMessage(
         conversationId,
-        { text, senderName: resolvedName, senderRole },
+        { text, senderName: resolvedName, senderRole, attachments },
         { id: user?.id, name: resolvedName, role: senderRole },
         client.tenantId,
       );

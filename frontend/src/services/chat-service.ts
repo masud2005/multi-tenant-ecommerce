@@ -8,6 +8,7 @@ export interface ChatMessage {
   senderRole: 'CUSTOMER' | 'OWNER' | 'STAFF' | string;
   senderName: string;
   text: string;
+  attachments?: string[];
   isRead: boolean;
   createdAt: string;
 }
@@ -37,9 +38,17 @@ export interface StartConversationPayload {
 }
 
 export interface SendChatMessagePayload {
-  text: string;
+  text?: string;
   senderName?: string;
   senderRole?: 'CUSTOMER' | 'OWNER' | 'STAFF';
+  attachments?: string[];
+}
+
+export interface ChatUploadResult {
+  url: string;
+  name: string;
+  mimeType: string;
+  size: number;
 }
 
 class ChatService {
@@ -206,6 +215,36 @@ class ChatService {
       return false;
     }
   }
+
+  /**
+   * Upload chat attachment (customer or owner endpoint)
+   */
+  async uploadAttachment(
+    file: File,
+    role: 'customer' | 'owner' = 'customer',
+  ): Promise<ChatUploadResult | null> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const endpoint =
+        role === 'owner' ? '/owner/chat/upload' : '/customer/chat/upload';
+      const res = await apiClient.post<ApiResponse<ChatUploadResult>>(
+        endpoint,
+        formData,
+      );
+      if (res && 'data' in res) {
+        return (res as any).data || null;
+      }
+      return (res as any) || null;
+    } catch (error) {
+      console.error('Failed to upload chat attachment:', error);
+      throw error;
+    }
+  }
 }
 
 export const chatService = new ChatService();
+
+export function isChatImageUrl(url: string) {
+  return /\.(jpe?g|png|gif|webp)(\?|$)/i.test(url) || url.includes('/image/upload/');
+}

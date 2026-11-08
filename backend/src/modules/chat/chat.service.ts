@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
+import { StorageService } from '../../shared/storage/storage.service';
 import { encryptMessage, decryptMessage } from '../../common/helpers/crypto.helper';
 import { SendMessageDto } from './dto/send-message.dto';
 import { StartConversationDto } from './dto/start-conversation.dto';
@@ -20,6 +21,7 @@ export interface DecryptedChatMessage {
   senderRole: string;
   senderName: string;
   text: string;
+  attachments: string[];
   isRead: boolean;
   createdAt: Date;
 }
@@ -31,7 +33,50 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
+    private readonly storageService: StorageService,
   ) {}
+
+  /**
+   * Upload a chat attachment (image or small file) to cloud storage
+   */
+  async uploadAttachment(file: Express.Multer.File, tenantId?: string) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    const maxBytes = 5 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      throw new BadRequestException('File must be under 5 MB');
+    }
+
+    const allowed = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+      'application/pdf',
+    ];
+    if (!allowed.includes(file.mimetype)) {
+      throw new BadRequestException('Only images (JPG, PNG, WebP, GIF) or PDF are allowed');
+    }
+
+    const resolvedTenantId = await this.resolveTenantId(tenantId);
+    const upload = await this.storageService.uploadFile(file, {
+      folder: `tenants/${resolvedTenantId}/chat`,
+      resourceType: file.mimetype === 'application/pdf' ? 'raw' : 'image',
+      tags: ['chat', resolvedTenantId],
+    });
+
+    return ResponseHelper.success(
+      {
+        url: upload.url,
+        name: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+      },
+      'Attachment uploaded',
+    );
+  }
 
   // Helper to resolve active tenant ID
   private async resolveTenantId(tenantId?: string): Promise<string> {
@@ -75,14 +120,19 @@ export class ChatService {
     const senderRole = dto.senderRole || sender.role;
     const senderName =
       dto.senderName || sender.name || (senderRole === 'CUSTOMER' ? 'Customer' : 'Store Support');
-    const plainText = dto.text.trim();
+    const attachments = Array.isArray(dto.attachments)
+      ? dto.attachments.filter((u) => typeof u === 'string' && u.trim().length > 0).slice(0, 4)
+      : [];
+    const plainText = (dto.text || '').trim();
 
-    if (!plainText) {
-      throw new BadRequestException('Message text cannot be empty');
+    if (!plainText && attachments.length === 0) {
+      throw new BadRequestException('Message text or attachment is required');
     }
 
+    const textToStore = plainText || (attachments.length ? '[Attachment]' : '');
+
     // 🔒 Encrypt message text using AES-256-CBC with random IV
-    const { encryptedText, iv } = encryptMessage(plainText);
+    const { encryptedText, iv } = encryptMessage(textToStore);
 
     // Save encrypted message record to database
     const message = await this.prisma.chatMessage.create({
@@ -94,6 +144,7 @@ export class ChatService {
         senderName,
         encryptedText,
         iv,
+        attachments,
         isRead: false,
       },
     });
@@ -113,7 +164,12 @@ export class ChatService {
 
     // If message is from customer, notify store owner & staff (In-App)
     if (isCustomerSender) {
-      this.dispatchChatNotification(resolvedTenantId, conversationId, senderName, plainText);
+      this.dispatchChatNotification(
+        resolvedTenantId,
+        conversationId,
+        senderName,
+        plainText || 'Sent an attachment',
+      );
     }
 
     const decryptedResponse: DecryptedChatMessage = {
@@ -123,7 +179,8 @@ export class ChatService {
       senderId: message.senderId,
       senderRole: message.senderRole,
       senderName: message.senderName,
-      text: plainText,
+      text: textToStore,
+      attachments: message.attachments || [],
       isRead: message.isRead,
       createdAt: message.createdAt,
     };
@@ -163,6 +220,7 @@ export class ChatService {
         senderRole: msg.senderRole,
         senderName: msg.senderName,
         text,
+        attachments: msg.attachments || [],
         isRead: msg.isRead,
         createdAt: msg.createdAt,
       };
@@ -375,9 +433,18 @@ export class ChatService {
       if (lastMsg) {
         lastMessageSenderRole = lastMsg.senderRole;
         try {
-          lastMessagePreview = decryptMessage(lastMsg.encryptedText, lastMsg.iv);
+          const decrypted = decryptMessage(lastMsg.encryptedText, lastMsg.iv);
+          if (decrypted && decrypted !== '[Attachment]') {
+            lastMessagePreview = decrypted;
+          } else if (lastMsg.attachments?.length) {
+            lastMessagePreview = '📎 Attachment';
+          } else {
+            lastMessagePreview = decrypted;
+          }
         } catch {
-          lastMessagePreview = 'Encrypted message';
+          lastMessagePreview = lastMsg.attachments?.length
+            ? '📎 Attachment'
+            : 'Encrypted message';
         }
       }
 

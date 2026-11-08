@@ -127,7 +127,7 @@ export default function AccountDashboardPage() {
     },
     {
       title: 'Help & support',
-      description: 'Chat with the store or send a message',
+      description: 'Live chat with the store team',
       href: '/account/support',
       icon: LifeBuoyIcon,
     },

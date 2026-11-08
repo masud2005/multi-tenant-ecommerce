@@ -1,10 +1,19 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class SendMessageDto {
-  @IsNotEmpty({ message: 'Message text is required' })
+  @ValidateIf((o) => !o.attachments?.length)
+  @IsNotEmpty({ message: 'Message text or attachment is required' })
   @IsString()
   @MaxLength(3000, { message: 'Message text cannot exceed 3000 characters' })
-  text: string;
+  text?: string;
 
   @IsOptional()
   @IsString()
@@ -13,4 +22,10 @@ export class SendMessageDto {
   @IsOptional()
   @IsString()
   senderRole?: 'CUSTOMER' | 'OWNER' | 'STAFF';
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @IsString({ each: true })
+  attachments?: string[];
 }

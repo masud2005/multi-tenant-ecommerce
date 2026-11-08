@@ -9,10 +9,15 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -86,6 +91,33 @@ export class ChatController {
     );
     this.chatGateway.broadcastMessage(conversationId, result.data);
     return result;
+  }
+
+  /**
+   * 🛍️ 3b. Customer: Upload chat attachment
+   */
+  @Post('customer/chat/upload')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(OptionalJwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload an image or PDF for live chat' })
+  async uploadCustomerChatFile(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    return this.chatService.uploadAttachment(
+      file,
+      tenantHeader || user?.tenantId,
+    );
   }
 
   /**
@@ -181,6 +213,35 @@ export class ChatController {
   ) {
     const tenantId = user?.tenantId || tenantHeader;
     return this.chatService.markAsRead(conversationId, 'OWNER', tenantId);
+  }
+
+  /**
+   * 🏢 8b. Owner/Staff: Upload chat attachment
+   */
+  @Post('owner/chat/upload')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER, UserRole.STAFF)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload an image or PDF for live chat (owner/staff)' })
+  async uploadOwnerChatFile(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    return this.chatService.uploadAttachment(
+      file,
+      user?.tenantId || tenantHeader,
+    );
   }
 
   /**
