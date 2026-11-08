@@ -5,7 +5,7 @@ const all: PermissionAction[] = ['view', 'create', 'update', 'delete'];
 const allModules: AdminModule[] = [
   'dashboard', 'orders', 'returns', 'payments', 'products', 'categories', 'collections', 'brands', 'inventory',
   'customers', 'reviews', 'discounts', 'marketing', 'shipping', 'theme', 'content', 'media', 'analytics',
-  'reports', 'staff', 'notifications', 'settings', 'audit', 'billing'
+  'reports', 'staff', 'notifications', 'settings', 'audit'
 ];
 
 export const rolePermissions: Record<AdminRole, Partial<Record<AdminModule, PermissionAction[]>>> = {
@@ -72,8 +72,7 @@ export const permissionModules: { key: AdminModule; label: string }[] = [
   { key: 'staff', label: 'Staff & roles' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'settings', label: 'Settings' },
-  { key: 'audit', label: 'Audit logs' },
-  { key: 'billing', label: 'Plan & billing' }
+  { key: 'audit', label: 'Audit logs' }
 ];
 
 export const permissionActions: PermissionAction[] = all;
@@ -88,8 +87,8 @@ export const staff = [
 ];
 
 export const roles = [
-  { id: 'r1', name: 'Owner', members: 1, system: true, description: 'Full access to every module, billing and staff.' },
-  { id: 'r2', name: 'Store Manager', members: 1, system: false, description: 'Runs daily operations incl. refunds; no billing or staff management.' },
+  { id: 'r1', name: 'Owner', members: 1, system: true, description: 'Full access to every module and staff.' },
+  { id: 'r2', name: 'Store Manager', members: 1, system: false, description: 'Runs daily operations incl. refunds; no staff management.' },
   { id: 'r3', name: 'Fulfillment Staff', members: 1, system: false, description: 'Processes, packs and ships orders; manages stock.' },
   { id: 'r4', name: 'Customer Care', members: 1, system: false, description: 'Views orders and customers, handles returns and reviews.' },
   { id: 'r5', name: 'Content Editor', members: 2, system: false, description: 'Manages pages, blog, media and theme drafts.' }

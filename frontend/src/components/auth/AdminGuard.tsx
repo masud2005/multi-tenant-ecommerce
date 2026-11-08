@@ -95,7 +95,6 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             '/admin/theme': 'theme',
             '/admin/content': 'content',
             '/admin/media': 'media',
-            '/admin/seo': 'content',
             '/admin/domains': 'domains',
             '/admin/analytics': 'analytics',
             '/admin/reports': 'reports',
@@ -104,7 +103,6 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             '/admin/integrations': 'integrations',
             '/admin/settings': 'settings',
             '/admin/audit': 'audit',
-            '/admin/billing': 'billing',
             '/admin': 'dashboard',
           };
 
@@ -116,9 +114,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             }
           }
 
-          const hasAccess = currentModule === 'billing'
-            ? false
-            : (perms[currentModule]?.includes('view') ?? false);
+          const hasAccess = perms[currentModule]?.includes('view') ?? false;
 
           if (!hasAccess) {
             let firstAllowedRoute = '';

@@ -69,8 +69,6 @@ export function AdminProvider({
         // Owner has complete access
         if (isOwner) return true;
 
-        if (module === 'billing') return false; // Non-owner staff cannot access billing
-
         if (readOnly && action !== 'view' && action !== 'export') return false;
 
         // Check assigned permissions from live database/session
@@ -119,7 +117,6 @@ export function useAdmin() {
       user: currentUser,
       can: (module: AdminModule, action: PermissionAction = 'view') => {
         if (isOwner) return true;
-        if (module === 'billing') return false;
         if (currentUser?.permissions?.[module]) {
           return (currentUser.permissions[module] as string[]).includes(action);
         }

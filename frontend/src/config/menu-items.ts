@@ -158,13 +158,6 @@ export const adminNavItems: NavItem[] = [
     category: 'Online store',
     module: 'media',
   },
-  {
-    title: 'SEO',
-    href: '/admin/seo',
-    icon: 'Search',
-    category: 'Online store',
-    module: 'content',
-  },
   // Insights
   {
     title: 'Analytics',
@@ -208,13 +201,6 @@ export const adminNavItems: NavItem[] = [
     icon: 'ScrollText',
     category: 'Administration',
     module: 'audit',
-  },
-  {
-    title: 'Plan & billing',
-    href: '/admin/billing',
-    icon: 'Gem',
-    category: 'Administration',
-    module: 'billing',
   },
 ];
 

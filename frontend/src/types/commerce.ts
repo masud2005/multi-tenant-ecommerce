@@ -202,8 +202,7 @@ export type AdminModule =
   | 'media'
   | 'notifications'
   | 'settings'
-  | 'audit'
-  | 'billing';
+  | 'audit';
 
 export type PermissionAction =
   | 'view'
