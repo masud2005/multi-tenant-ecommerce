@@ -18,6 +18,7 @@ import { StaffModule } from './staff/staff.module';
 import { OwnerPageModule } from './page/page.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { MediaModule } from './media/media.module';
+import { OwnerNotificationTemplateModule } from './notification-template/notification-template.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { MediaModule } from './media/media.module';
     OwnerPageModule,
     AuditLogModule,
     MediaModule,
+    OwnerNotificationTemplateModule,
   ],
   exports: [
     CategoryModule,
@@ -61,6 +63,7 @@ import { MediaModule } from './media/media.module';
     OwnerPageModule,
     AuditLogModule,
     MediaModule,
+    OwnerNotificationTemplateModule,
   ],
 })
 export class OwnerModule {}

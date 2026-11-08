@@ -59,6 +59,23 @@ export class InventoryController {
     return this.inventoryService.getOverview(query, user?.tenantId);
   }
 
+  @Get('movements')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'List recent stock movement ledger entries' })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock movements retrieved successfully',
+  })
+  async getMovements(
+    @Query('limit') limit?: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.inventoryService.getMovements(
+      user?.tenantId,
+      limit ? Number(limit) : 100,
+    );
+  }
+
   @Post('adjust')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

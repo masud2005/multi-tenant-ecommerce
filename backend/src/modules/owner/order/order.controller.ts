@@ -22,6 +22,7 @@ import {
   OrderQueryDto,
   UpdateOrderStatusDto,
   AddOrderNoteDto,
+  RefundOrderDto,
 } from './dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -114,5 +115,24 @@ export class OrderController {
   ) {
     const tenantId = tenantHeader || user?.tenantId;
     return this.orderService.verifyManualPayment(id, dto.approved, dto.note, tenantId, user);
+  }
+
+  // Record manual refund (owner pays customer via bKash/Nagad outside the app)
+  @Post(':id/refund')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Record a manual refund amount on an order (no payment gateway)',
+  })
+  @ApiResponse({ status: 200, description: 'Refund recorded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid refund amount' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async refundOrder(
+    @Param('id') id: string,
+    @Body() dto: RefundOrderDto,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.orderService.refundOrder(id, dto, tenantId, user);
   }
 }

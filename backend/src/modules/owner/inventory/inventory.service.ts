@@ -204,6 +204,61 @@ export class InventoryService {
     );
   }
 
+  /** Recent stock movement ledger for the tenant (DB only — no seed). */
+  async getMovements(tenantId?: string, limit = 100) {
+    if (!tenantId) {
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
+    }
+
+    const take = Math.min(Math.max(Number(limit) || 100, 1), 200);
+    const rows = await this.prisma.stockMovement.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+      take,
+      include: {
+        variant: {
+          select: {
+            id: true,
+            sku: true,
+            color: true,
+            size: true,
+            product: {
+              select: { id: true, title: true },
+            },
+          },
+        },
+      },
+    });
+
+    const items = rows.map((m) => {
+      const variantLabel = [m.variant?.color, m.variant?.size]
+        .filter(Boolean)
+        .join(' / ');
+      const productTitle = m.variant?.product?.title || 'Product';
+      return {
+        id: m.id,
+        at: m.createdAt,
+        sku: m.variant?.sku || m.variantId,
+        product: variantLabel ? `${productTitle} · ${variantLabel}` : productTitle,
+        change: m.change,
+        stockBefore: m.stockBefore,
+        stockAfter: m.stockAfter,
+        reason: String(m.reason || '').replace(/_/g, ' '),
+        by: m.by || '—',
+        ref: m.ref,
+        note: m.note,
+        variantId: m.variantId,
+      };
+    });
+
+    return ResponseHelper.success(
+      { items, total: items.length },
+      'Stock movements retrieved successfully',
+    );
+  }
+
   /**
    * ধাপ ২: স্টক এডজাস্টমেন্ট (Stock Adjustment with Audit Log & Atomic Transaction)
    */

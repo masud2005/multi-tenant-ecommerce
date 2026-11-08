@@ -4,31 +4,44 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ArrowUpRight, ChevronRight, Package, RotateCcw, AlertTriangle, Star, CreditCard, RefreshCw } from 'lucide-react';
-import { useStore } from '@/contexts/StoreContext';
 import { useAdmin } from '@/contexts/AdminContext';
-import { roleMeta } from '@/data/admin';
+import { useTenant } from '@/contexts/TenantContext';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/button';
 import { PaymentMark } from '@/components/ui/PaymentMark';
 import { orderStatusMeta } from '@/utils/status';
 import { formatBDT, formatCompactBDT, formatNumber, timeAgo } from '@/utils/format';
-import { available } from '@/utils/pricing';
 import { cn } from '@/lib/utils';
 import { authService } from '@/services/auth';
 import { analyticsService, AnalyticsOverviewResponse } from '@/services/analytics-service';
 import { reviewService } from '@/services/review-service';
+import { orderService } from '@/services/order-service';
+import { returnService } from '@/services/return-service';
+import { inventoryService, type InventoryVariantItem } from '@/services/inventory-service';
+import type { Order } from '@/types/commerce';
 
 type Range = '7d' | '30d';
 
+type TopProductRow = {
+  key: string;
+  title: string;
+  image?: string;
+  qty: number;
+};
+
 export default function AdminDashboardPage() {
-  const { orders, returns, products } = useStore();
-  const { role, can } = useAdmin();
+  const { can } = useAdmin();
+  const { tenant } = useTenant();
   const [userName, setUserName] = useState<string>('');
   const [range, setRange] = useState<Range>('30d');
   const [realOverview, setRealOverview] = useState<AnalyticsOverviewResponse | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
   const [pendingReplyCount, setPendingReplyCount] = useState(0);
+  const [pendingReturnsCount, setPendingReturnsCount] = useState(0);
+  const [ownerOrders, setOwnerOrders] = useState<Order[]>([]);
+  const [lowStock, setLowStock] = useState<InventoryVariantItem[]>([]);
+  const storeName = tenant?.name?.trim() || 'your store';
+  const greetingName = userName || 'there';
 
   const fetchOverview = () => {
     setIsLoadingAnalytics(true);
@@ -68,13 +81,68 @@ export default function AdminDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!can('orders')) return;
+    let cancelled = false;
+    orderService
+      .getOwnerOrders({ limit: 100 })
+      .then((res) => {
+        if (!cancelled) setOwnerOrders(res?.data?.orders || []);
+      })
+      .catch(() => {
+        if (!cancelled) setOwnerOrders([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!can('returns')) return;
+    let cancelled = false;
+    returnService
+      .getOwnerReturns({ tab: 'awaitingReview', limit: 1 })
+      .then((res) => {
+        if (!cancelled) {
+          const counts = res?.data?.counts;
+          setPendingReturnsCount(
+            counts?.awaitingReview ?? counts?.open ?? res?.data?.returns?.length ?? 0,
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPendingReturnsCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!can('inventory')) return;
+    let cancelled = false;
+    inventoryService
+      .getOverview({ stockStatus: 'low', limit: 5, sortBy: 'stock', sortOrder: 'asc' })
+      .then((res) => {
+        if (!cancelled) setLowStock(res?.data?.items || []);
+      })
+      .catch(() => {
+        if (!cancelled) setLowStock([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Compute 100% Dynamic DB-driven Time Series
   const series = useMemo(() => {
     const days = range === '7d' ? 7 : 30;
     const now = new Date();
     const dateMap = new Map<string, { date: string; sales: number; prev: number; orders: number }>();
 
-    // Generate date sequence for the active window
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -92,29 +160,18 @@ export default function AdminDashboardPage() {
           dateMap.set(item.date, item);
         }
       }
-    } else if (orders.length > 0) {
-      for (const o of orders) {
-        const d = new Date(o.createdAt);
-        const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        if (dateMap.has(key)) {
-          const entry = dateMap.get(key)!;
-          entry.sales += Number(o.total) || 0;
-          entry.orders += 1;
-          entry.prev = Math.round(entry.sales * 0.85);
-        }
-      }
     }
 
     return Array.from(dateMap.values());
-  }, [range, realOverview, orders]);
+  }, [range, realOverview]);
 
   const total = realOverview?.kpis ? realOverview.kpis.netSales : series.reduce((s, d) => s + d.sales, 0);
   const prev = series.reduce((s, d) => s + d.prev, 0);
   const change = prev > 0 ? ((total - prev) / prev) * 100 : total > 0 ? 100 : 0;
 
   const displayKpis = {
-    orders: realOverview?.kpis ? realOverview.kpis.orders : orders.length,
-    aov: realOverview?.kpis ? realOverview.kpis.aov : orders.length > 0 ? Math.round(total / orders.length) : 0,
+    orders: realOverview?.kpis ? realOverview.kpis.orders : 0,
+    aov: realOverview?.kpis ? realOverview.kpis.aov : 0,
     conversionRate: realOverview?.kpis?.conversionRate ?? 0,
     returningRate: realOverview?.kpis?.returningRate ?? 0,
   };
@@ -135,22 +192,42 @@ export default function AdminDashboardPage() {
     month: 'long',
   }).format(new Date());
 
-  const toFulfill = orders.filter((o) => ['confirmed', 'processing'].includes(o.status));
-  const toShip = orders.filter((o) => o.status === 'packed');
-  const pendingReturns = returns.filter((r) => r.status === 'requested' || r.status === 'received');
-  const unpaid = orders.filter((o) => o.status === 'pending_payment' || o.paymentStatus === 'failed');
-  const lowStock = products
-    .flatMap((p) => p.variants.filter((v) => !p.preorder && available(v) <= 3).map((v) => ({ p, v })))
-    .sort((a, b) => available(a.v) - available(b.v))
-    .slice(0, 5);
-  const top = [...products].sort((a, b) => b.sold - a.sold).slice(0, 5);
+  const toFulfill = ownerOrders.filter((o) =>
+    ['confirmed', 'processing'].includes(o.status),
+  );
+  const toShip = ownerOrders.filter((o) => o.status === 'packed');
+  const unpaid = ownerOrders.filter(
+    (o) => o.status === 'pending_payment' || o.paymentStatus === 'failed',
+  );
 
-  const me = roleMeta[role] ?? roleMeta.owner;
+  const topProducts = useMemo<TopProductRow[]>(() => {
+    const map = new Map<string, TopProductRow>();
+    for (const o of ownerOrders) {
+      if (['cancelled', 'failed', 'refunded'].includes(o.status)) continue;
+      for (const item of o.items || []) {
+        const key = item.productId || item.sku || item.title;
+        const existing = map.get(key);
+        if (existing) {
+          existing.qty += item.qty || 0;
+        } else {
+          map.set(key, {
+            key,
+            title: item.title,
+            image: item.image,
+            qty: item.qty || 0,
+          });
+        }
+      }
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5);
+  }, [ownerOrders]);
 
   const todos = [
     { label: 'Orders to fulfill', count: toFulfill.length, to: '/admin/orders?tab=unfulfilled', icon: Package, show: can('orders') },
     { label: 'Packed, awaiting courier', count: toShip.length, to: '/admin/orders?tab=packed', icon: Package, show: can('orders') },
-    { label: 'Returns to review', count: pendingReturns.length, to: '/admin/returns', icon: RotateCcw, show: can('returns') },
+    { label: 'Returns to review', count: pendingReturnsCount, to: '/admin/returns', icon: RotateCcw, show: can('returns') },
     { label: 'Payments needing attention', count: unpaid.length, to: '/admin/orders?tab=unpaid', icon: CreditCard, show: can('orders') },
     { label: 'Reviews awaiting reply', count: pendingReplyCount, to: '/admin/reviews', icon: Star, show: can('reviews') },
   ].filter((t) => t.show);
@@ -159,9 +236,11 @@ export default function AdminDashboardPage() {
     <div className="w-full space-y-6">
       <div className="mb-6">
         <h1 className="text-xl font-semibold tracking-tight text-ink">
-          Good morning, {userName || me.person.split(' ')[0]}
+          Good morning, {greetingName}
         </h1>
-        <p className="mt-1 text-sm text-ink-muted">Here’s what’s happening at Tanti today · {todayFormatted}</p>
+        <p className="mt-1 text-sm text-ink-muted">
+          Here’s what’s happening at {storeName} today · {todayFormatted}
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -309,7 +388,7 @@ export default function AdminDashboardPage() {
           flush
         >
           <ul className="divide-y divide-line">
-            {orders.slice(0, 6).map((o) => (
+            {ownerOrders.slice(0, 6).map((o) => (
               <li key={o.id}>
                 <Link
                   href={`/admin/orders/${o.id}`}
@@ -331,21 +410,31 @@ export default function AdminDashboardPage() {
                 </Link>
               </li>
             ))}
+            {ownerOrders.length === 0 && (
+              <li className="px-5 py-8 text-sm text-ink-muted">No orders yet.</li>
+            )}
           </ul>
         </Panel>
 
         <div className="space-y-6">
           {showMoney && (
-            <Panel title="Top products · 30 days" flush>
+            <Panel title="Top products · recent orders" flush>
               <ol className="divide-y divide-line">
-                {top.map((p, i) => (
-                  <li key={p.id} className="flex items-center gap-3 px-5 py-2.5">
+                {topProducts.map((p, i) => (
+                  <li key={p.key} className="flex items-center gap-3 px-5 py-2.5">
                     <span className="w-4 text-xs text-ink-muted tabular-nums">{i + 1}</span>
-                    <img src={p.images[0]} alt="" className="h-9 w-7 rounded object-cover" />
+                    {p.image ? (
+                      <img src={p.image} alt="" className="h-9 w-7 rounded object-cover" />
+                    ) : (
+                      <span className="h-9 w-7 rounded bg-subtle" />
+                    )}
                     <span className="flex-1 truncate text-sm text-ink">{p.title}</span>
-                    <span className="text-xs text-ink-muted tabular-nums">{p.sold} sold</span>
+                    <span className="text-xs text-ink-muted tabular-nums">{p.qty} sold</span>
                   </li>
                 ))}
+                {topProducts.length === 0 && (
+                  <li className="px-5 py-6 text-sm text-ink-muted">No product sales in loaded orders yet.</li>
+                )}
               </ol>
             </Panel>
           )}
@@ -364,21 +453,30 @@ export default function AdminDashboardPage() {
               flush
             >
               <ul className="divide-y divide-line">
-                {lowStock.map(({ p, v }) => (
-                  <li key={v.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-                    <span className="flex-1 truncate text-ink">
-                      {p.title} <span className="text-ink-muted">· {v.color} / {v.size}</span>
-                    </span>
-                    <span
-                      className={cn(
-                        'font-semibold tabular-nums',
-                        available(v) === 0 ? 'text-danger' : 'text-warning'
-                      )}
-                    >
-                      {available(v)}
-                    </span>
-                  </li>
-                ))}
+                {lowStock.map((v) => {
+                  const available = Math.max(0, (v.stock || 0) - (v.reserved || 0));
+                  return (
+                    <li key={v.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
+                      <span className="flex-1 truncate text-ink">
+                        {v.product?.title || 'Product'}{' '}
+                        <span className="text-ink-muted">
+                          · {[v.color, v.size].filter(Boolean).join(' / ') || v.sku}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          'font-semibold tabular-nums',
+                          available === 0 ? 'text-danger' : 'text-warning'
+                        )}
+                      >
+                        {available}
+                      </span>
+                    </li>
+                  );
+                })}
+                {lowStock.length === 0 && (
+                  <li className="px-5 py-6 text-sm text-ink-muted">No low-stock variants.</li>
+                )}
               </ul>
             </Panel>
           )}

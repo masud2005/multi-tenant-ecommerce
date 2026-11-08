@@ -216,79 +216,6 @@ export function useStoreOrders(
     [cart, products, user?.id, adjustStock, setCart]
   );
 
-  const completePayment = useCallback(
-    (orderId: string, result: 'success' | 'fail' | 'cancel') => {
-      patchOrder(orderId, (o) => {
-        const attempt = {
-          id: `pa${Date.now()}`,
-          method: o.paymentMethod,
-          amount: o.total,
-          status:
-            result === 'success'
-              ? ('paid' as const)
-              : result === 'fail'
-              ? ('failed' as const)
-              : ('cancelled' as const),
-          ref: `TRX${Math.random().toString(36).slice(2, 10).toUpperCase()}`,
-          at: now(),
-        };
-        if (result === 'success') {
-          return {
-            ...o,
-            paymentStatus: 'paid',
-            status: 'confirmed',
-            attempts: [...o.attempts, attempt],
-            timeline: [
-              { at: now(), label: 'Order confirmed', by: 'System' },
-              { at: now(), label: `Payment verified with gateway (${attempt.ref})`, by: 'System' },
-              ...o.timeline,
-            ],
-          };
-        }
-        return {
-          ...o,
-          paymentStatus: result === 'fail' ? 'failed' : 'pending',
-          attempts: [...o.attempts, attempt],
-          timeline: [
-            {
-              at: now(),
-              label: result === 'fail' ? 'Payment failed' : 'Payment cancelled by customer',
-              by: 'Gateway',
-            },
-            ...o.timeline,
-          ],
-        };
-      });
-    },
-    [patchOrder]
-  );
-
-  const retryPayment = useCallback(
-    (orderId: string, method: PaymentMethod) => {
-      patchOrder(orderId, (o) =>
-        method === 'cod'
-          ? {
-              ...o,
-              paymentMethod: 'cod',
-              status: 'confirmed',
-              paymentStatus: 'pending',
-              total: o.total + 20,
-              shipping: o.shipping + 20,
-              timeline: [
-                {
-                  at: now(),
-                  label: 'Switched to cash on delivery — order confirmed',
-                  by: 'Customer',
-                },
-                ...o.timeline,
-              ],
-            }
-          : { ...o, paymentMethod: method }
-      );
-    },
-    [patchOrder]
-  );
-
   const setOrderStatus = useCallback(
     (
       orderId: string,
@@ -331,31 +258,6 @@ export function useStoreOrders(
     [patchOrder]
   );
 
-  const refundOrder = useCallback(
-    (orderId: string, amount: number, by: string, reason: string) => {
-      patchOrder(orderId, (o) => {
-        const refunded = o.refunded + amount;
-        const full = refunded >= o.total;
-        return {
-          ...o,
-          refunded,
-          status: full ? 'refunded' : 'partially_refunded',
-          paymentStatus: full ? 'refunded' : 'partially_refunded',
-          timeline: [
-            {
-              at: now(),
-              label: `Refund of ৳${amount.toLocaleString('en-IN')} issued`,
-              by,
-              note: reason,
-            },
-            ...o.timeline,
-          ],
-        };
-      });
-    },
-    [patchOrder]
-  );
-
   const markCodCollected = useCallback(
     (orderId: string, by: string) => {
       patchOrder(orderId, (o) => ({
@@ -366,21 +268,6 @@ export function useStoreOrders(
       }));
     },
     [patchOrder]
-  );
-
-  const cancelOrder = useCallback(
-    (orderId: string, by: string) => {
-      const o = orders.find((x) => x.id === orderId);
-      o?.items.forEach((i) => adjustStock(i.productId, i.variantId, i.qty));
-      patchOrder(orderId, (x) => ({
-        ...x,
-        status: 'cancelled',
-        paymentStatus: x.paymentStatus === 'paid' ? 'refunded' : 'cancelled',
-        refunded: x.paymentStatus === 'paid' ? x.total : 0,
-        timeline: [{ at: now(), label: 'Order cancelled — stock restored', by }, ...x.timeline],
-      }));
-    },
-    [orders, adjustStock, patchOrder]
   );
 
   const createReturn = useCallback(
@@ -493,13 +380,9 @@ export function useStoreOrders(
     reviews,
     patchOrder,
     placeOrder,
-    completePayment,
-    retryPayment,
     setOrderStatus,
     addOrderNote,
-    refundOrder,
     markCodCollected,
-    cancelOrder,
     createReturn,
     updateReturn,
     updateReview,

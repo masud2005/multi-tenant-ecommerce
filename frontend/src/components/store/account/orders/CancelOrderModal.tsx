@@ -12,6 +12,7 @@ interface CancelOrderModalProps {
   order: Order | null;
   onClose: () => void;
   onConfirm: (orderId: string) => void;
+  busy?: boolean;
 }
 
 export function CancelOrderModal({
@@ -19,15 +20,17 @@ export function CancelOrderModal({
   order,
   onClose,
   onConfirm,
+  busy = false,
 }: CancelOrderModalProps) {
   if (!order) return null;
 
+  const methodLabel = paymentMethodLabel[order.paymentMethod] || order.paymentMethod;
   const description =
     order.paymentStatus === 'paid'
-      ? `We’ll refund ${formatBDT(order.total)} to your ${
-          paymentMethodLabel[order.paymentMethod]
-        } account within 3–7 days.`
-      : 'Your order will be cancelled and nothing will be charged.';
+      ? `Your order will be cancelled. Because you already paid ${formatBDT(order.total)} via ${methodLabel}, the store will refund you manually (usually within a few days). This app does not run an automatic payment gateway.`
+      : order.paymentMethod === 'cod'
+        ? 'Your order will be cancelled. Nothing will be collected on delivery.'
+        : 'Your order will be cancelled. If a payment was still pending verification, no further action is needed.';
 
   return (
     <Modal
@@ -38,15 +41,14 @@ export function CancelOrderModal({
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
             Keep order
           </Button>
           <Button
             variant="danger"
-            onClick={() => {
-              onConfirm(order.id);
-              onClose();
-            }}
+            loading={busy}
+            disabled={busy}
+            onClick={() => onConfirm(order.id)}
           >
             Cancel order
           </Button>

@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Download, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { useAdmin } from '@/contexts/AdminContext';
-import { stockMovements, type StockMovementItem } from '@/data/admin';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
 import { Tabs } from '@/components/ui/Tabs';
@@ -14,6 +13,7 @@ import {
   inventoryService,
   type InventoryOverviewData,
   type InventoryVariantItem,
+  type StockMovementItem,
 } from '@/services/inventory-service';
 import { InventoryStatsCards } from './InventoryStatsCards';
 import { InventoryFilters, type StockFilterType } from './InventoryFilters';
@@ -24,13 +24,35 @@ import { AdjustStockModal, type AdjustModalTarget } from './AdjustStockModal';
 type Tab = 'stock' | 'ledger';
 
 const REASON_MAP: Record<string, string> = {
-  'Received': 'RECEIVED',
-  'Correction': 'CORRECTION',
-  'Damaged': 'DAMAGED',
+  Received: 'RECEIVED',
+  Correction: 'CORRECTION',
+  Damaged: 'DAMAGED',
   'Lost / stolen': 'LOST_STOLEN',
   'Physical count': 'PHYSICAL_COUNT',
   'Returned to stock': 'RETURN',
 };
+
+const REASON_LABEL: Record<string, string> = {
+  RECEIVED: 'Received',
+  CORRECTION: 'Correction',
+  DAMAGED: 'Damaged',
+  LOST_STOLEN: 'Lost / stolen',
+  PHYSICAL_COUNT: 'Physical count',
+  RETURN: 'Returned to stock',
+  ORDER: 'Order',
+  RESERVED: 'Reserved',
+  RELEASED: 'Released',
+};
+
+function mapMovementReason(reason: string) {
+  const key = String(reason || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_');
+  if (REASON_LABEL[key]) return REASON_LABEL[key];
+  // API may already return humanized text like "Lost stolen"
+  return reason || '—';
+}
 
 export function InventoryManager() {
   const { actor } = useAdmin();
@@ -39,16 +61,17 @@ export function InventoryManager() {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [stockFilter, setStockFilter] = useState<StockFilterType>('all');
 
-  // Backend Live State
-  const [inventoryData, setInventoryData] = useState<InventoryOverviewData | null>(null);
+  const [inventoryData, setInventoryData] = useState<InventoryOverviewData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Adjustment Modal State
   const [adjustTarget, setAdjustTarget] = useState<AdjustModalTarget | null>(null);
-  const [ledger, setLedger] = useState<StockMovementItem[]>(stockMovements);
+  const [ledger, setLedger] = useState<StockMovementItem[]>([]);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [ledgerError, setLedgerError] = useState<string | null>(null);
 
-  // Debounce search query input
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -56,34 +79,71 @@ export function InventoryManager() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Fetch live inventory overview from backend
-  const fetchInventory = useCallback(async (isSilent = false) => {
-    if (!isSilent) setLoading(true);
-    try {
-      const res = await inventoryService.getOverview({
-        search: debouncedQuery.trim() || undefined,
-        stockStatus: stockFilter,
-      });
+  const fetchInventory = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setLoading(true);
+      try {
+        const res = await inventoryService.getOverview({
+          search: debouncedQuery.trim() || undefined,
+          stockStatus: stockFilter,
+        });
 
-      if (res && res.data) {
-        setInventoryData(res.data);
+        if (res && res.data) {
+          setInventoryData(res.data);
+        } else {
+          setInventoryData(null);
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch inventory:', err);
+        setInventoryData(null);
+        toast.error(err?.message || 'Failed to load inventory data');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
+    },
+    [debouncedQuery, stockFilter],
+  );
+
+  const fetchLedger = useCallback(async () => {
+    setLedgerLoading(true);
+    setLedgerError(null);
+    try {
+      const res = await inventoryService.getMovements(100);
+      const items = Array.isArray(res?.data?.items) ? res.data.items : [];
+      setLedger(
+        items.map((m) => ({
+          ...m,
+          at: typeof m.at === 'string' ? m.at : String(m.at),
+          reason: mapMovementReason(m.reason),
+        })),
+      );
     } catch (err: any) {
-      console.error('Failed to fetch inventory:', err);
-      toast.error(err?.message || 'Failed to load inventory data');
+      console.error('Failed to fetch stock movements:', err);
+      setLedger([]);
+      setLedgerError(err?.message || 'Failed to load stock movements');
+      toast.error(err?.message || 'Failed to load stock movements');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setLedgerLoading(false);
     }
-  }, [debouncedQuery, stockFilter]);
+  }, []);
 
   useEffect(() => {
     fetchInventory();
   }, [fetchInventory]);
 
+  useEffect(() => {
+    if (tab === 'ledger') {
+      fetchLedger();
+    }
+  }, [tab, fetchLedger]);
+
   const handleManualRefresh = async () => {
     setRefreshing(true);
     await fetchInventory(true);
+    if (tab === 'ledger') {
+      await fetchLedger();
+    }
     toast.success('Inventory refreshed');
   };
 
@@ -125,11 +185,11 @@ export function InventoryManager() {
         note: note || undefined,
       });
 
-      // Update local item stock immediately from response
-      const updatedStock = res?.data?.variant?.stock ?? (target.current + delta);
+      const updatedStock =
+        res?.data?.variant?.stock ?? target.current + delta;
       if (inventoryData) {
         const updatedItems = inventoryData.items.map((item) =>
-          item.id === target.vid ? { ...item, stock: updatedStock } : item
+          item.id === target.vid ? { ...item, stock: updatedStock } : item,
         );
         setInventoryData({
           ...inventoryData,
@@ -137,29 +197,32 @@ export function InventoryManager() {
         });
       }
 
-      // Record movement in audit ledger
-      setLedger((prev) => [
-        {
-          id: res?.data?.movement?.id || `sm${Date.now()}`,
-          at: res?.data?.movement?.createdAt || new Date().toISOString(),
+      const movement = res?.data?.movement;
+      if (movement) {
+        const entry: StockMovementItem = {
+          id: movement.id,
+          at: movement.createdAt,
           sku: target.vid,
           product: target.label,
-          change: delta,
-          stockAfter: updatedStock,
-          reason,
-          by: actor || 'Store Owner',
-          ref: reference || undefined,
-          note: note || undefined,
-        },
-        ...prev,
-      ]);
+          change: movement.change,
+          stockAfter: movement.stockAfter,
+          stockBefore: movement.stockBefore,
+          reason: mapMovementReason(movement.reason) || reason,
+          by: movement.by || actor || 'Store Owner',
+          ref: movement.ref,
+          note: movement.note,
+          variantId: movement.variantId,
+        };
+        setLedger((prev) => [entry, ...prev.filter((m) => m.id !== entry.id)]);
+      } else if (tab === 'ledger') {
+        await fetchLedger();
+      }
 
       toast.success(
-        res?.message || `Stock ${delta > 0 ? '+' : ''}${delta} (${reason}) saved to database!`
+        res?.message ||
+          `Stock ${delta > 0 ? '+' : ''}${delta} (${reason}) saved`,
       );
       setAdjustTarget(null);
-
-      // Silently refresh stats in the background
       fetchInventory(true);
     } catch (err: any) {
       console.error('Failed to adjust stock:', err);
@@ -180,27 +243,60 @@ export function InventoryManager() {
               variant="secondary"
               size="sm"
               onClick={handleManualRefresh}
-              disabled={refreshing || loading}
+              disabled={refreshing || loading || ledgerLoading}
               className="gap-2"
             >
-              <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+              <RefreshCw
+                className={cn('h-4 w-4', refreshing && 'animate-spin')}
+              />
               Refresh
             </Button>
-            <GuardedButton
-              module="inventory"
-              action="update"
-              variant="secondary"
-              size="sm"
-              onClick={() => toast.success('Physical count started')}
-            >
-              <ClipboardCheck className="h-4 w-4" aria-hidden /> Start count
-            </GuardedButton>
             <GuardedButton
               module="inventory"
               action="export"
               variant="secondary"
               size="sm"
-              onClick={() => toast.success('Inventory exported')}
+              disabled={!items.length}
+              onClick={() => {
+                const headers = [
+                  'Product',
+                  'SKU',
+                  'Color',
+                  'Size',
+                  'Stock',
+                  'Reserved',
+                  'Available',
+                  'Low threshold',
+                ];
+                const csvRows = [headers.join(',')];
+                for (const v of items) {
+                  const available = Math.max(0, (v.stock || 0) - (v.reserved || 0));
+                  csvRows.push(
+                    [
+                      `"${(v.product?.title || '').replace(/"/g, '""')}"`,
+                      `"${(v.sku || '').replace(/"/g, '""')}"`,
+                      `"${(v.color || '').replace(/"/g, '""')}"`,
+                      `"${(v.size || '').replace(/"/g, '""')}"`,
+                      `"${v.stock}"`,
+                      `"${v.reserved}"`,
+                      `"${available}"`,
+                      `"${v.lowStockThreshold ?? ''}"`,
+                    ].join(','),
+                  );
+                }
+                const blob = new Blob([csvRows.join('\n')], {
+                  type: 'text/csv;charset=utf-8;',
+                });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `inventory_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                toast.success(`Exported ${items.length} variants`);
+              }}
             >
               <Download className="h-4 w-4" aria-hidden /> Export
             </GuardedButton>
@@ -208,10 +304,11 @@ export function InventoryManager() {
         }
       />
 
-      {/* KPI Stats Cards */}
-      <InventoryStatsCards stats={inventoryData?.stats ?? null} loading={loading} />
+      <InventoryStatsCards
+        stats={inventoryData?.stats ?? null}
+        loading={loading}
+      />
 
-      {/* Main Content Area: Stock Table or Movement Ledger */}
       <div className="rounded-lg border border-line bg-surface shadow-xs">
         <div className="flex flex-wrap items-end justify-between gap-3 px-4 pt-2">
           <Tabs
@@ -246,10 +343,15 @@ export function InventoryManager() {
           </>
         )}
 
-        {tab === 'ledger' && <InventoryLedgerTable movements={ledger} />}
+        {tab === 'ledger' && (
+          <InventoryLedgerTable
+            movements={ledger}
+            loading={ledgerLoading}
+            error={ledgerError}
+          />
+        )}
       </div>
 
-      {/* Stock Adjustment Modal */}
       <AdjustStockModal
         target={adjustTarget}
         onClose={() => setAdjustTarget(null)}

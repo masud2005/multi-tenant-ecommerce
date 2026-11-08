@@ -2,10 +2,8 @@
 
 import React, { use, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { PackageIcon, Loader2Icon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
-import { useTenant } from '@/contexts/TenantContext';
 import { Button } from '@/components/ui/button';
 import { orderService, mapBackendOrderToFrontend } from '@/services/order-service';
 import {
@@ -14,7 +12,7 @@ import {
   OrderConfirmationSummary,
   DownloadInvoiceButton,
 } from '@/components/store/order-confirmation';
-import type { PaymentMethod, Order } from '@/types/commerce';
+import type { Order } from '@/types/commerce';
 
 interface OrderConfirmationPageProps {
   params: Promise<{ orderId: string }>;
@@ -22,15 +20,12 @@ interface OrderConfirmationPageProps {
 
 export default function OrderConfirmationPage({ params }: OrderConfirmationPageProps) {
   const { orderId } = use(params);
-  const router = useRouter();
-  const { orders, retryPayment, user } = useStore();
-  const { tenant } = useTenant();
+  const { orders, user } = useStore();
 
   const matchedOrder = orders.find((o) => o.id === orderId || o.number === orderId);
   const [dbOrder, setDbOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(!matchedOrder);
 
-  // Fetch order from backend if not found in local store state
   useEffect(() => {
     if (!matchedOrder && orderId) {
       setIsLoading(true);
@@ -49,7 +44,6 @@ export default function OrderConfirmationPage({ params }: OrderConfirmationPageP
   }, [matchedOrder, orderId]);
 
   const order = matchedOrder || dbOrder;
-  const [method, setMethod] = useState<PaymentMethod | null>(null);
 
   if (isLoading) {
     return (
@@ -71,40 +65,28 @@ export default function OrderConfirmationPage({ params }: OrderConfirmationPageP
     );
   }
 
-  const awaitingPayment = order.status === 'pending_payment';
-  const failed =
-    awaitingPayment &&
-    (order.paymentStatus === 'failed' ||
-      order.attempts.some((a) => a.status === 'cancelled' || a.status === 'failed'));
-  const chosen = method ?? order.paymentMethod;
+  const awaitingManualPayment =
+    order.paymentMethod === 'bkash' || order.paymentMethod === 'nagad'
+      ? order.paymentStatus === 'pending' ||
+        order.status === 'pending_payment' ||
+        order.paymentStatus === 'failed'
+      : false;
 
-  // Retry or switch payment method
-  const retry = () => {
-    retryPayment(order.id, chosen);
-    if (chosen === 'cod') return;
-    router.push(`/pay/${order.number || order.id}`);
-  };
+  const failed =
+    awaitingManualPayment &&
+    (order.paymentStatus === 'failed' || order.status === 'failed');
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-      {/* Top Banner: Either Payment Retry Alert or Order Success Checkmark */}
-      {awaitingPayment ? (
-        <OrderPaymentRetry
-          order={order}
-          failed={failed}
-          chosenMethod={chosen}
-          onSelectMethod={setMethod}
-          onRetry={retry}
-        />
+      {awaitingManualPayment ? (
+        <OrderPaymentRetry order={order} failed={failed} />
       ) : (
         <OrderSuccessBanner order={order} />
       )}
 
-      {/* Structured Order Summary */}
       <OrderConfirmationSummary order={order} />
 
-      {/* Footer Navigation Buttons */}
-      {!awaitingPayment && (
+      {!awaitingManualPayment && (
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           {user ? (
             <Button href={`/account/orders/${order.number}`}>
@@ -120,15 +102,10 @@ export default function OrderConfirmationPage({ params }: OrderConfirmationPageP
         </div>
       )}
 
-      {(tenant?.name || tenant?.contact?.phone || tenant?.contact?.email) && (
-        <p className="mt-6 text-center text-xs text-ink-muted">
-          Need help?{' '}
-          <Link href="/contact" className="underline">
-            Contact{tenant?.name ? ` ${tenant.name}` : ''}
-          </Link>
-          {tenant?.contact?.phone ? ` · ${tenant.contact.phone}` : ''}
-          {tenant?.contact?.whatsapp ? ` · WhatsApp ${tenant.contact.whatsapp}` : ''}
-        </p>
+      {awaitingManualPayment && !failed && (
+        <div className="mt-6 flex justify-center">
+          <DownloadInvoiceButton order={order} />
+        </div>
       )}
     </div>
   );

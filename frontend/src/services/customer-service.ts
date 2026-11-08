@@ -41,7 +41,7 @@ export function mapBackendCustomerToFrontend(item: any): Customer {
     name: item.name || 'Customer',
     email: item.email || '',
     phone: item.phone || defaultAddr?.phone || '',
-    district: item.district || defaultAddr?.district || 'Dhaka',
+    district: item.district || defaultAddr?.district || '',
     orders: Number(item.ordersCount) || Number(item._count?.orders) || 0,
     spent: Number(item.totalSpent) || 0,
     lastOrder: item.orders?.[0]?.createdAt
@@ -49,7 +49,7 @@ export function mapBackendCustomerToFrontend(item: any): Customer {
       : '',
     joined: item.createdAt
       ? new Date(item.createdAt).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0],
+      : '',
     tags: Array.isArray(item.tags) ? item.tags : [],
     segment: (item.segment || 'New') as any,
     status: item.isActive === false ? 'inactive' : 'active',

@@ -239,6 +239,24 @@ export const orderService = {
     return res;
   },
 
+  // 3b. Customer self-cancel before packed/shipped
+  async cancelCustomerOrder(
+    orderNumberOrId: string,
+    tenantId?: string,
+  ): Promise<ApiResponse<Order>> {
+    const endpoint = tenantId
+      ? `/customer/orders/${encodeURIComponent(orderNumberOrId)}/cancel?tenantId=${encodeURIComponent(tenantId)}`
+      : `/customer/orders/${encodeURIComponent(orderNumberOrId)}/cancel`;
+    const res = await apiClient.patch<ApiResponse<any>>(endpoint, {});
+    if (res?.data) {
+      return {
+        ...res,
+        data: mapBackendOrderToFrontend(res.data),
+      };
+    }
+    return res;
+  },
+
   // ----------------------------------------------------
   // Owner Endpoints (/owner/orders)
   // ----------------------------------------------------
@@ -354,6 +372,25 @@ export const orderService = {
       ? `/owner/orders/${encodeURIComponent(id)}/notes?tenantId=${encodeURIComponent(tenantId)}`
       : `/owner/orders/${encodeURIComponent(id)}/notes`;
     return await apiClient.post<ApiResponse<any>>(endpoint, payload);
+  },
+
+  // 8. Record manual refund (Owner) — no payment gateway payout
+  async refundOwnerOrder(
+    id: string,
+    payload: { amount: number; reason?: string; restock?: boolean },
+    tenantId?: string,
+  ): Promise<ApiResponse<Order>> {
+    const endpoint = tenantId
+      ? `/owner/orders/${encodeURIComponent(id)}/refund?tenantId=${encodeURIComponent(tenantId)}`
+      : `/owner/orders/${encodeURIComponent(id)}/refund`;
+    const res = await apiClient.post<ApiResponse<any>>(endpoint, payload);
+    if (res?.data) {
+      return {
+        ...res,
+        data: mapBackendOrderToFrontend(res.data),
+      };
+    }
+    return res;
   },
 
   async getOrders(): Promise<Order[]> {

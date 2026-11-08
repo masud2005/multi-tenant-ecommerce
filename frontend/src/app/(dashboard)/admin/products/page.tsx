@@ -385,7 +385,47 @@ export default function AdminProductsPage() {
               action="export"
               variant="secondary"
               size="sm"
-              onClick={() => toast.success(`Exported ${rows.length} products to CSV`)}
+              disabled={rows.length === 0}
+              onClick={() => {
+                const headers = [
+                  'Title',
+                  'Status',
+                  'Category',
+                  'Brand',
+                  'Price',
+                  'Stock',
+                  'SKU',
+                  'Sold',
+                ];
+                const csvRows = [headers.join(',')];
+                for (const p of rows) {
+                  const skus = (p.variants || []).map((v) => v.sku).filter(Boolean).join('; ');
+                  csvRows.push(
+                    [
+                      `"${(p.title || '').replace(/"/g, '""')}"`,
+                      `"${p.status || ''}"`,
+                      `"${(p.category || '').replace(/"/g, '""')}"`,
+                      `"${(p.brand || '').replace(/"/g, '""')}"`,
+                      `"${productPrice(p)}"`,
+                      `"${productStock(p)}"`,
+                      `"${skus.replace(/"/g, '""')}"`,
+                      `"${p.sold ?? 0}"`,
+                    ].join(','),
+                  );
+                }
+                const blob = new Blob([csvRows.join('\n')], {
+                  type: 'text/csv;charset=utf-8;',
+                });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `products_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                toast.success(`Exported ${rows.length} products`);
+              }}
             >
               <Download className="h-4 w-4" aria-hidden /> Export
             </GuardedButton>

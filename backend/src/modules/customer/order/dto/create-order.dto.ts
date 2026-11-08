@@ -3,6 +3,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -13,6 +14,13 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { PaymentMethod, PaymentStatus } from '../../../../../prisma/generated/client';
+
+/** Manual-fulfillment stores: COD + manual MFS only (no online gateways). */
+export const SUPPORTED_CHECKOUT_PAYMENT_METHODS = [
+  PaymentMethod.COD,
+  PaymentMethod.BKASH,
+  PaymentMethod.NAGAD,
+] as const;
 
 // Delivery shipping address details
 export class OrderAddressDto {
@@ -237,11 +245,13 @@ export class CreateOrderDto {
 
   // Payment method and status
   @ApiProperty({
-    description: 'Selected payment method',
-    enum: PaymentMethod,
+    description: 'Selected payment method (COD, bKash, or Nagad only)',
+    enum: SUPPORTED_CHECKOUT_PAYMENT_METHODS,
     example: PaymentMethod.COD,
   })
-  @IsEnum(PaymentMethod)
+  @IsIn(SUPPORTED_CHECKOUT_PAYMENT_METHODS as unknown as string[], {
+    message: 'Only COD, bKash and Nagad are supported',
+  })
   paymentMethod: PaymentMethod;
 
   @ApiPropertyOptional({

@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { useAdmin } from '@/contexts/AdminContext';
-import { brands as seedBrands, categories as seedCategories, collections as seedCollections } from '@/data/products';
 import { images } from '@/data/images';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
@@ -46,12 +45,12 @@ const blankProduct: Product = {
   id: '',
   slug: '',
   title: '',
-  brand: 'Tanti Studio',
-  category: 'women',
-  subcategory: 'Kurtas',
+  brand: '',
+  category: '' as CategoryKey,
+  subcategory: '',
   collections: [],
   tags: [],
-  images: [images.kurta],
+  images: [],
   price: 0,
   cost: 0,
   rating: 0,
@@ -92,7 +91,7 @@ function slugify(s: string) {
 export function ProductEditor({ id }: { id?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { products, saveProduct, categories: storeCategories, addSubcategory } = useStore();
+  const { products, saveProduct, addSubcategory } = useStore();
   const { can } = useAdmin();
   const existing = products.find((p) => p.id === id);
 
@@ -232,55 +231,37 @@ export function ProductEditor({ id }: { id?: string }) {
     ? Math.round((((p.salePrice ?? p.price) - p.cost) / (p.salePrice ?? p.price)) * 100)
     : 0;
 
-  // Process Category List (Merge DB categories or fallback to storeCategories)
+  // Categories from API only — empty list means create taxonomy first
   const categoryOptions = useMemo(() => {
-    if (dbCategories.length > 0) {
-      const parents = dbCategories.filter((c) => !c.parentId);
-      return parents.map((parent) => {
-        const subcategories = dbCategories
-          .filter((c) => c.parentId === parent.id)
-          .map((sub) => ({ id: sub.id, name: sub.name, slug: sub.slug }));
+    if (dbCategories.length === 0) return [];
+    const parents = dbCategories.filter((c) => !c.parentId);
+    return parents.map((parent) => {
+      const subcategories = dbCategories
+        .filter((c) => c.parentId === parent.id)
+        .map((sub) => ({ id: sub.id, name: sub.name, slug: sub.slug }));
 
-        return {
-          id: parent.id,
-          key: parent.slug,
-          name: parent.name,
-          subcategories,
-        };
-      });
-    }
-
-    const fallback = storeCategories && storeCategories.length > 0 ? storeCategories : seedCategories;
-    return fallback.map((c) => ({
-      id: c.key,
-      key: c.key,
-      name: c.name,
-      subcategories: (c.subcategories || []).map((name) => ({ id: name, name, slug: slugify(name) })),
-    }));
-  }, [dbCategories, storeCategories]);
+      return {
+        id: parent.id,
+        key: parent.slug,
+        name: parent.name,
+        subcategories,
+      };
+    });
+  }, [dbCategories]);
 
   // Current active category object
   const activeCategory = useMemo(() => {
-    return (
-      categoryOptions.find((c) => c.key === p.category || c.id === p.category) ??
-      categoryOptions[0]
-    );
+    return categoryOptions.find((c) => c.key === p.category || c.id === p.category);
   }, [categoryOptions, p.category]);
 
-  // Brand Options
+  // Brand Options from API only
   const brandOptions = useMemo(() => {
-    if (dbBrands.length > 0) {
-      return dbBrands.map((b) => ({ id: b.id, name: b.name, slug: b.slug }));
-    }
-    return seedBrands.map((b) => ({ id: b.name, name: b.name, slug: slugify(b.name) }));
+    return dbBrands.map((b) => ({ id: b.id, name: b.name, slug: b.slug }));
   }, [dbBrands]);
 
-  // Collection Options
+  // Collection Options from API only
   const collectionOptions = useMemo(() => {
-    if (dbCollections.length > 0) {
-      return dbCollections.map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
-    }
-    return seedCollections.map((c) => ({ id: c.slug, name: c.name, slug: c.slug }));
+    return dbCollections.map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
   }, [dbCollections]);
 
   const generateVariants = () => {
@@ -1114,6 +1095,7 @@ export function ProductEditor({ id }: { id?: string }) {
               <Select
                 label="Category"
                 value={p.category}
+                placeholder="Select category"
                 onChange={(e) => {
                   const selectedCat = categoryOptions.find(
                     (x) => x.key === e.target.value || x.id === e.target.value
@@ -1127,13 +1109,20 @@ export function ProductEditor({ id }: { id?: string }) {
                   value: c.key,
                   label: c.name,
                 }))}
+                error={errors.category}
               />
+              {categoryOptions.length === 0 && (
+                <p className="text-xs text-ink-muted -mt-2">
+                  No categories yet. Create a category in Catalog → Categories first.
+                </p>
+              )}
 
               {activeCategory?.subcategories && activeCategory.subcategories.length > 0 ? (
                 <div className="space-y-1.5">
                   <Select
                     label="Subcategory"
                     value={p.subcategory}
+                    placeholder="Select subcategory"
                     onChange={(e) => set({ subcategory: e.target.value })}
                     options={activeCategory.subcategories.map((sub) => ({
                       value: sub.name,
@@ -1171,53 +1160,71 @@ export function ProductEditor({ id }: { id?: string }) {
                     value={p.subcategory}
                     onChange={(e) => set({ subcategory: e.target.value })}
                     placeholder="e.g. Kurtas, Sarees"
-                    hint="No subcategories in this category yet. Type one to assign."
+                    hint={
+                      categoryOptions.length === 0
+                        ? 'Create a category first, then add subcategories.'
+                        : 'No subcategories in this category yet. Type one to assign.'
+                    }
                   />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (p.subcategory.trim()) {
-                        addSubcategory(activeCategory?.key || p.category, p.subcategory.trim());
-                        toast.success(
-                          `"${p.subcategory.trim()}" saved to ${activeCategory?.name || 'category'}`
-                        );
-                      }
-                    }}
-                    className="text-xs text-clay hover:underline cursor-pointer font-medium"
-                  >
-                    + Save &quot;{p.subcategory || 'name'}&quot; to category
-                  </button>
+                  {activeCategory && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (p.subcategory.trim()) {
+                          addSubcategory(activeCategory.key, p.subcategory.trim());
+                          toast.success(
+                            `"${p.subcategory.trim()}" saved to ${activeCategory.name}`
+                          );
+                        }
+                      }}
+                      className="text-xs text-clay hover:underline cursor-pointer font-medium"
+                    >
+                      + Save &quot;{p.subcategory || 'name'}&quot; to category
+                    </button>
+                  )}
                 </div>
               )}
 
               <Select
                 label="Brand"
                 value={p.brand}
+                placeholder="Select brand"
                 onChange={(e) => set({ brand: e.target.value })}
                 options={brandOptions.map((b) => ({
                   value: b.name,
                   label: b.name,
                 }))}
               />
+              {brandOptions.length === 0 && (
+                <p className="text-xs text-ink-muted -mt-2">
+                  No brands yet. Create a brand in Catalog → Brands first.
+                </p>
+              )}
 
               <div>
                 <p className="mb-1.5 text-sm font-medium text-ink">Collections</p>
-                <div className="space-y-2">
-                  {collectionOptions.map((c) => (
-                    <Checkbox
-                      key={c.slug || c.id}
-                      checked={p.collections.includes(c.slug) || p.collections.includes(c.id)}
-                      onChange={(v) =>
-                        set({
-                          collections: v
-                            ? [...p.collections, c.slug]
-                            : p.collections.filter((x) => x !== c.slug && x !== c.id),
-                        })
-                      }
-                      label={c.name}
-                    />
-                  ))}
-                </div>
+                {collectionOptions.length === 0 ? (
+                  <p className="text-xs text-ink-muted">
+                    No collections yet. Create one in Catalog → Collections first.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {collectionOptions.map((c) => (
+                      <Checkbox
+                        key={c.slug || c.id}
+                        checked={p.collections.includes(c.slug) || p.collections.includes(c.id)}
+                        onChange={(v) =>
+                          set({
+                            collections: v
+                              ? [...p.collections, c.slug]
+                              : p.collections.filter((x) => x !== c.slug && x !== c.id),
+                          })
+                        }
+                        label={c.name}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
