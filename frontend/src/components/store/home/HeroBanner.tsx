@@ -60,9 +60,9 @@ export function HeroBanner() {
                 size="lg"
                 variant="ghost"
                 className="text-canvas hover:bg-canvas/15 hover:text-canvas cursor-pointer"
-                href="/journal/eid-styling-guide"
+                href="/about"
               >
-                Read the styling guide
+                Our story
               </Button>
             </div>
           </div>

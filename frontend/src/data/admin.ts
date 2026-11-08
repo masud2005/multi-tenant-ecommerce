@@ -65,7 +65,7 @@ export const permissionModules: { key: AdminModule; label: string }[] = [
   { key: 'marketing', label: 'Marketing' },
   { key: 'shipping', label: 'Shipping' },
   { key: 'theme', label: 'Theme' },
-  { key: 'content', label: 'Pages, blog & menus' },
+  { key: 'content', label: 'Content' },
   { key: 'media', label: 'Media' },
   { key: 'analytics', label: 'Analytics' },
   { key: 'reports', label: 'Reports' },
@@ -167,23 +167,6 @@ export const mediaAssets = [
   { id: 'm8', name: 'silver-jhumka.jpg', url: images.jewelry, size: '176 KB', dims: '1200×1600', alt: '', usedIn: 1 },
   { id: 'm9', name: 'unused-banner-old.jpg', url: images.dupatta, size: '520 KB', dims: '2400×900', alt: '', usedIn: 0 }
 ];
-
-export const cmsPages = [
-  { id: 'pg1', title: 'About us', slug: '/about', status: 'published', updated: '2026-08-14', author: 'Shahana Parvin' },
-  { id: 'pg2', title: 'Contact', slug: '/contact', status: 'published', updated: '2026-06-02', author: 'Shahana Parvin' },
-  { id: 'pg3', title: 'FAQ', slug: '/faq', status: 'published', updated: '2026-09-10', author: 'Mitu Akter' },
-  { id: 'pg4', title: 'Eid gifting guide', slug: '/pages/eid-gifting', status: 'scheduled', updated: '2026-09-25', author: 'Tasnim Ara', publishAt: '2026-10-01T09:00:00' },
-  { id: 'pg5', title: 'Wholesale enquiries', slug: '/pages/wholesale', status: 'draft', updated: '2026-09-20', author: 'Farzana Yasmin' },
-  { id: 'pg6', title: 'Shipping policy', slug: '/policies/shipping', status: 'published', updated: '2026-08-01', author: 'Shahana Parvin' },
-  { id: 'pg7', title: 'Return & refund policy', slug: '/policies/returns', status: 'published', updated: '2026-08-01', author: 'Shahana Parvin' }
-];
-
-export const menus = [
-  { id: 'mn1', name: 'Main menu', location: 'Header', items: ['Women', 'Men', 'Kids', 'Footwear', 'Accessories', 'Sale'] },
-  { id: 'mn2', name: 'Footer — Help', location: 'Footer', items: ['Track order', 'Shipping', 'Returns', 'FAQ', 'Contact'] },
-  { id: 'mn3', name: 'Footer — Company', location: 'Footer', items: ['About', 'Journal', 'Careers', 'Wholesale'] }
-];
-
 
 export const reportCatalog: { group: string; items: { name: string; description: string }[] }[] = [
   {

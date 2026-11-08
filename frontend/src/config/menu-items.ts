@@ -145,7 +145,7 @@ export const adminNavItems: NavItem[] = [
     module: 'theme',
   },
   {
-    title: 'Pages, blog & menus',
+    title: 'Content',
     href: '/admin/content',
     icon: 'FileText',
     category: 'Online store',

@@ -88,7 +88,7 @@ export const adminNav: { group: string; items: AdminNavItem[] }[] = [
     group: 'Online store',
     items: [
       { to: '/admin/theme', label: 'Theme', icon: Palette, module: 'theme' },
-      { to: '/admin/content', label: 'Pages, blog & menus', icon: FileText, module: 'content' },
+      { to: '/admin/content', label: 'Content', icon: FileText, module: 'content' },
       { to: '/admin/media', label: 'Media', icon: ImageIcon, module: 'media' }
     ]
   },

@@ -1,10 +1,24 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { QueryMediaDto } from './dto/query-media.dto';
 import { CreateMediaDto } from './dto/create-media.dto';
 import { UpdateMediaDto } from './dto/update-media.dto';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
+
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif',
+  'image/gif',
+]);
 
 @Injectable()
 export class MediaService {
@@ -115,6 +129,80 @@ export class MediaService {
     });
 
     return ResponseHelper.created(asset, 'Media asset added successfully');
+  }
+
+  /** Upload an image file to Cloudinary and register it in the media library. */
+  async uploadMediaFile(
+    file: Express.Multer.File,
+    alt?: string,
+    tenantId?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Image file is required');
+    }
+    if (!ALLOWED_IMAGE_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        'Only PNG, JPG, WebP, AVIF, or GIF images are allowed',
+      );
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      throw new BadRequestException('Image must be under 5MB');
+    }
+
+    const targetTenantId = await this.resolveTenantId(tenantId);
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: targetTenantId },
+      select: { id: true, slug: true },
+    });
+    if (!tenant) {
+      throw new NotFoundException('Store tenant context not found');
+    }
+
+    const baseName = (file.originalname || 'image')
+      .replace(/\.[^.]+$/, '')
+      .replace(/[^a-zA-Z0-9-_]+/g, '-')
+      .replace(/-+/g, '-')
+      .slice(0, 60)
+      .replace(/^-|-$/g, '');
+
+    const uploadResult = await this.storageService.uploadFile(file, {
+      folder: `store/${tenant.slug || tenant.id}/media`,
+      publicId: `${baseName || 'image'}-${Date.now()}`,
+      overwrite: false,
+      resourceType: 'image',
+      tags: ['media-library', tenant.slug || tenant.id],
+    });
+
+    const sizeKb = Math.max(1, Math.round(uploadResult.bytes / 1024));
+    const dimensions =
+      uploadResult.width && uploadResult.height
+        ? `${uploadResult.width}×${uploadResult.height}`
+        : undefined;
+    const displayName = file.originalname || `${baseName}.${uploadResult.format}`;
+
+    try {
+      const asset = await this.prisma.mediaAsset.create({
+        data: {
+          tenantId: targetTenantId,
+          name: displayName,
+          url: uploadResult.secureUrl || uploadResult.url,
+          size: `${sizeKb} KB`,
+          dimensions: dimensions || null,
+          alt: alt?.trim() || null,
+        },
+      });
+
+      this.logger.log(
+        `Media uploaded [${asset.id}] for tenant [${targetTenantId}]`,
+      );
+
+      return ResponseHelper.created(asset, 'Image uploaded successfully');
+    } catch (error) {
+      await this.storageService
+        .deleteFile(uploadResult.secureUrl || uploadResult.url)
+        .catch(() => {});
+      throw error;
+    }
   }
 
   // Update media asset alt text or title

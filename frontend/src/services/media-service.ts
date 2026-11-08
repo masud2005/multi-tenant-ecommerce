@@ -60,6 +60,22 @@ export const mediaService = {
     return await apiClient.get<ApiResponse<MediaResponseData>>(endpoint);
   },
 
+  // Upload image file to Cloudinary and register in media library
+  async uploadFile(
+    file: File,
+    options?: { alt?: string },
+  ): Promise<ApiResponse<MediaAsset>> {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options?.alt?.trim()) {
+      formData.append('alt', options.alt.trim());
+    }
+    return await apiClient.post<ApiResponse<MediaAsset>>(
+      '/owner/media/upload',
+      formData,
+    );
+  },
+
   // Save new media asset record
   async createMedia(dto: {
     name: string;

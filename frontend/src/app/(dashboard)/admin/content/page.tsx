@@ -1,55 +1,58 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Edit3, HelpCircle, Save } from 'lucide-react';
-import { cmsPages, menus } from '@/data/admin';
-import { blogPosts, faqs as initialFaqs } from '@/data/content';
+import { Edit3, Save } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
 import { Tabs } from '@/components/ui/Tabs';
 import { Badge } from '@/components/ui/Badge';
-import { Drawer } from '@/components/ui/Drawer';
 import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/Textarea';
-import { Select } from '@/components/ui/Select';
 import { Switch } from '@/components/ui/Switch';
-import { Button } from '@/components/ui/button';
-import { formatDate, formatDateTime } from '@/utils/format';
 import { FaqEditorDrawer, FaqItemData } from '@/components/dashboard/admin/content/FaqEditorDrawer';
 import { ContactEditorDrawer } from '@/components/dashboard/admin/content/ContactEditorDrawer';
 import { AboutEditorDrawer } from '@/components/dashboard/admin/content/AboutEditorDrawer';
-import { ReturnsEditorDrawer } from '@/components/dashboard/admin/content/ReturnsEditorDrawer';
+import { PolicyEditorDrawer } from '@/components/dashboard/admin/content/PolicyEditorDrawer';
 import { faqService } from '@/services/faq-service';
 import { storeService } from '@/services/store-service';
+import type { PolicySlug } from '@/services/page-service';
 import { cn } from '@/utils/cn';
 
-type Tab = 'pages' | 'blog' | 'navigation' | 'faq';
-const tone = {
-  published: 'success',
-  draft: 'neutral',
-  scheduled: 'info',
-} as const;
+type Tab = 'pages' | 'faq';
+
+type ContentEntry = {
+  key: string;
+  title: string;
+  path: string;
+  kind: 'about' | 'contact' | 'faq' | PolicySlug;
+};
+
+const PAGE_ENTRIES: ContentEntry[] = [
+  { key: 'about', title: 'About', path: '/about', kind: 'about' },
+  { key: 'contact', title: 'Contact', path: '/contact', kind: 'contact' },
+  { key: 'faq', title: 'FAQ', path: '/faq', kind: 'faq' },
+  { key: 'returns', title: 'Return policy', path: '/policies/returns', kind: 'returns' },
+  { key: 'shipping', title: 'Shipping policy', path: '/policies/shipping', kind: 'shipping' },
+  { key: 'privacy', title: 'Privacy policy', path: '/policies/privacy', kind: 'privacy' },
+  { key: 'terms', title: 'Terms of service', path: '/policies/terms', kind: 'terms' },
+  { key: 'cookies', title: 'Cookie policy', path: '/policies/cookies', kind: 'cookies' },
+];
 
 export default function AdminContentPage() {
   const [tab, setTab] = useState<Tab>('pages');
-  const [editing, setEditing] = useState<string | null>(null);
-  const [publishMode, setPublishMode] = useState('Publish now');
-  const page = cmsPages.find((p) => p.id === editing);
 
-  // Announcement bar (persisted in tenant store settings — no mock defaults)
   const [announcementText, setAnnouncementText] = useState('');
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [announcementLoading, setAnnouncementLoading] = useState(true);
   const [announcementSaving, setAnnouncementSaving] = useState(false);
 
-  // About, Contact, FAQ & Returns Editor state
   const [aboutOpen, setAboutOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
-  const [returnsOpen, setReturnsOpen] = useState(false);
+  const [policySlug, setPolicySlug] = useState<PolicySlug | null>(null);
+
   const [faqTitle, setFaqTitle] = useState('Help & FAQ');
   const [faqCategories, setFaqCategories] = useState<string[]>([
     'Orders',
@@ -57,72 +60,55 @@ export default function AdminContentPage() {
     'Returns',
     'Account',
   ]);
-  const [faqList, setFaqList] = useState<FaqItemData[]>(
-    initialFaqs
-      .filter((f) => f.category.toLowerCase() !== 'payments')
-      .map((f, i) => ({
-        id: `faq-${i + 1}`,
-        category: f.category,
-        q: f.q,
-        a: f.a,
-      }))
-  );
+  const [faqList, setFaqList] = useState<FaqItemData[]>([]);
   const [activeFaqFilter, setActiveFaqFilter] = useState<string>('all');
-  const [loadingFaqs, setLoadingFaqs] = useState(false);
+  const [loadingFaqs, setLoadingFaqs] = useState(true);
 
-  // Load announcement + FAQs from backend on mount
+  const loadFaqs = useCallback(async () => {
+    try {
+      setLoadingFaqs(true);
+      const data = await faqService.getOwnerFaqs();
+      const mapped: FaqItemData[] = (data || []).map((item) => ({
+        id: item.id,
+        category: item.category,
+        q: item.question,
+        a: item.answer,
+      }));
+      setFaqList(mapped);
+      const cats = Array.from(new Set(mapped.map((f) => f.category).filter(Boolean)));
+      if (cats.length) setFaqCategories(cats);
+    } catch {
+      setFaqList([]);
+      toast.error('Could not load FAQs');
+    } finally {
+      setLoadingFaqs(false);
+    }
+  }, []);
+
   useEffect(() => {
-    let isMounted = true;
-
+    let alive = true;
     async function loadAnnouncement() {
       try {
         setAnnouncementLoading(true);
         const res = await storeService.getOwnerSettings();
-        if (!isMounted || !res?.data) return;
+        if (!alive || !res?.data) return;
         const d = res.data;
         setAnnouncementText(
-          typeof d.announcement === 'string' ? d.announcement : ''
+          typeof d.announcement === 'string' ? d.announcement : '',
         );
         setAnnouncementEnabled(Boolean(d.announcementEnabled));
-      } catch (err) {
-        console.error('Error fetching announcement settings:', err);
+      } catch {
+        /* empty */
       } finally {
-        if (isMounted) setAnnouncementLoading(false);
+        if (alive) setAnnouncementLoading(false);
       }
     }
-
-    async function loadFaqs() {
-      try {
-        setLoadingFaqs(true);
-        const data = await faqService.getOwnerFaqs();
-        if (isMounted && data && data.length > 0) {
-          const mapped: FaqItemData[] = data.map((item) => ({
-            id: item.id,
-            category: item.category,
-            q: item.question,
-            a: item.answer,
-          }));
-          setFaqList(mapped);
-
-          // Update unique categories list
-          const uniqueCats = Array.from(new Set(mapped.map((it) => it.category)));
-          if (uniqueCats.length > 0) {
-            setFaqCategories(uniqueCats);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching FAQs:', err);
-      } finally {
-        if (isMounted) setLoadingFaqs(false);
-      }
-    }
-
     loadAnnouncement();
     loadFaqs();
     return () => {
-      isMounted = false;
+      alive = false;
     };
-  }, []);
+  }, [loadFaqs]);
 
   const saveAnnouncement = async (overrides?: {
     text?: string;
@@ -130,32 +116,19 @@ export default function AdminContentPage() {
   }) => {
     const text = (overrides?.text ?? announcementText).trim();
     const enabled = overrides?.enabled ?? announcementEnabled;
-
     if (enabled && !text) {
       toast.error('Add announcement text before showing it on the storefront');
-      return false;
+      return;
     }
-
+    setAnnouncementSaving(true);
     try {
-      setAnnouncementSaving(true);
       await storeService.updateOwnerSettings({
         announcement: text,
         announcementEnabled: enabled,
       });
-      setAnnouncementText(text);
-      setAnnouncementEnabled(enabled);
-      toast.success(
-        overrides?.enabled !== undefined
-          ? enabled
-            ? 'Announcement bar is live on the storefront'
-            : 'Announcement bar hidden from the storefront'
-          : 'Announcement bar saved'
-      );
-      return true;
-    } catch (err) {
-      console.error('Failed to save announcement:', err);
-      toast.error('Failed to save announcement bar');
-      return false;
+      toast.success('Announcement bar saved');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to save announcement bar');
     } finally {
       setAnnouncementSaving(false);
     }
@@ -164,14 +137,13 @@ export default function AdminContentPage() {
   const handleAnnouncementToggle = async (enabled: boolean) => {
     const previous = announcementEnabled;
     setAnnouncementEnabled(enabled);
-    const ok = await saveAnnouncement({ enabled });
-    if (!ok) setAnnouncementEnabled(previous);
+    if (enabled && !announcementText.trim()) {
+      setAnnouncementEnabled(previous);
+      toast.error('Add announcement text before enabling');
+      return;
+    }
+    await saveAnnouncement({ enabled });
   };
-
-  const filteredFaqs =
-    activeFaqFilter === 'all'
-      ? faqList
-      : faqList.filter((f) => f.category === activeFaqFilter);
 
   const handleSaveFaq = async (data: {
     title: string;
@@ -183,39 +155,49 @@ export default function AdminContentPage() {
     setFaqTitle(data.title);
     setFaqCategories(data.categories);
     setFaqList(data.items);
-
     try {
-      // Sync to real backend database atomically
-      const payload = data.items.map((item, idx) => ({
+      const payload = data.items.map((item, order) => ({
         category: item.category,
         question: item.q,
         answer: item.a,
-        order: idx,
+        order,
       }));
-
       const saved = await faqService.batchSaveFaqs(payload);
-      if (saved && saved.length > 0) {
+      if (saved?.length) {
         setFaqList(
           saved.map((item) => ({
             id: item.id,
             category: item.category,
             q: item.question,
             a: item.answer,
-          }))
+          })),
         );
       }
-    } catch (err) {
-      console.error('Failed to sync FAQs to backend:', err);
+    } catch {
       toast.error('Failed to sync FAQs to database');
     }
   };
+
+  const openEntry = (entry: ContentEntry) => {
+    if (entry.kind === 'about') setAboutOpen(true);
+    else if (entry.kind === 'contact') setContactOpen(true);
+    else if (entry.kind === 'faq') {
+      setTab('faq');
+      setFaqOpen(true);
+    } else setPolicySlug(entry.kind);
+  };
+
+  const filteredFaqs = useMemo(() => {
+    if (activeFaqFilter === 'all') return faqList;
+    return faqList.filter((f) => f.category === activeFaqFilter);
+  }, [faqList, activeFaqFilter]);
 
   return (
     <ModuleGate module="content">
       <div className="w-full space-y-6">
         <PageHeader
           title="Content"
-          description="Pages, journal, navigation, and FAQs."
+          description="Announcement, store pages, policies, and FAQ."
           actions={
             tab === 'faq' ? (
               <GuardedButton
@@ -224,24 +206,15 @@ export default function AdminContentPage() {
                 size="sm"
                 onClick={() => setFaqOpen(true)}
               >
-                <Edit3 className="h-4 w-4" aria-hidden /> Edit FAQ Page
+                <Edit3 className="h-4 w-4" aria-hidden /> Edit FAQ
               </GuardedButton>
-            ) : (
-              <GuardedButton
-                module="content"
-                action="create"
-                size="sm"
-                onClick={() => setEditing('new')}
-              >
-                <Plus className="h-4 w-4" aria-hidden /> New page
-              </GuardedButton>
-            )
+            ) : null
           }
         />
+
         <Panel
-          className="mb-6"
           title="Announcement bar"
-          description="Shown above the storefront navigation when enabled. Same setting as Store Settings."
+          description="Shown above the storefront navigation when enabled."
         >
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -271,147 +244,44 @@ export default function AdminContentPage() {
               disabled={announcementLoading || announcementSaving}
               hint="Keep it short — one line works best on mobile."
             />
-            {announcementEnabled && announcementText.trim() ? (
-              <div className="overflow-hidden rounded-md border border-line">
-                <div className="bg-ink px-4 py-1.5 text-center text-xs font-medium tracking-wide text-canvas">
-                  {announcementText.trim()}
-                </div>
-              </div>
-            ) : null}
           </div>
         </Panel>
-        <div className="mb-6">
-          <Tabs
-            value={tab}
-            onChange={(val) => setTab(val as Tab)}
-            tabs={[
-              { value: 'pages', label: 'Pages' },
-              { value: 'blog', label: 'Journal' },
-              { value: 'navigation', label: 'Navigation' },
-              { value: 'faq', label: `FAQ (${faqList.length})` },
-            ]}
-          />
-        </div>
 
-        {tab === 'pages' && (
+        <Tabs
+          value={tab}
+          onChange={(val) => setTab(val as Tab)}
+          tabs={[
+            { value: 'pages', label: 'Pages & policies' },
+            { value: 'faq', label: `FAQ (${faqList.length})` },
+          ]}
+        />
+
+        {tab === 'pages' ? (
           <Panel flush>
             <ul className="divide-y divide-line">
-              {cmsPages.map((p) => (
-                <li key={p.id}>
+              {PAGE_ENTRIES.map((entry) => (
+                <li key={entry.key}>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (p.id === 'pg3' || p.slug === '/faq' || p.title.toLowerCase() === 'faq') {
-                        setFaqOpen(true);
-                      } else if (p.id === 'pg2' || p.slug === '/contact' || p.title.toLowerCase() === 'contact') {
-                        setContactOpen(true);
-                      } else if (p.id === 'pg1' || p.slug === '/about' || p.title.toLowerCase().includes('about')) {
-                        setAboutOpen(true);
-                      } else if (
-                        p.id === 'pg7' ||
-                        p.slug === '/policies/returns' ||
-                        p.slug === 'policies/returns' ||
-                        p.slug === 'returns' ||
-                        p.title.toLowerCase().includes('return')
-                      ) {
-                        setReturnsOpen(true);
-                      } else {
-                        setEditing(p.id);
-                      }
-                    }}
-                    className="flex w-full flex-wrap items-center gap-3 px-5 py-3 text-left text-sm hover:bg-canvas transition-colors cursor-pointer"
+                    onClick={() => openEntry(entry)}
+                    className="flex w-full flex-wrap items-center gap-3 px-5 py-3.5 text-left text-sm hover:bg-canvas transition-colors cursor-pointer"
                   >
                     <span className="min-w-[160px] flex-1">
-                      <span className="block font-medium text-ink">{p.title}</span>
-                      <span className="text-xs text-ink-muted">{p.slug}</span>
+                      <span className="block font-medium text-ink">
+                        {entry.title}
+                      </span>
+                      <span className="text-xs text-ink-muted">{entry.path}</span>
                     </span>
-                    <span className="text-xs text-ink-muted">
-                      Updated {formatDate(p.updated)} · {p.author}
-                    </span>
-                    <Badge tone={tone[p.status as keyof typeof tone]}>
-                      {p.status === 'scheduled' && 'publishAt' in p
-                        ? `Scheduled ${formatDateTime(p.publishAt as string)}`
-                        : p.status}
-                    </Badge>
+                    <Badge tone="neutral">Edit</Badge>
                   </button>
                 </li>
               ))}
             </ul>
           </Panel>
-        )}
+        ) : null}
 
-        {tab === 'blog' && (
-          <Panel
-            flush
-            actions={
-              <GuardedButton
-                module="content"
-                action="create"
-                size="sm"
-                variant="secondary"
-                onClick={() => setEditing('new')}
-              >
-                New post
-              </GuardedButton>
-            }
-            title="Journal posts"
-          >
-            <ul className="divide-y divide-line">
-              {blogPosts.map((b) => (
-                <li
-                  key={b.slug}
-                  className="flex items-center gap-4 px-5 py-3 text-sm hover:bg-subtle/30"
-                >
-                  <img
-                    src={b.image}
-                    alt=""
-                    className="h-12 w-16 rounded object-cover"
-                  />
-                  <div className="flex-1">
-                    <p className="font-medium text-ink">{b.title}</p>
-                    <p className="text-xs text-ink-muted">
-                      {b.category} · {b.author} · {formatDate(b.date)}
-                    </p>
-                  </div>
-                  <Badge tone="success">Published</Badge>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        )}
-
-        {tab === 'navigation' && (
-          <div className="grid gap-5 md:grid-cols-3">
-            {menus.map((m) => (
-              <Panel key={m.id} title={m.name} description={m.location}>
-                <ol className="space-y-1.5 text-sm">
-                  {m.items.map((i) => (
-                    <li
-                      key={i}
-                      className="rounded border border-line bg-surface px-3 py-1.5 text-ink"
-                    >
-                      {i}
-                    </li>
-                  ))}
-                </ol>
-                <GuardedButton
-                  module="content"
-                  action="update"
-                  size="sm"
-                  variant="ghost"
-                  className="mt-3"
-                  onClick={() => toast('Menu editor opened')}
-                >
-                  Edit menu
-                </GuardedButton>
-              </Panel>
-            ))}
-          </div>
-        )}
-
-        {tab === 'faq' && (
+        {tab === 'faq' ? (
           <div className="space-y-4">
-            {/* FAQ Category Filters Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface p-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
@@ -421,7 +291,7 @@ export default function AdminContentPage() {
                     'rounded-md px-3 py-1 text-xs font-medium transition-colors cursor-pointer',
                     activeFaqFilter === 'all'
                       ? 'bg-ink text-canvas font-semibold'
-                      : 'bg-canvas text-ink-muted hover:text-ink hover:bg-subtle'
+                      : 'bg-canvas text-ink-muted hover:text-ink hover:bg-subtle',
                   )}
                 >
                   All ({faqList.length})
@@ -437,7 +307,7 @@ export default function AdminContentPage() {
                         'rounded-md px-3 py-1 text-xs font-medium transition-colors cursor-pointer',
                         activeFaqFilter === c
                           ? 'bg-ink text-canvas font-semibold'
-                          : 'bg-canvas text-ink-muted hover:text-ink hover:bg-subtle'
+                          : 'bg-canvas text-ink-muted hover:text-ink hover:bg-subtle',
                       )}
                     >
                       {c} ({count})
@@ -445,54 +315,58 @@ export default function AdminContentPage() {
                   );
                 })}
               </div>
-
               <GuardedButton
                 module="content"
                 action="update"
                 size="sm"
                 onClick={() => setFaqOpen(true)}
-                className="cursor-pointer"
               >
                 <Edit3 className="h-3.5 w-3.5" />
-                <span>Edit FAQ Page</span>
+                Edit FAQ
               </GuardedButton>
             </div>
 
-            {/* FAQ Items List Panel */}
             <Panel flush>
-              <ul className="divide-y divide-line">
-                {filteredFaqs.map((f, i) => (
-                  <li key={f.id || `faq-${i}`}>
-                    <button
-                      type="button"
-                      onClick={() => setFaqOpen(true)}
-                      className="flex w-full items-start justify-between gap-4 px-5 py-3.5 text-left hover:bg-subtle/30 transition-colors cursor-pointer group"
-                    >
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="rounded bg-clay/10 px-2 py-0.5 text-xs font-semibold text-clay uppercase tracking-wider">
-                            {f.category}
-                          </span>
-                          <p className="font-semibold text-ink group-hover:text-clay transition-colors">
-                            {f.q}
+              {loadingFaqs ? (
+                <p className="px-5 py-10 text-center text-sm text-ink-muted">
+                  Loading FAQs…
+                </p>
+              ) : filteredFaqs.length === 0 ? (
+                <p className="px-5 py-10 text-center text-sm text-ink-muted">
+                  No FAQ items yet. Click Edit FAQ to add questions.
+                </p>
+              ) : (
+                <ul className="divide-y divide-line">
+                  {filteredFaqs.map((f, i) => (
+                    <li key={f.id || `faq-${i}`}>
+                      <button
+                        type="button"
+                        onClick={() => setFaqOpen(true)}
+                        className="flex w-full items-start justify-between gap-4 px-5 py-3.5 text-left hover:bg-subtle/30 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded bg-clay/10 px-2 py-0.5 text-xs font-semibold text-clay uppercase tracking-wider">
+                              {f.category}
+                            </span>
+                            <p className="font-semibold text-ink group-hover:text-clay transition-colors">
+                              {f.q}
+                            </p>
+                          </div>
+                          <p className="text-xs text-ink-muted line-clamp-2 leading-relaxed">
+                            {f.a}
                           </p>
                         </div>
-                        <p className="text-xs text-ink-muted line-clamp-2 leading-relaxed">
-                          {f.a}
-                        </p>
-                      </div>
-                      <span className="rounded p-1.5 text-ink-muted group-hover:bg-surface group-hover:text-ink transition-colors">
-                        <Edit3 className="h-4 w-4" />
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                        <Edit3 className="h-4 w-4 shrink-0 text-ink-muted" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Panel>
           </div>
-        )}
+        ) : null}
 
-        {/* Dedicated FAQ Editor Drawer */}
         <FaqEditorDrawer
           open={faqOpen}
           onClose={() => setFaqOpen(false)}
@@ -501,116 +375,19 @@ export default function AdminContentPage() {
           onSave={handleSaveFaq}
           initialTitle={faqTitle}
         />
-
-        {/* Dedicated Contact Us Page Editor Drawer */}
         <ContactEditorDrawer
           open={contactOpen}
           onClose={() => setContactOpen(false)}
         />
-
-        {/* Dedicated About Us Page Editor Drawer */}
         <AboutEditorDrawer
           open={aboutOpen}
           onClose={() => setAboutOpen(false)}
         />
-
-        {/* Dedicated Return & Refund Policy Editor Drawer */}
-        <ReturnsEditorDrawer
-          open={returnsOpen}
-          onClose={() => setReturnsOpen(false)}
+        <PolicyEditorDrawer
+          open={!!policySlug}
+          slug={policySlug}
+          onClose={() => setPolicySlug(null)}
         />
-
-
-        <Drawer
-          open={!!editing}
-          onClose={() => setEditing(null)}
-          width="max-w-2xl"
-          title={page ? `Edit “${page.title}”` : 'New page'}
-          footer={
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setEditing(null);
-                  toast.success('Preview link copied');
-                }}
-              >
-                Preview
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setEditing(null);
-                  toast.success('Draft saved');
-                }}
-              >
-                Save draft
-              </Button>
-              <GuardedButton
-                module="content"
-                action="publish"
-                onClick={() => {
-                  setEditing(null);
-                  toast.success(
-                    publishMode === 'Publish now'
-                      ? 'Page published'
-                      : 'Page scheduled'
-                  );
-                }}
-              >
-                {publishMode === 'Publish now' ? 'Publish' : 'Schedule'}
-              </GuardedButton>
-            </div>
-          }
-        >
-          <div className="space-y-4 px-5 py-5">
-            <Input
-              label="Title"
-              defaultValue={page?.title}
-              placeholder="e.g. Shipping & Delivery"
-              key={`t${editing}`}
-            />
-            <Textarea
-              label="Content"
-              rows={10}
-              defaultValue={
-                page
-                  ? `${page.title} — write your content here. Use reusable blocks for banners, FAQs and product grids.`
-                  : ''
-              }
-              placeholder="Write your page content. You can add banners, FAQs, and product grids."
-              key={`c${editing}`}
-            />
-            <Input
-              label="URL"
-              defaultValue={page?.slug ?? '/pages/'}
-              placeholder="/pages/shipping"
-              key={`u${editing}`}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select
-                label="Visibility"
-                value={publishMode}
-                onChange={(e) => setPublishMode(e.target.value)}
-                options={['Publish now', 'Schedule']}
-              />
-              {publishMode === 'Schedule' && (
-                <Input
-                  label="Publish at"
-                  type="datetime-local"
-                  defaultValue="2026-10-01T09:00"
-                  placeholder="2026-10-01 09:00"
-                />
-              )}
-            </div>
-            <Input
-              label="SEO title"
-              defaultValue={page ? `${page.title} | Tanti` : ''}
-              placeholder="Shipping & Delivery | Your Store Name"
-              key={`s${editing}`}
-            />
-          </div>
-        </Drawer>
       </div>
     </ModuleGate>
   );

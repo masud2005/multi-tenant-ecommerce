@@ -9,6 +9,7 @@ import { seedProducts } from './product.seed';
 import { seedDiscounts } from './discount.seed';
 import { seedCustomers } from './customer.seed';
 import { seedOrders } from './order.seed';
+import { seedContent } from './content.seed';
 
 const connectionString =
     process.env.DATABASE_URL || process.env['DATABASE_URL'];
@@ -30,6 +31,7 @@ async function main() {
     await seedCustomers(prisma);
     await seedDiscounts(prisma);
     await seedOrders(prisma);
+    await seedContent(prisma);
 
     console.log('--- Database Seeding Completed Successfully! ---');
 }

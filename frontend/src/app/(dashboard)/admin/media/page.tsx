@@ -11,6 +11,7 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { cn } from '@/utils/cn';
 
 export default function AdminMediaPage() {
@@ -25,14 +26,8 @@ export default function AdminMediaPage() {
 
   // Upload modal state
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [newAsset, setNewAsset] = useState({
-    name: '',
-    url: '',
-    alt: '',
-    size: '180 KB',
-    dimensions: '1200×1600',
-  });
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState('');
+  const [uploadAlt, setUploadAlt] = useState('');
 
   const [metrics, setMetrics] = useState({
     total: 0,
@@ -111,34 +106,17 @@ export default function AdminMediaPage() {
     }
   };
 
-  // Add new media asset
-  const handleCreateAsset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAsset.name.trim() || !newAsset.url.trim()) {
-      toast.error('Please provide an asset title and image URL');
-      return;
-    }
+  const closeUploadModal = () => {
+    setUploadOpen(false);
+    setUploadPreviewUrl('');
+    setUploadAlt('');
+  };
 
-    try {
-      setIsUploading(true);
-      const res = await mediaService.createMedia({
-        name: newAsset.name.trim(),
-        url: newAsset.url.trim(),
-        alt: newAsset.alt.trim(),
-        size: newAsset.size || '240 KB',
-        dimensions: newAsset.dimensions || '1200×1600',
-      });
-
-      if (res?.data) {
-        toast.success('New image asset registered in media library!');
-        setUploadOpen(false);
-        setNewAsset({ name: '', url: '', alt: '', size: '180 KB', dimensions: '1200×1600' });
-        fetchMedia();
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to upload media asset');
-    } finally {
-      setIsUploading(false);
+  const handleUploadComplete = (url: string) => {
+    setUploadPreviewUrl(url);
+    if (url) {
+      closeUploadModal();
+      fetchMedia();
     }
   };
 
@@ -349,69 +327,25 @@ export default function AdminMediaPage() {
         {/* Add Media Modal */}
         <Modal
           open={uploadOpen}
-          onClose={() => setUploadOpen(false)}
-          title="Add media asset to store"
+          onClose={closeUploadModal}
+          title="Upload media asset"
         >
-          <form onSubmit={handleCreateAsset} className="space-y-4 py-2">
-            <div>
-              <label className="text-xs font-medium text-ink">Asset Title / File Name</label>
-              <input
-                required
-                value={newAsset.name}
-                onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
-                placeholder="e.g. jamdani-saree-crimson-front.webp"
-                className="mt-1 h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-ink">Public Image URL (or CDN path)</label>
-              <input
-                required
-                value={newAsset.url}
-                onChange={(e) => setNewAsset({ ...newAsset, url: e.target.value })}
-                placeholder="https://images.unsplash.com/... or /images/..."
-                className="mt-1 h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-ink">Accessibility Alt Text</label>
-              <input
-                value={newAsset.alt}
-                onChange={(e) => setNewAsset({ ...newAsset, alt: e.target.value })}
-                placeholder="e.g. Crimson handwoven Jamdani saree with gold border"
-                className="mt-1 h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-ink">File Size</label>
-                <input
-                  value={newAsset.size}
-                  onChange={(e) => setNewAsset({ ...newAsset, size: e.target.value })}
-                  placeholder="240 KB"
-                  className="mt-1 h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-ink">Dimensions</label>
-                <input
-                  value={newAsset.dimensions}
-                  onChange={(e) => setNewAsset({ ...newAsset, dimensions: e.target.value })}
-                  placeholder="1200×1600"
-                  className="mt-1 h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-line">
-              <Button type="button" variant="ghost" onClick={() => setUploadOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isUploading}>
-                {isUploading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Upload className="h-4 w-4 mr-1" />}
-                Save Asset
+          <div className="space-y-4 py-2">
+            <ImageUploadField
+              label="Store image"
+              hint="Uploads to Cloudinary and saves in your media library · max 5MB"
+              value={uploadPreviewUrl}
+              onChange={handleUploadComplete}
+              alt={uploadAlt}
+              onAltChange={setUploadAlt}
+              aspectClassName="aspect-[4/3] min-h-[180px]"
+            />
+            <div className="flex justify-end border-t border-line pt-3">
+              <Button type="button" variant="ghost" onClick={closeUploadModal}>
+                Close
               </Button>
             </div>
-          </form>
+          </div>
         </Modal>
       </div>
     </ModuleGate>
