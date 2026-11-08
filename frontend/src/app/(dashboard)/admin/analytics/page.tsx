@@ -15,11 +15,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import {
-  salesSeries as mockSalesSeries,
-  kpis as mockKpis,
-  salesByRegion as mockSalesByRegion,
-} from '@/data/analytics';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
@@ -35,36 +30,41 @@ import {
 const ranges = ['Today', '7 days', '30 days', '90 days'] as const;
 const axisTick = { fontSize: 11, fill: '#8A8378' };
 
+type KpiState = {
+  orders: number;
+  ordersDelta: string;
+  aov: number;
+  aovDelta: string;
+  discounts: number;
+  discountsDelta: string;
+  returningRate: number;
+  returningDelta: string;
+  returningCustomers?: number;
+  totalCustomers?: number;
+  netSales: number;
+  grossSales: number;
+  salesDelta: string;
+  conversionRate: number;
+  conversionDelta: string;
+  loggedInCustomers?: number;
+  orderingCustomers?: number;
+  shippingRevenue?: number;
+  shippingDelta?: string;
+};
+
 export default function AdminAnalyticsPage() {
   const [range, setRange] = useState<(typeof ranges)[number]>('30 days');
   const [compare, setCompare] = useState(true);
-  const [regionData, setRegionData] = useState<DistrictSalesItem[]>(mockSalesByRegion);
+  const [regionData, setRegionData] = useState<DistrictSalesItem[]>([]);
   const [isLoadingRegion, setIsLoadingRegion] = useState(false);
   const [searchesData, setSearchesData] = useState<SearchQueryItem[]>([]);
   const [isLoadingSearches, setIsLoadingSearches] = useState(false);
-  const [seriesData, setSeriesData] = useState<any[]>([]);
-  const [realKpis, setRealKpis] = useState<{
-    orders: number;
-    ordersDelta: string;
-    aov: number;
-    aovDelta: string;
-    discounts: number;
-    discountsDelta: string;
-    returningRate: number;
-    returningDelta: string;
-    returningCustomers?: number;
-    totalCustomers?: number;
-    netSales: number;
-    grossSales: number;
-    salesDelta: string;
-    conversionRate: number;
-    conversionDelta: string;
-    loggedInCustomers?: number;
-    orderingCustomers?: number;
-    shippingRevenue?: number;
-    shippingDelta?: string;
-  } | null>(null);
+  const [seriesData, setSeriesData] = useState<
+    { date: string; sales: number; prev: number; orders: number }[]
+  >([]);
+  const [realKpis, setRealKpis] = useState<KpiState | null>(null);
   const [isLoadingKpis, setIsLoadingKpis] = useState(false);
+  const [overviewError, setOverviewError] = useState(false);
 
   // Fetch real database KPIs (Orders, AOV, Returning Customers, Discounts, Sales, District) whenever date range changes
   const fetchOverview = useCallback(
@@ -76,6 +76,7 @@ export default function AdminAnalyticsPage() {
         }
         const overview = await analyticsService.getAnalyticsOverview(selectedRange);
         if (overview?.kpis) {
+          setOverviewError(false);
           setRealKpis({
             orders: overview.kpis.orders,
             ordersDelta: overview.kpis.ordersDelta || '+0%',
@@ -97,15 +98,24 @@ export default function AdminAnalyticsPage() {
             shippingRevenue: overview.kpis.shippingRevenue,
             shippingDelta: overview.kpis.shippingDelta || '+0%',
           });
-          if (Array.isArray(overview.salesByRegion) && overview.salesByRegion.length > 0) {
-            setRegionData(overview.salesByRegion);
-          }
-          if (Array.isArray(overview.salesSeries) && overview.salesSeries.length > 0) {
-            setSeriesData(overview.salesSeries);
-          }
+          setRegionData(
+            Array.isArray(overview.salesByRegion) ? overview.salesByRegion : []
+          );
+          setSeriesData(
+            Array.isArray(overview.salesSeries) ? overview.salesSeries : []
+          );
+        } else {
+          setOverviewError(true);
+          setRealKpis(null);
+          setRegionData([]);
+          setSeriesData([]);
         }
       } catch (err) {
         console.error('Failed to load real analytics overview:', err);
+        setOverviewError(true);
+        setRealKpis(null);
+        setRegionData([]);
+        setSeriesData([]);
       } finally {
         if (showLoader) {
           setIsLoadingKpis(false);
@@ -153,55 +163,60 @@ export default function AdminAnalyticsPage() {
     return () => clearInterval(interval);
   }, [fetchTopSearches]);
 
-  const secondary = [
-    [
-      'Orders',
-      realKpis ? formatNumber(realKpis.orders) : formatNumber(mockKpis.orders),
-      realKpis ? realKpis.ordersDelta : '+18%',
-      Boolean(realKpis),
-      undefined,
-    ],
-    [
-      'Avg. order value',
-      realKpis ? formatBDT(realKpis.aov) : formatBDT(mockKpis.aov),
-      realKpis ? realKpis.aovDelta : '+4%',
-      Boolean(realKpis),
-      undefined,
-    ],
-    [
-      'Conversion rate',
-      realKpis ? `${realKpis.conversionRate}%` : `${mockKpis.conversionRate}%`,
-      realKpis ? realKpis.conversionDelta : '+0.3 pt',
-      Boolean(realKpis),
-      realKpis && realKpis.loggedInCustomers !== undefined
-        ? `${realKpis.orderingCustomers ?? 0}/${realKpis.loggedInCustomers ?? 0} logged-in ordered`
-        : undefined,
-    ],
-    [
-      'Returning customers',
-      realKpis ? `${realKpis.returningRate}%` : `${mockKpis.returningRate}%`,
-      realKpis ? realKpis.returningDelta : '+2 pt',
-      Boolean(realKpis),
-      realKpis && realKpis.returningCustomers !== undefined
-        ? `${realKpis.returningCustomers}/${realKpis.totalCustomers ?? 0} repeat buyers`
-        : undefined,
-    ],
-    [
-      'Discounts',
-      realKpis ? formatBDT(realKpis.discounts) : formatBDT(mockKpis.discounts),
-      realKpis ? realKpis.discountsDelta : '+11%',
-      Boolean(realKpis),
-      undefined,
-    ],
-    [
-      'Shipping revenue',
-      realKpis?.shippingRevenue !== undefined
-        ? formatBDT(realKpis.shippingRevenue)
-        : formatBDT(mockKpis.shippingRevenue),
-      realKpis?.shippingDelta || '+9%',
-      Boolean(realKpis),
-      undefined,
-    ],
+  const secondary: {
+    label: string;
+    value: string;
+    delta: string;
+    isReal: boolean;
+    extra?: string;
+  }[] = [
+    {
+      label: 'Orders',
+      value: realKpis ? formatNumber(realKpis.orders) : '—',
+      delta: realKpis ? realKpis.ordersDelta : '',
+      isReal: Boolean(realKpis),
+    },
+    {
+      label: 'Avg. order value',
+      value: realKpis ? formatBDT(realKpis.aov) : '—',
+      delta: realKpis ? realKpis.aovDelta : '',
+      isReal: Boolean(realKpis),
+    },
+    {
+      label: 'Conversion rate',
+      value: realKpis ? `${realKpis.conversionRate}%` : '—',
+      delta: realKpis ? realKpis.conversionDelta : '',
+      isReal: Boolean(realKpis),
+      extra:
+        realKpis && realKpis.loggedInCustomers !== undefined
+          ? `${realKpis.orderingCustomers ?? 0}/${realKpis.loggedInCustomers ?? 0} logged-in ordered`
+          : undefined,
+    },
+    {
+      label: 'Returning customers',
+      value: realKpis ? `${realKpis.returningRate}%` : '—',
+      delta: realKpis ? realKpis.returningDelta : '',
+      isReal: Boolean(realKpis),
+      extra:
+        realKpis && realKpis.returningCustomers !== undefined
+          ? `${realKpis.returningCustomers}/${realKpis.totalCustomers ?? 0} repeat buyers`
+          : undefined,
+    },
+    {
+      label: 'Discounts',
+      value: realKpis ? formatBDT(realKpis.discounts) : '—',
+      delta: realKpis ? realKpis.discountsDelta : '',
+      isReal: Boolean(realKpis),
+    },
+    {
+      label: 'Shipping revenue',
+      value:
+        realKpis?.shippingRevenue !== undefined
+          ? formatBDT(realKpis.shippingRevenue)
+          : '—',
+      delta: realKpis?.shippingDelta || '',
+      isReal: Boolean(realKpis),
+    },
   ];
 
   return (
@@ -239,7 +254,9 @@ export default function AdminAnalyticsPage() {
                 action="export"
                 variant="secondary"
                 size="sm"
-                onClick={() => toast.success('analytics-30d.xlsx exported')}
+                onClick={() =>
+                  toast.info('Analytics export is not available yet')
+                }
               >
                 <Download className="h-4 w-4" aria-hidden /> Export
               </GuardedButton>
@@ -251,12 +268,28 @@ export default function AdminAnalyticsPage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-sm text-ink-muted">Net sales · {range}</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums text-ink">
-                {formatBDT(realKpis ? realKpis.netSales : mockKpis.netSales)}
-              </p>
-              <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                {realKpis ? `${realKpis.salesDelta} vs previous period` : '+22.4% vs previous period'} · Gross {formatBDT(realKpis ? realKpis.grossSales : mockKpis.grossSales)}
-              </p>
+              {isLoadingKpis && !realKpis ? (
+                <div className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Loading analytics…</span>
+                </div>
+              ) : overviewError && !realKpis ? (
+                <p className="mt-2 text-sm text-ink-muted">
+                  Could not load analytics
+                </p>
+              ) : realKpis ? (
+                <>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums text-ink">
+                    {formatBDT(realKpis.netSales)}
+                  </p>
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                    {realKpis.salesDelta} vs previous period · Gross{' '}
+                    {formatBDT(realKpis.grossSales)}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-2 text-sm text-ink-muted">No analytics data</p>
+              )}
             </div>
             <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
               <input
@@ -269,65 +302,80 @@ export default function AdminAnalyticsPage() {
             </label>
           </div>
           <div className="mt-5 h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={seriesData.length > 0 ? seriesData : mockSalesSeries}
-                margin={{ left: 0, right: 8, top: 8 }}
-              >
-                <CartesianGrid stroke="#E9E4DA" vertical={false} opacity={0.5} />
-                <XAxis
-                  dataKey="date"
-                  tick={axisTick}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tickFormatter={(v: number) => formatCompactBDT(v)}
-                  tick={axisTick}
-                  axisLine={false}
-                  tickLine={false}
-                  width={60}
-                />
-                <Tooltip
-                  formatter={(value: any) =>
-                    value ? formatBDT(Number(value)) : ''
-                  }
-                  contentStyle={{
-                    fontSize: 12,
-                    borderRadius: 6,
-                    backgroundColor: 'var(--color-surface, #fff)',
-                    borderColor: 'var(--color-line, #e5e5e5)',
-                    color: 'var(--color-ink, #000)',
-                  }}
-                />
-                <Area
-                  dataKey="sales"
-                  name="This period"
-                  stroke="#1C1A17"
-                  strokeWidth={2}
-                  fill="#1C1A17"
-                  fillOpacity={0.06}
-                />
-                {compare && (
-                  <Line
-                    dataKey="prev"
-                    name="Previous"
-                    stroke="#B5562F"
-                    strokeDasharray="4 4"
-                    dot={false}
+            {isLoadingKpis && seriesData.length === 0 ? (
+              <div className="flex h-full items-center justify-center gap-2 text-sm text-ink-muted">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading chart…</span>
+              </div>
+            ) : overviewError && seriesData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-ink-muted">
+                Could not load analytics
+              </div>
+            ) : seriesData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-ink-muted">
+                No analytics data
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart
+                  data={seriesData}
+                  margin={{ left: 0, right: 8, top: 8 }}
+                >
+                  <CartesianGrid stroke="#E9E4DA" vertical={false} opacity={0.5} />
+                  <XAxis
+                    dataKey="date"
+                    tick={axisTick}
+                    axisLine={false}
+                    tickLine={false}
                   />
-                )}
-              </ComposedChart>
-            </ResponsiveContainer>
+                  <YAxis
+                    tickFormatter={(v: number) => formatCompactBDT(v)}
+                    tick={axisTick}
+                    axisLine={false}
+                    tickLine={false}
+                    width={60}
+                  />
+                  <Tooltip
+                    formatter={(value: any) =>
+                      value ? formatBDT(Number(value)) : ''
+                    }
+                    contentStyle={{
+                      fontSize: 12,
+                      borderRadius: 6,
+                      backgroundColor: 'var(--color-surface, #fff)',
+                      borderColor: 'var(--color-line, #e5e5e5)',
+                      color: 'var(--color-ink, #000)',
+                    }}
+                  />
+                  <Area
+                    dataKey="sales"
+                    name="This period"
+                    stroke="#1C1A17"
+                    strokeWidth={2}
+                    fill="#1C1A17"
+                    fillOpacity={0.06}
+                  />
+                  {compare && (
+                    <Line
+                      dataKey="prev"
+                      name="Previous"
+                      stroke="#B5562F"
+                      strokeDasharray="4 4"
+                      dot={false}
+                    />
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Panel>
 
         <dl className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
-          {secondary.map(([l, v, d, isReal, extra]) => (
-            <div key={l as string} className="bg-surface px-4 py-3">
+          {secondary.map((item) => (
+            <div key={item.label} className="bg-surface px-4 py-3">
               <div className="flex items-center justify-between">
-                <dt className="text-xs text-ink-muted">{l as string}</dt>
-                {isReal && (
+                <dt className="text-xs text-ink-muted">{item.label}</dt>
+                {item.isReal && (
                   <span
                     title="Real database live data"
                     className="inline-flex items-center text-xs font-medium text-emerald-600 dark:text-emerald-400"
@@ -337,11 +385,21 @@ export default function AdminAnalyticsPage() {
                 )}
               </div>
               <dd className="mt-1 text-base font-semibold tabular-nums text-ink">
-                {v as string}{' '}
-                <span className="text-xs font-normal text-ink-muted">{d as string}</span>
+                {isLoadingKpis && !realKpis ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-ink-muted" />
+                ) : (
+                  <>
+                    {item.value}{' '}
+                    {item.delta ? (
+                      <span className="text-xs font-normal text-ink-muted">
+                        {item.delta}
+                      </span>
+                    ) : null}
+                  </>
+                )}
               </dd>
-              {extra && (
-                <p className="mt-0.5 text-xs text-ink-muted">{extra as string}</p>
+              {item.extra && (
+                <p className="mt-0.5 text-xs text-ink-muted">{item.extra}</p>
               )}
             </div>
           ))}
@@ -357,6 +415,8 @@ export default function AdminAnalyticsPage() {
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span>Updating...</span>
                 </div>
+              ) : overviewError ? (
+                <span className="text-xs text-ink-muted">Unavailable</span>
               ) : (
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                   ● Real-time
@@ -365,7 +425,16 @@ export default function AdminAnalyticsPage() {
             }
           >
             <div className="h-56 w-full">
-              {regionData.length === 0 ? (
+              {isLoadingRegion && regionData.length === 0 ? (
+                <div className="flex h-full items-center justify-center gap-2 text-xs text-ink-muted">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Loading…</span>
+                </div>
+              ) : overviewError && regionData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-xs text-ink-muted">
+                  Could not load analytics
+                </div>
+              ) : regionData.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-xs text-ink-muted">
                   No district sales recorded yet for this period.
                 </div>

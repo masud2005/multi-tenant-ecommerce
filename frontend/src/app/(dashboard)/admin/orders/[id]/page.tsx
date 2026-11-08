@@ -68,13 +68,14 @@ const eventLabel: Partial<Record<OrderStatus, string>> = {
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { orders: storeOrders, customers, setOrderStatus, refundOrder, markCodCollected, cancelOrder, returns } = useStore();
+  const { customers, setOrderStatus, refundOrder, markCodCollected, returns } = useStore();
   const { actor, can } = useAdmin();
   const { tenant } = useTenant();
 
   // Local state for backend order
   const [liveOrder, setLiveOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
 
@@ -116,31 +117,32 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  // Fetch live order from backend
+  // Fetch live order from backend — no local mock fallback
   const fetchOrderDetail = useCallback(async () => {
     try {
       setIsLoading(true);
+      setLoadError(null);
       const res = await orderService.getOwnerOrderDetail(id);
       if (res?.data) {
         setLiveOrder(res.data);
       } else {
-        const fallback = storeOrders.find((o) => o.id === id || o.number === id);
-        setLiveOrder(fallback || null);
+        setLiveOrder(null);
+        setLoadError('Order not found');
       }
-    } catch (err) {
-      console.warn('Backend order fetch failed, using client store:', err);
-      const fallback = storeOrders.find((o) => o.id === id || o.number === id);
-      setLiveOrder(fallback || null);
+    } catch (err: any) {
+      console.warn('Backend order fetch failed:', err);
+      setLiveOrder(null);
+      setLoadError(err?.response?.data?.message || err?.message || 'Failed to load order');
     } finally {
       setIsLoading(false);
     }
-  }, [id, storeOrders]);
+  }, [id]);
 
   useEffect(() => {
     fetchOrderDetail();
   }, [fetchOrderDetail]);
 
-  const order = liveOrder || storeOrders.find((o) => o.id === id || o.number === id);
+  const order = liveOrder;
 
   if (isLoading && !order) {
     return (
@@ -154,11 +156,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   if (!order) {
     return (
       <div className="w-full py-16 text-center">
-        <p className="text-base font-medium text-ink">Order not found</p>
-        <p className="text-xs text-ink-muted mt-1">Could not find order with identifier "{id}"</p>
-        <Link href="/admin/orders" className="mt-4 inline-block text-sm font-medium text-clay hover:underline">
-          Back to orders
-        </Link>
+        <p className="text-base font-medium text-ink">{loadError ? 'Unable to load order' : 'Order not found'}</p>
+        <p className="text-xs text-ink-muted mt-1">
+          {loadError || `Could not find order with identifier "${id}"`}
+        </p>
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={fetchOrderDetail}
+            className="text-sm font-medium text-ink underline cursor-pointer"
+          >
+            Retry
+          </button>
+          <Link href="/admin/orders" className="text-sm font-medium text-clay hover:underline">
+            Back to orders
+          </Link>
+        </div>
       </div>
     );
   }
@@ -208,8 +221,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     if (!next) return;
     if (next === 'shipped') {
       setShip({
-        courier: order.courier || 'Pathao',
-        tracking: order.tracking || `${(order.courier || 'PA').slice(0, 2).toUpperCase()}${order.number.slice(3)}${Math.floor(Math.random() * 900 + 100)}`,
+        courier: order.courier || couriers[0]?.name || 'Pathao',
+        tracking: order.tracking || '',
         notify: true,
       });
       setShipOpen(true);

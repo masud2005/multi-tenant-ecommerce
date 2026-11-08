@@ -1,15 +1,4 @@
 import { apiClient } from './api-client';
-import { authService } from './auth/auth.service';
-import {
-  salesSeries,
-  kpis,
-  funnel,
-  salesByPayment,
-  salesByRegion,
-  salesByChannel,
-  topSearches,
-} from '@/data/analytics';
-
 import { getAuthRole } from './auth/auth.storage';
 
 export interface DistrictSalesItem {
@@ -87,12 +76,12 @@ export const analyticsService = {
       const res: any = await apiClient.get(
         `/owner/analytics/sales-by-district?range=${encodeURIComponent(range)}`
       );
-      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.data && Array.isArray(res.data)) {
         return res.data;
       }
-      return salesByRegion;
+      return [];
     } catch {
-      return salesByRegion;
+      return [];
     }
   },
 
@@ -167,23 +156,4 @@ export const analyticsService = {
     }
   },
 
-  async getSalesSeries() {
-    return salesSeries;
-  },
-
-  async getKpis() {
-    return kpis;
-  },
-
-  async getFunnel() {
-    return funnel;
-  },
-
-  async getSalesByPayment() {
-    return salesByPayment;
-  },
-
-  async getSalesByChannel() {
-    return salesByChannel;
-  },
 };

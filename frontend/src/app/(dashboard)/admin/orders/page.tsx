@@ -38,7 +38,7 @@ const tabFilter: Record<Tab, (o: Order) => boolean> = {
 };
 
 function OrdersContent() {
-  const { orders: storeOrders, setOrderStatus } = useStore();
+  const { setOrderStatus } = useStore();
   const { actor } = useAdmin();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,30 +84,22 @@ function OrdersContent() {
       });
 
       if (res?.data?.orders) {
-        const backendOrders = res.data.orders;
-        const backendOrderKeys = new Set(backendOrders.map((o: Order) => o.number || o.id));
-        const localOnlyOrders = (storeOrders || []).filter(
-          (o) => !backendOrderKeys.has(o.number) && !backendOrderKeys.has(o.id)
-        );
-        const combined = [...backendOrders, ...localOnlyOrders];
-        setLiveOrders(combined);
+        setLiveOrders(res.data.orders);
         if (res.data.counts) {
-          setServerCounts({
-            ...res.data.counts,
-            all: res.data.counts.all + localOnlyOrders.length,
-            unfulfilled: res.data.counts.unfulfilled + localOnlyOrders.filter((o) => o.fulfillmentStatus === 'unfulfilled').length,
-          });
+          setServerCounts(res.data.counts);
         }
       } else {
-        setLiveOrders(storeOrders);
+        setLiveOrders([]);
+        toast.error('Could not load orders');
       }
-    } catch (err) {
-      console.warn('Could not fetch owner orders from backend, using client store:', err);
-      setLiveOrders(storeOrders);
+    } catch (err: any) {
+      console.warn('Could not fetch owner orders from backend:', err);
+      setLiveOrders([]);
+      toast.error(err?.message || 'Could not load orders');
     } finally {
       setIsLoading(false);
     }
-  }, [q, tab, method, channel, storeOrders]);
+  }, [q, tab, method, channel]);
 
   // Initial and reactive fetch with debounce for search
   useEffect(() => {

@@ -7,7 +7,6 @@ import { Badge, type Tone } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatBDT } from '@/utils/format';
 import { productPrice, productStock, LOW_STOCK_THRESHOLD } from '@/utils/pricing';
-import { categories } from '@/data/products';
 import { cn } from '@/lib/utils';
 import type { Product, ProductStatus } from '@/types/product';
 
@@ -121,7 +120,7 @@ export function ProductTable({
             {products.map((p) => {
               const isSelected = selectedIds.includes(p.id);
               const stock = productStock(p);
-              const categoryName = categories.find((c) => c.key === p.category)?.name || p.category;
+              const categoryLabel = [p.category, p.subcategory].filter(Boolean).join(' / ') || '—';
 
               return (
                 <tr
@@ -194,9 +193,7 @@ export function ProductTable({
 
                   {/* Category */}
                   <td className="px-4 py-3 align-middle text-ink-muted hidden lg:table-cell">
-                    <span>
-                      {categoryName} / {p.subcategory}
-                    </span>
+                    <span>{categoryLabel}</span>
                   </td>
 
                   {/* Price */}

@@ -6,10 +6,9 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { ArrowUpRight, ChevronRight, Package, RotateCcw, AlertTriangle, Star, CreditCard, RefreshCw } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { useAdmin } from '@/contexts/AdminContext';
-import { roleMeta } from '@/data/admin';
+import { useTenant } from '@/contexts/TenantContext';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/button';
 import { PaymentMark } from '@/components/ui/PaymentMark';
 import { orderStatusMeta } from '@/utils/status';
 import { formatBDT, formatCompactBDT, formatNumber, timeAgo } from '@/utils/format';
@@ -23,12 +22,15 @@ type Range = '7d' | '30d';
 
 export default function AdminDashboardPage() {
   const { orders, returns, products } = useStore();
-  const { role, can } = useAdmin();
+  const { can } = useAdmin();
+  const { tenant } = useTenant();
   const [userName, setUserName] = useState<string>('');
   const [range, setRange] = useState<Range>('30d');
   const [realOverview, setRealOverview] = useState<AnalyticsOverviewResponse | null>(null);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
   const [pendingReplyCount, setPendingReplyCount] = useState(0);
+  const storeName = tenant?.name?.trim() || 'your store';
+  const greetingName = userName || 'there';
 
   const fetchOverview = () => {
     setIsLoadingAnalytics(true);
@@ -145,8 +147,6 @@ export default function AdminDashboardPage() {
     .slice(0, 5);
   const top = [...products].sort((a, b) => b.sold - a.sold).slice(0, 5);
 
-  const me = roleMeta[role] ?? roleMeta.owner;
-
   const todos = [
     { label: 'Orders to fulfill', count: toFulfill.length, to: '/admin/orders?tab=unfulfilled', icon: Package, show: can('orders') },
     { label: 'Packed, awaiting courier', count: toShip.length, to: '/admin/orders?tab=packed', icon: Package, show: can('orders') },
@@ -159,9 +159,11 @@ export default function AdminDashboardPage() {
     <div className="w-full space-y-6">
       <div className="mb-6">
         <h1 className="text-xl font-semibold tracking-tight text-ink">
-          Good morning, {userName || me.person.split(' ')[0]}
+          Good morning, {greetingName}
         </h1>
-        <p className="mt-1 text-sm text-ink-muted">Here’s what’s happening at Tanti today · {todayFormatted}</p>
+        <p className="mt-1 text-sm text-ink-muted">
+          Here’s what’s happening at {storeName} today · {todayFormatted}
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

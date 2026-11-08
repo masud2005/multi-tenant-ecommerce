@@ -1,48 +1,58 @@
 # Admin mock-data review
 
-**Verdict:** Admin-এ এখনো কয়েকটা জায়গায় mock/demo data আছে। নিচে শুধু business/demo data; nav/permission/status label-এর মতো static config বাদ।
+**Verdict:** Admin business screens now load from live APIs (or show empty/error). Fake seed rows are no longer shown when the API fails or returns empty. Demo login credentials remain on purpose.
 
-> Reviewed without code changes. Use this list later to decide what to keep, remove, or replace with live APIs.
-
----
-
-## Still mock / partial mock
-
-| # | Area | Route | What’s mocked |
-|---|------|-------|----------------|
-| 5 | **Inventory ledger** | `/admin/inventory` | Stock movements seed; levels API live |
-| 6 | **Product import** | `/admin/products/import` | Demo CSV wizard (no real upload API) |
-| 7 | **Analytics fallbacks** | `/admin/analytics` | API fail/load-এর আগে mock KPIs/charts; export toast-only |
-| 8 | **Staff seed flash** | `/admin/staff` | শুরুতে/`API fail`-এ fake staff & roles |
-| 9 | **Payments reconcile UX** | `/admin/payments` | Fake reconcile flags, sync toast, “expected settlement” copy |
-| 10 | **Product filters/editor fallback** | products UI | Empty DB হলে seed brands/categories/collections |
-| 11 | **Theme offline fallback** | `/admin/theme` | API down → fallback theme + seed products preview |
-| 12 | **Order ship couriers** | `/admin/orders/[id]` | Static courier list + fake success % |
-| 13 | **Reports — Growth export** | `/admin/reports` | Growth group → stub CSV |
-| 14 | **Demo login** | `/login` | `owner@gmail.com` / `customer@gmail.com` auto-fill |
-| 15 | **Dashboard greeting** | `/admin` | “Tanti” + `roleMeta` name fallback |
-
-**Orphan seed (unused but still in repo):** `data/admin.ts` — `auditLogs`, `notificationLogs`, `mediaAssets`, `themeVersions`, `entitlements`, `planFeatures`, `discounts` (live pages আর use করে না)।
+> Updated after removing frontend mock/fallback displays across inventory, analytics, staff, payments, products, theme, orders, reports, import, and dashboard greeting.
 
 ---
 
-## Mostly / fully live (API)
+## Intentionally kept
 
-Orders, Returns, Products CRUD, Categories, Collections, Brands, Inventory **levels**, Customers, Reviews, Messages, Discounts, Shipping settings, Store settings, Media, Theme (when API up), Audit logs, Notification **logs** + **templates** (DB CRUD, Email/In-App, wired to order/return/stock/review/chat events), Staff (after successful API load), Analytics (when overview API succeeds), Reports Sales/Catalog/Customers CSV, **Content** (announcement, About/Contact/FAQ, policies: returns/shipping/privacy/terms/cookies — DB-only, no mock/fallback).
-
----
-
-## Not mock (static config — OK)
-
-- Sidebar (`adminNav`), permission modules/actions
-- Status labels, BD districts/areas
-- Theme design presets
+| Area | Route | Notes |
+|------|-------|--------|
+| **Demo login** | `/login` | `owner@gmail.com` / `customer@gmail.com` auto-fill — keep for local/dev demos |
+| Static config | nav, permissions, status labels, BD districts, theme presets, courier **name** options | Not business data |
 
 ---
 
-## Priority to replace first
+## Fully live / empty-or-error (no mock fallback)
 
-1. Inventory ledger
-2. Analytics fallbacks + fake export
-3. Product import wizard
-4. Demo credentials on login
+| Area | Route | Behavior |
+|------|-------|----------|
+| Notification templates + logs | `/admin/notifications` | DB CRUD; empty/error only |
+| Inventory levels + **movement ledger** | `/admin/inventory` | `GET /owner/inventory` + `GET /owner/inventory/movements` |
+| Analytics | `/admin/analytics` | Overview API; fail → empty/`—`, not seed KPIs |
+| Staff & roles | `/admin/staff` | API only; fail/empty → empty states |
+| Payments | `/admin/payments` | Order payment rows only; no fake reconcile/sync |
+| Product editor taxonomies | products editor | Empty selects + “create first” hints |
+| Theme | `/admin/theme` | Fail → error + retry (no invented theme) |
+| Orders list / detail | `/admin/orders` | API only; no client-store fallback |
+| Reports | `/admin/reports` | Only 3 DB CSV exports: Orders, Inventory variants, Customers |
+| Content / policies | `/admin/content` | DB-only |
+| Dashboard greeting | `/admin` | Auth name + tenant store name |
+
+---
+
+## Not available yet (honest UI — no fake success)
+
+| Area | Route | UI |
+|------|-------|-----|
+| Product CSV import/export | `/admin/products/import` | “Not available yet” + optional blank template headers |
+| Analytics / inventory / payments export & gateway sync | various | Toast: not available yet |
+| Physical stock count workflow | `/admin/inventory` | Toast: not available yet |
+
+---
+
+## Orphan seed files (unused by live pages; safe to delete later)
+
+`data/admin.ts` leftovers: `stockMovements`, `auditLogs`, `notificationLogs`, `mediaAssets`, `themeVersions`, `entitlements`, `planFeatures`, `discounts`, person fields in `roleMeta`  
+`data/analytics.ts` — seed series/KPIs (no longer imported by analytics page/service)
+
+---
+
+## Priority leftovers (optional cleanup)
+
+1. Delete unused seed arrays in `data/admin.ts` / `data/analytics.ts`
+2. Wire real CSV import when backend exists
+3. Payments reconcile / gateway sync when APIs exist
+4. Add more report types only when dedicated accurate aggregations exist

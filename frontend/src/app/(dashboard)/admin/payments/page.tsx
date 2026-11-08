@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { CheckCircle2, AlertCircle, Download, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
@@ -25,18 +25,16 @@ interface Txn {
   amount: number;
   status: PaymentStatus;
   at: string;
-  reconciled: boolean;
 }
 
 export default function PaymentsPage() {
   const { orders } = useStore();
   const [method, setMethod] = useState<'all' | PaymentMethod>('all');
-  const [syncing, setSyncing] = useState(false);
 
   const txns = useMemo<Txn[]>(() => {
     const list: Txn[] = [];
     orders.forEach((o) => {
-      o.attempts.forEach((a, i) =>
+      o.attempts.forEach((a) =>
         list.push({
           id: a.id,
           orderId: o.id,
@@ -47,7 +45,6 @@ export default function PaymentsPage() {
           amount: a.amount,
           status: a.status,
           at: a.at,
-          reconciled: a.status !== 'paid' || i % 5 !== 3
         })
       );
       if (o.paymentMethod === 'cod' && o.codCollected)
@@ -61,7 +58,6 @@ export default function PaymentsPage() {
           amount: o.total,
           status: 'paid',
           at: o.timeline[0]?.at || o.createdAt,
-          reconciled: o.number !== 'TN-10491'
         });
       if (o.refunded > 0)
         list.push({
@@ -74,7 +70,6 @@ export default function PaymentsPage() {
           amount: -o.refunded,
           status: 'refunded',
           at: o.timeline[0]?.at || o.createdAt,
-          reconciled: true
         });
     });
     return list.sort((a, b) => b.at.localeCompare(a.at));
@@ -86,11 +81,12 @@ export default function PaymentsPage() {
     const t = txns.filter((x) => x.method === g);
     const paid = t.filter((x) => x.status === 'paid');
     const failed = t.filter((x) => x.status === 'failed').length;
+    const hasOutcomes = paid.length + failed > 0;
     return {
       g,
       volume: paid.reduce((s, x) => s + x.amount, 0),
       count: paid.length,
-      successRate: t.length ? Math.round((paid.length / Math.max(1, paid.length + failed)) * 100) : 100,
+      successRate: hasOutcomes ? Math.round((paid.length / (paid.length + failed)) * 100) : null,
       pending:
         g === 'cod'
           ? orders
@@ -99,7 +95,6 @@ export default function PaymentsPage() {
           : 0
     };
   });
-  const unreconciled = txns.filter((t) => !t.reconciled).length;
 
   const columns: Column<Txn>[] = [
     { key: 'at', header: 'Date', render: (t) => <span className="text-ink-muted">{formatDateTime(t.at)}</span> },
@@ -140,20 +135,6 @@ export default function PaymentsPage() {
       )
     },
     { key: 'status', header: 'Status', render: (t) => <Badge tone={paymentStatusMeta[t.status].tone}>{t.status}</Badge> },
-    {
-      key: 'rec',
-      header: 'Settlement',
-      render: (t) =>
-        t.reconciled ? (
-          <span className="flex items-center gap-1 text-xs text-success">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Reconciled
-          </span>
-        ) : (
-          <span className="flex items-center gap-1 text-xs text-warning">
-            <AlertCircle className="h-3.5 w-3.5" /> Pending bank credit
-          </span>
-        )
-    }
   ];
 
   return (
@@ -168,7 +149,7 @@ export default function PaymentsPage() {
               action="export"
               variant="secondary"
               size="sm"
-              onClick={() => toast.success('Payment reconciliation report downloaded')}
+              onClick={() => toast.message('Payment export is not available yet')}
             >
               <Download className="h-4 w-4" aria-hidden /> Export
             </GuardedButton>
@@ -176,29 +157,13 @@ export default function PaymentsPage() {
               module="payments"
               action="update"
               size="sm"
-              onClick={async () => {
-                setSyncing(true);
-                await new Promise((r) => setTimeout(r, 900));
-                setSyncing(false);
-                toast.success('All gateway webhooks synced: 0 missing events');
-              }}
+              onClick={() => toast.message('Gateway sync is not available yet')}
             >
-              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} aria-hidden /> Sync gateways
+              <RefreshCw className="h-4 w-4" aria-hidden /> Sync gateways
             </GuardedButton>
           </>
         }
       />
-
-      {unreconciled > 0 && (
-        <div className="mb-6 flex items-center justify-between rounded-lg border border-warning/40 bg-warning-soft px-4 py-3 text-xs text-warning">
-          <span className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>
-              <b>{unreconciled} transactions</b> awaiting bank credit settlement. Expected in account by tomorrow 4 PM.
-            </span>
-          </span>
-        </div>
-      )}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-5">
         {summary.map((s) => (
@@ -209,7 +174,11 @@ export default function PaymentsPage() {
             </div>
             <p className="mt-2 text-base font-semibold text-ink tabular-nums">{formatBDT(s.volume)}</p>
             <p className="text-xs text-ink-muted">
-              {s.g === 'cod' ? `৳${(s.pending / 1000).toFixed(0)}k in courier hands` : `${s.successRate}% success rate`}
+              {s.g === 'cod'
+                ? `৳${(s.pending / 1000).toFixed(0)}k in courier hands`
+                : s.successRate === null
+                  ? '— success rate'
+                  : `${s.successRate}% success rate`}
             </p>
           </div>
         ))}

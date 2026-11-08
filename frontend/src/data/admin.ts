@@ -150,52 +150,8 @@ export const mediaAssets = [
   { id: 'm9', name: 'unused-banner-old.jpg', url: images.dupatta, size: '520 KB', dims: '2400×900', alt: '', usedIn: 0 }
 ];
 
-export const reportCatalog: { group: string; items: { name: string; description: string }[] }[] = [
-  {
-    group: 'Sales',
-    items: [
-      { name: 'Sales over time', description: 'Gross, net, discounts and returns by day, week or month' },
-      { name: 'Orders', description: 'Order count, status mix and AOV' },
-      { name: 'Revenue breakdown', description: 'Product, shipping, tax and fee revenue' },
-      { name: 'Tax', description: 'VAT collected by period and region' },
-      { name: 'Payments', description: 'Sales by gateway, success and failure rates' }
-    ]
-  },
-  {
-    group: 'Catalog',
-    items: [
-      { name: 'Products', description: 'Units, revenue and margin per product' },
-      { name: 'Categories', description: 'Performance by category' },
-      { name: 'Variants', description: 'Size and colour performance' },
-      { name: 'Inventory', description: 'Stock on hand, value and days of cover' },
-      { name: 'Low stock', description: 'Variants at or below threshold' }
-    ]
-  },
-  {
-    group: 'Customers',
-    items: [
-      { name: 'Customers', description: 'New vs returning, LTV and cohorts' },
-      { name: 'Reviews', description: 'Ratings distribution and moderation volume' },
-      { name: 'Search', description: 'Top searches and zero-result queries' }
-    ]
-  },
-  {
-    group: 'Operations',
-    items: [
-      { name: 'Fulfillment', description: 'Time to pack and ship, SLA breaches' },
-      { name: 'Shipping', description: 'Courier performance and delivery success' },
-      { name: 'Returns', description: 'Return rate and reasons by product' },
-      { name: 'Refunds', description: 'Refund value by method and reason' }
-    ]
-  },
-  {
-    group: 'Growth',
-    items: [
-      { name: 'Discounts & coupons', description: 'Usage and revenue attributed to each code' },
-      { name: 'Staff activity', description: 'Actions by staff member' }
-    ]
-  }
-];
+/** @deprecated Reports page defines its own live-only catalog. Kept empty so old imports don't revive fake reports. */
+export const reportCatalog: { group: string; items: { name: string; description: string }[] }[] = [];
 
 export interface StockMovementItem {
   id: string;

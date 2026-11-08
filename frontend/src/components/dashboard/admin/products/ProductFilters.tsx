@@ -2,9 +2,13 @@
 
 import React from 'react';
 import { Search } from 'lucide-react';
-import { categories } from '@/data/products';
 
 export type StockFilter = 'all' | 'low' | 'out';
+
+export interface ProductFilterCategory {
+  key: string;
+  name: string;
+}
 
 interface ProductFiltersProps {
   searchQuery: string;
@@ -13,6 +17,8 @@ interface ProductFiltersProps {
   onCategoryChange: (cat: string) => void;
   selectedStock: StockFilter;
   onStockChange: (stock: StockFilter) => void;
+  /** Categories from API / product payload — empty shows only "All categories" */
+  categories?: ProductFilterCategory[];
 }
 
 export function ProductFilters({
@@ -22,6 +28,7 @@ export function ProductFilters({
   onCategoryChange,
   selectedStock,
   onStockChange,
+  categories = [],
 }: ProductFiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
