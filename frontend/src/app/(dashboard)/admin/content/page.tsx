@@ -567,6 +567,7 @@ export default function AdminContentPage() {
             <Input
               label="Title"
               defaultValue={page?.title}
+              placeholder="e.g. Shipping & Delivery"
               key={`t${editing}`}
             />
             <Textarea
@@ -577,11 +578,13 @@ export default function AdminContentPage() {
                   ? `${page.title} — write your content here. Use reusable blocks for banners, FAQs and product grids.`
                   : ''
               }
+              placeholder="Write your page content. You can add banners, FAQs, and product grids."
               key={`c${editing}`}
             />
             <Input
               label="URL"
               defaultValue={page?.slug ?? '/pages/'}
+              placeholder="/pages/shipping"
               key={`u${editing}`}
             />
             <div className="grid gap-4 sm:grid-cols-2">
@@ -596,12 +599,14 @@ export default function AdminContentPage() {
                   label="Publish at"
                   type="datetime-local"
                   defaultValue="2026-10-01T09:00"
+                  placeholder="2026-10-01 09:00"
                 />
               )}
             </div>
             <Input
               label="SEO title"
               defaultValue={page ? `${page.title} | Tanti` : ''}
+              placeholder="Shipping & Delivery | Your Store Name"
               key={`s${editing}`}
             />
           </div>

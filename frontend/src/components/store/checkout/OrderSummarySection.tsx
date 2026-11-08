@@ -111,7 +111,7 @@ export function OrderSummarySection({
             aria-label="Discount code"
             value={code}
             onChange={(e) => onCodeChange(e.target.value.toUpperCase())}
-            placeholder="Discount code"
+            placeholder="e.g. EID500"
             className="h-10 flex-1 rounded-md border border-line-strong bg-canvas px-3 text-sm uppercase text-ink focus:border-ink focus:outline-none"
           />
           <Button

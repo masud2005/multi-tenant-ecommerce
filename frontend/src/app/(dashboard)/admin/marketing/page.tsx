@@ -225,14 +225,24 @@ export default function AdminMarketingPage() {
               label={channel === 'SMS' ? 'SMS text (160 chars)' : 'Message'}
               rows={4}
               maxLength={channel === 'SMS' ? 160 : undefined}
+              placeholder={
+                channel === 'SMS'
+                  ? 'Eid sale Fri — code EID500 for ৳500 off. Shop: tanti.com.bd'
+                  : 'e.g. Eid sale starts Friday — use code EID500 for ৳500 off orders over ৳3,000.'
+              }
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
                 label="Send at"
                 type="datetime-local"
                 defaultValue="2026-09-29T10:00"
+                placeholder="2026-09-29 10:00"
               />
-              <Input label="UTM campaign" defaultValue="puja26_preview" />
+              <Input
+                label="UTM campaign"
+                defaultValue="puja26_preview"
+                placeholder="e.g. eid26_sale"
+              />
             </div>
           </div>
         </Modal>

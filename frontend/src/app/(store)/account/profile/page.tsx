@@ -101,6 +101,7 @@ export default function AccountProfilePage() {
             <div className="grid gap-5">
               <Input
                 label="Full name"
+                placeholder="e.g. Ayesha Rahman"
                 value={form.name}
                 onChange={(e) => set({ name: e.target.value })}
                 autoComplete="name"
@@ -108,6 +109,7 @@ export default function AccountProfilePage() {
               <Input
                 label="Email"
                 type="email"
+                placeholder="your.email@example.com"
                 value={form.email}
                 disabled
                 hint="Email is used to sign in and receive order confirmations."
@@ -115,6 +117,7 @@ export default function AccountProfilePage() {
               />
               <Input
                 label="Mobile number"
+                placeholder="01XXXXXXXXX"
                 value={form.phone}
                 onChange={(e) => set({ phone: e.target.value })}
                 autoComplete="tel"

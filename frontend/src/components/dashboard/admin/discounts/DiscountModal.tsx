@@ -331,6 +331,7 @@ export function DiscountModal({
               value={value}
               onChange={(e) => setValue(e.target.value)}
               error={errors.value}
+              placeholder={type === 'PERCENTAGE' ? 'e.g. 15' : 'e.g. 500'}
               hint={type === 'PERCENTAGE' ? 'Enter rate between 1% to 100%' : 'Flat deduction in BDT'}
             />
           ) : (
@@ -432,6 +433,7 @@ export function DiscountModal({
               value={startsAt}
               onChange={(e) => setStartsAt(e.target.value)}
               error={errors.startsAt}
+              placeholder="YYYY-MM-DD"
             />
 
             <Input
@@ -440,6 +442,7 @@ export function DiscountModal({
               value={endsAt}
               onChange={(e) => setEndsAt(e.target.value)}
               error={errors.endsAt}
+              placeholder="YYYY-MM-DD"
               hint="Leave blank for ongoing promotional codes"
             />
           </div>

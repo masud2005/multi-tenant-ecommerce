@@ -329,6 +329,7 @@ export default function AdminMediaPage() {
                 label="Alt text (SEO & Accessibility)"
                 value={alt}
                 onChange={(e) => setAlt(e.target.value)}
+                placeholder="e.g. Crimson Jamdani saree with gold border"
                 hint="Describe the image content accurately for screen readers and SEO"
               />
               <div className="rounded-md border border-line bg-surface p-3 text-xs space-y-1">

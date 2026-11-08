@@ -82,6 +82,7 @@ export function RegisterForm() {
       <Input
         label="Full name"
         autoComplete="name"
+        placeholder="e.g. Ayesha Rahman"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
         error={errors.name}
@@ -91,6 +92,7 @@ export function RegisterForm() {
         label="Email"
         type="email"
         autoComplete="email"
+        placeholder="your.email@example.com"
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
         error={errors.email}
@@ -102,7 +104,7 @@ export function RegisterForm() {
         value={form.phone}
         onChange={(e) => setForm({ ...form, phone: e.target.value })}
         error={errors.phone}
-        placeholder="01XXX-XXXXXX"
+        placeholder="01XXXXXXXXX"
         hint="We’ll verify this with a one-time code"
       />
 
@@ -111,6 +113,7 @@ export function RegisterForm() {
           label="Password"
           type="password"
           autoComplete="new-password"
+          placeholder="Create a strong password"
           value={form.password}
           onChange={(e) => setForm({ ...form, password: e.target.value })}
           error={errors.password}

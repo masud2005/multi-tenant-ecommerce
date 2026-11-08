@@ -10,6 +10,7 @@ import { EmailService } from '../../shared/mail/email-service';
 import { AuthOtpController } from './controllers/otp.controller';
 import { AuthPasswordController } from './controllers/password.controller';
 import { PasswordService } from './services/password.service';
+import { SessionService } from './services/session.service';
 
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
 
@@ -29,7 +30,14 @@ import { JwtStrategy } from '../../common/strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController, AuthOtpController, AuthPasswordController],
-  providers: [AuthService, OtpService, PasswordService, EmailService, JwtStrategy],
-  exports: [AuthService, JwtModule],
+  providers: [
+    AuthService,
+    OtpService,
+    PasswordService,
+    SessionService,
+    EmailService,
+    JwtStrategy,
+  ],
+  exports: [AuthService, SessionService, JwtModule],
 })
 export class AuthModule { }

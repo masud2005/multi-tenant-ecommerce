@@ -249,6 +249,7 @@ export default function PaymentGatewayPage({ params }: PaymentPageProps) {
                   id="cc"
                   value={card.number}
                   onChange={(e) => setCard({ ...card, number: e.target.value })}
+                  placeholder="4242 4242 4242 4242"
                   className="mt-1 h-10 w-full rounded-md border border-[#D1D5DB] px-3 text-sm tracking-wider focus:outline-none"
                 />
               </div>
@@ -261,6 +262,7 @@ export default function PaymentGatewayPage({ params }: PaymentPageProps) {
                     id="exp"
                     value={card.expiry}
                     onChange={(e) => setCard({ ...card, expiry: e.target.value })}
+                    placeholder="MM/YY"
                     className="mt-1 h-10 w-full rounded-md border border-[#D1D5DB] px-3 text-sm focus:outline-none"
                   />
                 </div>
@@ -272,6 +274,7 @@ export default function PaymentGatewayPage({ params }: PaymentPageProps) {
                     id="cvc"
                     value={card.cvc}
                     onChange={(e) => setCard({ ...card, cvc: e.target.value })}
+                    placeholder="123"
                     className="mt-1 h-10 w-full rounded-md border border-[#D1D5DB] px-3 text-sm focus:outline-none"
                   />
                 </div>
@@ -284,6 +287,7 @@ export default function PaymentGatewayPage({ params }: PaymentPageProps) {
                   id="cn"
                   value={card.name}
                   onChange={(e) => setCard({ ...card, name: e.target.value })}
+                  placeholder="Name as on card"
                   className="mt-1 h-10 w-full rounded-md border border-[#D1D5DB] px-3 text-sm focus:outline-none"
                 />
               </div>

@@ -59,7 +59,7 @@ export default function TrackOrderPage() {
           label="Phone number"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="01XXX-XXXXXX"
+          placeholder="01XXXXXXXXX"
         />
         <Button type="submit" loading={loading}>
           Track

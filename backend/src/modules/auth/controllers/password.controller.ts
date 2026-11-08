@@ -2,8 +2,10 @@ import {
     Controller,
     Post,
     Body,
+    Headers,
     HttpCode,
     HttpStatus,
+    Req,
     UseGuards,
 } from '@nestjs/common';
 import {
@@ -45,8 +47,20 @@ export class AuthPasswordController {
     })
     @ApiResponse({ status: 200, description: 'Password reset successfully' })
     @ApiResponse({ status: 400, description: 'Invalid or expired OTP' })
-    async resetPassword(@Body() dto: ResetPasswordDto) {
-        return this.passwordService.resetPassword(dto);
+    async resetPassword(
+        @Body() dto: ResetPasswordDto,
+        @Req() req: any,
+        @Headers('user-agent') userAgent?: string,
+    ) {
+        const forwarded = req?.headers?.['x-forwarded-for'];
+        const ip =
+            (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : null) ||
+            req?.ip ||
+            null;
+        return this.passwordService.resetPassword(dto, {
+            userAgent: userAgent || req?.headers?.['user-agent'] || null,
+            ipAddress: ip,
+        });
     }
 
     @Post('change-password')
