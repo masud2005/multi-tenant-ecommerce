@@ -449,24 +449,68 @@ export class OrderService {
       return order;
     });
 
-    // Event 2: Notify customer if order status has changed
-    if (dto.status && dto.status !== existingOrder.status && updatedOrder.email) {
-      const statusFriendly = dto.status.replace(/_/g, ' ').toLowerCase();
-      this.notificationService
-        .send({
-          tenantId: updatedOrder.tenantId,
-          userId: updatedOrder.customerId || '',
-          title: `Order #${updatedOrder.number} status: ${dto.status}`,
-          message: `Your order status has been updated to ${statusFriendly}.${dto.trackingNumber ? ` Tracking: ${dto.trackingNumber}` : ''}`,
-          type: 'ORDER',
-          link: `/account/orders`,
-          email: {
-            to: updatedOrder.email,
-            subject: `Order Update #${updatedOrder.number}: ${dto.status}`,
-            html: `<h2>Order Status Update</h2><p>Your order <b>#${updatedOrder.number}</b> is now <b>${statusFriendly}</b>.</p>${dto.trackingNumber ? `<p>Courier: <b>${dto.courier || updatedOrder.courier || 'Standard'}</b> | Tracking: <b>${dto.trackingNumber}</b></p>` : ''}`,
-          },
-        })
-        .catch((err) => this.logger.error('Failed to send status update notification', err));
+    // Notify customer from DB templates for key status changes only
+    if (dto.status && dto.status !== existingOrder.status) {
+      const statusKeyMap: Partial<Record<string, string>> = {
+        [OrderStatus.CONFIRMED]: 'ORDER_CONFIRMED',
+        [OrderStatus.SHIPPED]: 'ORDER_SHIPPED',
+        [OrderStatus.OUT_FOR_DELIVERY]: 'ORDER_SHIPPED',
+        [OrderStatus.DELIVERED]: 'ORDER_DELIVERED',
+        [OrderStatus.CANCELLED]: 'ORDER_CANCELLED',
+        [OrderStatus.FAILED]: 'PAYMENT_FAILED',
+      };
+      const templateKey = statusKeyMap[dto.status];
+      if (templateKey) {
+        (async () => {
+          try {
+            let customerUserId: string | undefined;
+            if (updatedOrder.customerId) {
+              const profile = await this.prisma.customerProfile.findUnique({
+                where: { id: updatedOrder.customerId },
+                select: { userId: true },
+              });
+              customerUserId = profile?.userId || undefined;
+            }
+            const tenant = await this.prisma.tenant.findUnique({
+              where: { id: updatedOrder.tenantId },
+              select: { name: true },
+            });
+            await this.notificationService.sendFromTemplate({
+              tenantId: updatedOrder.tenantId,
+              key: templateKey,
+              userId: customerUserId,
+              emailTo: updatedOrder.email,
+              type: 'ORDER',
+              link: `/account/orders`,
+              vars: {
+                customer_name:
+                  updatedOrder.shippingAddress?.name ||
+                  updatedOrder.customerName ||
+                  updatedOrder.email ||
+                  '',
+                order_number: updatedOrder.number,
+                total_amount: `৳${Number(updatedOrder.total || 0).toLocaleString('en-BD')}`,
+                store_name: tenant?.name || 'Store',
+                payment_method: String(updatedOrder.paymentMethod || '—'),
+                courier_name:
+                  dto.courier || updatedOrder.courier || 'Courier',
+                tracking_number:
+                  dto.trackingNumber || updatedOrder.trackingNumber || '—',
+                shipping_address: [
+                  updatedOrder.shippingAddress?.line1,
+                  updatedOrder.shippingAddress?.area,
+                  updatedOrder.shippingAddress?.district,
+                ]
+                  .filter(Boolean)
+                  .join(', '),
+                items_summary: '',
+              },
+            });
+          } catch (err) {
+            this.logger.error('Failed to send status update notification', err);
+          }
+        })();
+      }
     }
 
     return ResponseHelper.success(updatedOrder, 'Order status updated successfully');

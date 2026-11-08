@@ -15,7 +15,6 @@ import {
   PaymentStatus,
 } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
-import { buildOrderInvoiceEmailHtml } from '../../../shared/mail/templates/order-invoice-email.template';
 
 @Injectable()
 export class OrderService {
@@ -336,28 +335,8 @@ export class OrderService {
 
         const tenant = await this.prisma.tenant.findUnique({
           where: { id: resolvedTenantId },
-          select: {
-            name: true,
-            tagline: true,
-            logo: true,
-            contact: true,
-          },
+          select: { name: true },
         });
-        const contact = (tenant?.contact as Record<string, any>) || {};
-
-        const absoluteAssetUrl = (value?: string | null) => {
-          const raw = (value || '').trim();
-          if (!raw) return null;
-          if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) return raw;
-          const base = (
-            process.env.FRONTEND_URL ||
-            process.env.APP_URL ||
-            process.env.PUBLIC_APP_URL ||
-            ''
-          ).replace(/\/$/, '');
-          if (!base) return raw;
-          return `${base}/${raw.replace(/^\//, '')}`;
-        };
 
         // Resolve User id for in-app notify (CustomerProfile.id ≠ User.id)
         let customerUserId: string | undefined;
@@ -372,7 +351,28 @@ export class OrderService {
           customerUserId = userId;
         }
 
-        // Event 1.A: Notify store owner & active staff members (In-App + Email)
+        const itemsSummary = (createdOrder.items || [])
+          .map((item) => item.title)
+          .filter(Boolean)
+          .slice(0, 4)
+          .join(', ');
+        const shippingAddress = [
+          createdOrder.shippingAddress?.line1,
+          createdOrder.shippingAddress?.area,
+          createdOrder.shippingAddress?.district,
+        ]
+          .filter(Boolean)
+          .join(', ');
+        const orderVars = {
+          customer_name: customerDisplayName,
+          order_number: createdOrder.number,
+          total_amount: `৳${toNum(createdOrder.total).toLocaleString('en-BD')}`,
+          items_summary: itemsSummary || 'Items',
+          shipping_address: shippingAddress || '—',
+          store_name: tenant?.name || 'Store',
+          payment_method: String(createdOrder.paymentMethod || '—'),
+        };
+
         const staffMembers = await this.prisma.tenantMember.findMany({
           where: {
             tenantId: resolvedTenantId,
@@ -383,112 +383,54 @@ export class OrderService {
         });
 
         for (const member of staffMembers) {
-          if (member.userId) {
-            await this.notificationService.send({
-              tenantId: resolvedTenantId,
-              userId: member.userId,
-              title: `New Order #${createdOrder.number}`,
-              message: `${customerDisplayName} placed an order for ৳${toNum(createdOrder.total)}`,
-              type: 'ORDER',
-              link: `/admin/orders`,
-              email: member.user?.email
-                ? {
-                    to: member.user.email,
-                    subject: `[New Order] #${createdOrder.number} received (৳${toNum(createdOrder.total)})`,
-                    html: `<h2>New Order Received!</h2><p>Order <b>#${createdOrder.number}</b> has been placed by <b>${customerDisplayName}</b>.</p><p>Total Amount: <b>৳${toNum(createdOrder.total)}</b></p><p>Payment Method: ${createdOrder.paymentMethod}</p>`,
-                  }
-                : undefined,
-            });
-          }
-        }
-
-        // Event 1.B: Email confirmation + dynamic invoice (no SMS; in-app only if real User)
-        if (createdOrder.email) {
-          const invoiceHtml = buildOrderInvoiceEmailHtml({
-            storeName: tenant?.name || null,
-            storeLogoUrl: absoluteAssetUrl(tenant?.logo),
-            storeTagline: tenant?.tagline || null,
-            storePhone: contact.phone || null,
-            storeWhatsapp: contact.whatsapp || null,
-            storeEmail: contact.email || null,
-            storeAddress: contact.address || null,
-            customerName: customerDisplayName || null,
-            customerEmail: createdOrder.email || null,
-            orderNumber: createdOrder.number,
-            orderDate: new Date(createdOrder.createdAt).toLocaleString('en-GB', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            }),
-            paymentMethod: String(createdOrder.paymentMethod || ''),
-            paymentStatus: String(createdOrder.paymentStatus || ''),
-            shippingMethod: createdOrder.shippingMethod || null,
-            courier: (createdOrder as any).courier || null,
-            tracking: (createdOrder as any).tracking || null,
-            fulfillmentStatus: createdOrder.fulfillmentStatus
-              ? String(createdOrder.fulfillmentStatus)
-              : null,
-            shippingAddress: {
-              name: createdOrder.shippingAddress?.name,
-              phone: createdOrder.shippingAddress?.phone,
-              line1: createdOrder.shippingAddress?.line1,
-              area: createdOrder.shippingAddress?.area,
-              district: createdOrder.shippingAddress?.district,
-            },
-            items: (createdOrder.items || []).map((item) => ({
-              title: item.title,
-              color: item.color,
-              size: item.size,
-              sku: item.sku,
-              qty: item.qty,
-              price: toNum(item.price),
-            })),
-            subtotal: toNum(createdOrder.subtotal),
-            discount: toNum(createdOrder.discount),
-            shipping: toNum(createdOrder.shipping),
-            total: toNum(createdOrder.total),
-          });
-
-          await this.notificationService.send({
+          if (!member.userId) continue;
+          await this.notificationService.sendFromTemplate({
             tenantId: resolvedTenantId,
-            userId: customerUserId,
-            title: `Order Confirmation #${createdOrder.number}`,
-            message: `Thank you for your order! Total: ৳${toNum(createdOrder.total)}`,
+            key: 'NEW_ORDER',
+            userId: member.userId,
+            emailTo: member.user?.email,
             type: 'ORDER',
-            link: `/account/orders`,
-            email: {
-              to: createdOrder.email,
-              subject: `Order Confirmation & Invoice #${createdOrder.number}`,
-              html: invoiceHtml,
-            },
+            link: `/admin/orders`,
+            vars: orderVars,
           });
         }
 
-        // Event 3: Low Stock Alert Check
-        for (const item of dto.items) {
-          if (item.variantId) {
-            const variant = await this.prisma.productVariant.findUnique({
-              where: { id: item.variantId },
-              include: { product: true },
-            });
+        await this.notificationService.sendFromTemplate({
+          tenantId: resolvedTenantId,
+          key: 'ORDER_CONFIRMED',
+          userId: customerUserId,
+          emailTo: createdOrder.email,
+          type: 'ORDER',
+          link: `/account/orders`,
+          vars: orderVars,
+        });
 
-            const threshold = variant?.lowStockThreshold ?? 5;
-            if (variant && variant.stock <= threshold) {
-              const owners = staffMembers.filter((m) => m.isOwner);
-              const variantName = `${variant.color ? `${variant.color} - ` : ''}${variant.size || variant.sku || 'Default'}`;
-              for (const owner of owners) {
-                await this.notificationService.send({
-                  tenantId: resolvedTenantId,
-                  userId: owner.userId,
-                  title: `Low Stock Alert: ${variant.product?.title || 'Product'}`,
-                  message: `Stock for variant "${variantName}" is low (${variant.stock} units remaining).`,
-                  type: 'INVENTORY',
-                  link: `/admin/inventory`,
-                });
-              }
-            }
+        for (const item of dto.items) {
+          if (!item.variantId) continue;
+          const variant = await this.prisma.productVariant.findUnique({
+            where: { id: item.variantId },
+            include: { product: true },
+          });
+
+          const threshold = variant?.lowStockThreshold ?? 5;
+          if (!variant || variant.stock > threshold) continue;
+
+          const owners = staffMembers.filter((m) => m.isOwner);
+          const variantName = `${variant.color ? `${variant.color} - ` : ''}${variant.size || variant.sku || 'Default'}`;
+          for (const owner of owners) {
+            await this.notificationService.sendFromTemplate({
+              tenantId: resolvedTenantId,
+              key: 'LOW_STOCK',
+              userId: owner.userId,
+              emailTo: owner.user?.email,
+              type: 'INVENTORY',
+              link: `/admin/inventory`,
+              vars: {
+                product_title: variant.product?.title || 'Product',
+                variant_name: variantName,
+                remaining_stock: String(variant.stock),
+              },
+            });
           }
         }
       } catch (err) {

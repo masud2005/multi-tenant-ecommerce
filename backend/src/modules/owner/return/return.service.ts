@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { NotificationService } from '../../notification/notification.service';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import { QueryReturnDto, UpdateReturnStatusDto } from './dto';
 import {
@@ -9,7 +10,12 @@ import {
 
 @Injectable()
 export class ReturnService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ReturnService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   // Helper to resolve tenant ID from token or fallback to active tenant
   private async resolveTenantId(tenantId?: string): Promise<string> {
@@ -457,6 +463,56 @@ export class ReturnService {
 
       return returnRequest;
     });
+
+    // Notify customer for meaningful return outcomes
+    const notifyStatuses = new Set([
+      ReturnStatus.APPROVED,
+      ReturnStatus.REJECTED,
+      ReturnStatus.REFUNDED,
+      ReturnStatus.EXCHANGED,
+    ]);
+    if (
+      dto.status !== existing.status &&
+      notifyStatuses.has(dto.status as any)
+    ) {
+      (async () => {
+        try {
+          const order = updatedReturn.order;
+          if (!order) return;
+          let customerUserId: string | undefined;
+          if (order.customer?.id) {
+            const profile = await this.prisma.customerProfile.findUnique({
+              where: { id: order.customer.id },
+              select: { userId: true },
+            });
+            customerUserId = profile?.userId || undefined;
+          }
+          const tenant = await this.prisma.tenant.findUnique({
+            where: { id: existing.tenantId },
+            select: { name: true },
+          });
+          const ship = (order.shippingAddress || {}) as Record<string, any>;
+          await this.notificationService.sendFromTemplate({
+            tenantId: existing.tenantId,
+            key: 'RETURN_UPDATED',
+            userId: customerUserId,
+            emailTo: order.email || order.customer?.email,
+            type: 'ORDER',
+            link: `/account/orders`,
+            vars: {
+              customer_name:
+                ship.name || order.customer?.name || order.email || '',
+              order_number: order.number,
+              return_status: String(dto.status).replace(/_/g, ' '),
+              return_note: dto.note || dto.inspectionNote || '',
+              store_name: tenant?.name || 'Store',
+            },
+          });
+        } catch (err) {
+          this.logger.error('Failed to send return status notification', err);
+        }
+      })();
+    }
 
     return ResponseHelper.success(
       updatedReturn,

@@ -50,22 +50,31 @@ model WebhookEndpoint {
 }
 
 model NotificationTemplate {
-  id        String   @id @default(uuid())
-  tenantId  String
-  event     String // 'Order confirmation', 'Order shipped', etc.
-  group     String // 'Orders', 'Payments', 'Shipping', 'Returns', 'Account'
-  email     Boolean  @default(true)
-  inApp     Boolean  @default(true)
-  sms       Boolean  @default(false)
-  push      Boolean  @default(false)
-  subject   String?
-  body      String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(uuid())
+  tenantId     String
+  /// Stable machine key used by backend senders (e.g. NEW_ORDER, ORDER_SHIPPED)
+  key          String
+  /// Human-readable event title shown in admin
+  event        String
+  group        String
+  description  String?
+  email        Boolean  @default(true)
+  inApp        Boolean  @default(true)
+  sms          Boolean  @default(false)
+  push         Boolean  @default(false)
+  subject      String?
+  body         String?  @db.Text
+  inAppTitle   String?
+  inAppMessage String?  @db.Text
+  /// [{ tag, name, description, example }]
+  variables    Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, event])
+  @@unique([tenantId, key])
+  @@index([tenantId, group])
   @@map("notification_templates")
 }
 

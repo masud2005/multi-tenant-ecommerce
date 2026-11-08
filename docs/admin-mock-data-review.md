@@ -10,7 +10,6 @@
 
 | # | Area | Route | What’s mocked |
 |---|------|-------|----------------|
-| 4 | **Notification templates** | `/admin/notifications` | Template list + channel toggles local-only; preview sample data |
 | 5 | **Inventory ledger** | `/admin/inventory` | Stock movements seed; levels API live |
 | 6 | **Product import** | `/admin/products/import` | Demo CSV wizard (no real upload API) |
 | 7 | **Analytics fallbacks** | `/admin/analytics` | API fail/load-এর আগে mock KPIs/charts; export toast-only |
@@ -29,7 +28,7 @@
 
 ## Mostly / fully live (API)
 
-Orders, Returns, Products CRUD, Categories, Collections, Brands, Inventory **levels**, Customers, Reviews, Messages, Discounts, Shipping settings, Store settings, Media, Theme (when API up), Audit logs, Notification **logs**, Staff (after successful API load), Analytics (when overview API succeeds), Reports Sales/Catalog/Customers CSV, **Content** (announcement, About/Contact/FAQ, policies: returns/shipping/privacy/terms/cookies — DB-only, no mock/fallback).
+Orders, Returns, Products CRUD, Categories, Collections, Brands, Inventory **levels**, Customers, Reviews, Messages, Discounts, Shipping settings, Store settings, Media, Theme (when API up), Audit logs, Notification **logs** + **templates** (DB CRUD, Email/In-App, wired to order/return/stock/review/chat events), Staff (after successful API load), Analytics (when overview API succeeds), Reports Sales/Catalog/Customers CSV, **Content** (announcement, About/Contact/FAQ, policies: returns/shipping/privacy/terms/cookies — DB-only, no mock/fallback).
 
 ---
 
@@ -43,8 +42,7 @@ Orders, Returns, Products CRUD, Categories, Collections, Brands, Inventory **lev
 
 ## Priority to replace first
 
-1. Notification templates
-2. Inventory ledger
-3. Analytics fallbacks + fake export
-4. Product import wizard
-5. Demo credentials on login
+1. Inventory ledger
+2. Analytics fallbacks + fake export
+3. Product import wizard
+4. Demo credentials on login
