@@ -13,9 +13,16 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  Prisma,
+  StockMovementReason,
 } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
-import { buildOrderInvoiceEmailHtml } from '../../../shared/mail/templates/order-invoice-email.template';
+
+const CUSTOMER_CANCELLABLE: OrderStatus[] = [
+  OrderStatus.PENDING_PAYMENT,
+  OrderStatus.CONFIRMED,
+  OrderStatus.PROCESSING,
+];
 
 @Injectable()
 export class OrderService {
@@ -141,6 +148,77 @@ export class OrderService {
       throw new BadRequestException('Order must contain at least one item');
     }
 
+    const allowedMethods = new Set<PaymentMethod>([
+      PaymentMethod.COD,
+      PaymentMethod.BKASH,
+      PaymentMethod.NAGAD,
+    ]);
+    if (!allowedMethods.has(dto.paymentMethod)) {
+      throw new BadRequestException(
+        'Only Cash on delivery, bKash and Nagad are supported',
+      );
+    }
+
+    const tenantSettings = await this.prisma.tenant.findUnique({
+      where: { id: resolvedTenantId },
+      select: { settings: true },
+    });
+    const settings =
+      tenantSettings?.settings && typeof tenantSettings.settings === 'object'
+        ? (tenantSettings.settings as Record<string, any>)
+        : {};
+    const payCfg = (settings.payment || {}) as Record<string, any>;
+    const pmCfg = (settings.pm || {}) as Record<string, any>;
+    const methodEnabled = {
+      [PaymentMethod.COD]:
+        typeof payCfg.codEnabled === 'boolean'
+          ? payCfg.codEnabled
+          : typeof pmCfg.cod === 'boolean'
+            ? pmCfg.cod
+            : true,
+      [PaymentMethod.BKASH]:
+        typeof payCfg.bkashEnabled === 'boolean'
+          ? payCfg.bkashEnabled
+          : typeof pmCfg.bkash === 'boolean'
+            ? pmCfg.bkash
+            : true,
+      [PaymentMethod.NAGAD]:
+        typeof payCfg.nagadEnabled === 'boolean'
+          ? payCfg.nagadEnabled
+          : typeof pmCfg.nagad === 'boolean'
+            ? pmCfg.nagad
+            : true,
+    };
+    const enabledForMethod =
+      dto.paymentMethod === PaymentMethod.COD ||
+      dto.paymentMethod === PaymentMethod.BKASH ||
+      dto.paymentMethod === PaymentMethod.NAGAD
+        ? methodEnabled[dto.paymentMethod]
+        : false;
+    if (!enabledForMethod) {
+      throw new BadRequestException(
+        `${dto.paymentMethod} is not enabled for this store`,
+      );
+    }
+
+    const isManualMfs =
+      dto.paymentMethod === PaymentMethod.BKASH ||
+      dto.paymentMethod === PaymentMethod.NAGAD;
+    if (isManualMfs) {
+      const sender = String(dto.senderPhone || '').trim();
+      const trx = String(dto.transactionId || '').trim();
+      if (!sender || !/^01[3-9]\d{8}$/.test(sender.replace(/-/g, ''))) {
+        throw new BadRequestException(
+          'A valid sender mobile number is required for bKash/Nagad',
+        );
+      }
+      if (!trx || trx.length < 5) {
+        throw new BadRequestException(
+          'Transaction ID (TrxID) is required for bKash/Nagad',
+        );
+      }
+    }
+
     // Step 3: Check valid product and variant IDs in database to prevent foreign key constraint violations
     const validProductIds = new Set<string>();
     const validVariantIds = new Set<string>();
@@ -187,13 +265,10 @@ export class OrderService {
           shipping: dto.shippingCost,
           tax: 0,
           total: dto.total,
-          status: isCod
-            ? OrderStatus.CONFIRMED
-            : dto.paymentStatus === PaymentStatus.PAID
-            ? OrderStatus.CONFIRMED
-            : OrderStatus.PENDING_PAYMENT,
+          status: isCod ? OrderStatus.CONFIRMED : OrderStatus.PENDING_PAYMENT,
           fulfillmentStatus: FulfillmentStatus.UNFULFILLED,
-          paymentStatus: dto.paymentStatus ?? PaymentStatus.PENDING,
+          // Never trust client-paid for checkout; owner verifies MFS / collects COD
+          paymentStatus: PaymentStatus.PENDING,
           paymentMethod: dto.paymentMethod,
           couponCode: dto.couponCode,
           channel: OrderChannel.ONLINE,
@@ -235,17 +310,13 @@ export class OrderService {
               },
               ...(isCod
                 ? [{ label: 'Order confirmed (Cash on delivery)', by: 'System' }]
-                : (dto.paymentMethod === PaymentMethod.BKASH || dto.paymentMethod === PaymentMethod.NAGAD)
-                ? [
+                : [
                     {
-                      label: `Manual ${dto.paymentMethod} Payment Submitted`,
-                      note: `Sender Phone: ${dto.senderPhone || 'N/A'}, TrxID: ${dto.transactionId || 'N/A'} (Awaiting Owner Verification)`,
+                      label: `Manual ${dto.paymentMethod} payment submitted`,
+                      note: `Sender Phone: ${String(dto.senderPhone || '').trim()}, TrxID: ${String(dto.transactionId || '').trim()} (Awaiting owner verification)`,
                       by: 'Customer',
                     },
-                  ]
-                : dto.paymentStatus === PaymentStatus.PAID
-                ? [{ label: 'Payment verified with gateway', by: 'System' }]
-                : []),
+                  ]),
             ],
           },
         },
@@ -265,8 +336,8 @@ export class OrderService {
             amount: dto.total,
             status: PaymentStatus.PENDING,
             gatewayRef: JSON.stringify({
-              senderPhone: dto.senderPhone || '',
-              transactionId: dto.transactionId || '',
+              senderPhone: String(dto.senderPhone || '').trim(),
+              transactionId: String(dto.transactionId || '').trim(),
             }),
           },
         });
@@ -336,28 +407,8 @@ export class OrderService {
 
         const tenant = await this.prisma.tenant.findUnique({
           where: { id: resolvedTenantId },
-          select: {
-            name: true,
-            tagline: true,
-            logo: true,
-            contact: true,
-          },
+          select: { name: true },
         });
-        const contact = (tenant?.contact as Record<string, any>) || {};
-
-        const absoluteAssetUrl = (value?: string | null) => {
-          const raw = (value || '').trim();
-          if (!raw) return null;
-          if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) return raw;
-          const base = (
-            process.env.FRONTEND_URL ||
-            process.env.APP_URL ||
-            process.env.PUBLIC_APP_URL ||
-            ''
-          ).replace(/\/$/, '');
-          if (!base) return raw;
-          return `${base}/${raw.replace(/^\//, '')}`;
-        };
 
         // Resolve User id for in-app notify (CustomerProfile.id ≠ User.id)
         let customerUserId: string | undefined;
@@ -372,7 +423,28 @@ export class OrderService {
           customerUserId = userId;
         }
 
-        // Event 1.A: Notify store owner & active staff members (In-App + Email)
+        const itemsSummary = (createdOrder.items || [])
+          .map((item) => item.title)
+          .filter(Boolean)
+          .slice(0, 4)
+          .join(', ');
+        const shippingAddress = [
+          createdOrder.shippingAddress?.line1,
+          createdOrder.shippingAddress?.area,
+          createdOrder.shippingAddress?.district,
+        ]
+          .filter(Boolean)
+          .join(', ');
+        const orderVars = {
+          customer_name: customerDisplayName,
+          order_number: createdOrder.number,
+          total_amount: `৳${toNum(createdOrder.total).toLocaleString('en-BD')}`,
+          items_summary: itemsSummary || 'Items',
+          shipping_address: shippingAddress || '—',
+          store_name: tenant?.name || 'Store',
+          payment_method: String(createdOrder.paymentMethod || '—'),
+        };
+
         const staffMembers = await this.prisma.tenantMember.findMany({
           where: {
             tenantId: resolvedTenantId,
@@ -383,112 +455,57 @@ export class OrderService {
         });
 
         for (const member of staffMembers) {
-          if (member.userId) {
-            await this.notificationService.send({
-              tenantId: resolvedTenantId,
-              userId: member.userId,
-              title: `New Order #${createdOrder.number}`,
-              message: `${customerDisplayName} placed an order for ৳${toNum(createdOrder.total)}`,
-              type: 'ORDER',
-              link: `/admin/orders`,
-              email: member.user?.email
-                ? {
-                    to: member.user.email,
-                    subject: `[New Order] #${createdOrder.number} received (৳${toNum(createdOrder.total)})`,
-                    html: `<h2>New Order Received!</h2><p>Order <b>#${createdOrder.number}</b> has been placed by <b>${customerDisplayName}</b>.</p><p>Total Amount: <b>৳${toNum(createdOrder.total)}</b></p><p>Payment Method: ${createdOrder.paymentMethod}</p>`,
-                  }
-                : undefined,
-            });
-          }
+          if (!member.userId) continue;
+          await this.notificationService.sendFromTemplate({
+            tenantId: resolvedTenantId,
+            key: 'NEW_ORDER',
+            userId: member.userId,
+            emailTo: member.user?.email,
+            type: 'ORDER',
+            link: `/admin/orders`,
+            vars: orderVars,
+          });
         }
 
-        // Event 1.B: Email confirmation + dynamic invoice (no SMS; in-app only if real User)
-        if (createdOrder.email) {
-          const invoiceHtml = buildOrderInvoiceEmailHtml({
-            storeName: tenant?.name || null,
-            storeLogoUrl: absoluteAssetUrl(tenant?.logo),
-            storeTagline: tenant?.tagline || null,
-            storePhone: contact.phone || null,
-            storeWhatsapp: contact.whatsapp || null,
-            storeEmail: contact.email || null,
-            storeAddress: contact.address || null,
-            customerName: customerDisplayName || null,
-            customerEmail: createdOrder.email || null,
-            orderNumber: createdOrder.number,
-            orderDate: new Date(createdOrder.createdAt).toLocaleString('en-GB', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            }),
-            paymentMethod: String(createdOrder.paymentMethod || ''),
-            paymentStatus: String(createdOrder.paymentStatus || ''),
-            shippingMethod: createdOrder.shippingMethod || null,
-            courier: (createdOrder as any).courier || null,
-            tracking: (createdOrder as any).tracking || null,
-            fulfillmentStatus: createdOrder.fulfillmentStatus
-              ? String(createdOrder.fulfillmentStatus)
-              : null,
-            shippingAddress: {
-              name: createdOrder.shippingAddress?.name,
-              phone: createdOrder.shippingAddress?.phone,
-              line1: createdOrder.shippingAddress?.line1,
-              area: createdOrder.shippingAddress?.area,
-              district: createdOrder.shippingAddress?.district,
-            },
-            items: (createdOrder.items || []).map((item) => ({
-              title: item.title,
-              color: item.color,
-              size: item.size,
-              sku: item.sku,
-              qty: item.qty,
-              price: toNum(item.price),
-            })),
-            subtotal: toNum(createdOrder.subtotal),
-            discount: toNum(createdOrder.discount),
-            shipping: toNum(createdOrder.shipping),
-            total: toNum(createdOrder.total),
-          });
-
-          await this.notificationService.send({
+        // COD is confirmed immediately; manual MFS waits for owner verify → ORDER_CONFIRMED
+        if (isCod) {
+          await this.notificationService.sendFromTemplate({
             tenantId: resolvedTenantId,
+            key: 'ORDER_CONFIRMED',
             userId: customerUserId,
-            title: `Order Confirmation #${createdOrder.number}`,
-            message: `Thank you for your order! Total: ৳${toNum(createdOrder.total)}`,
+            emailTo: createdOrder.email,
             type: 'ORDER',
             link: `/account/orders`,
-            email: {
-              to: createdOrder.email,
-              subject: `Order Confirmation & Invoice #${createdOrder.number}`,
-              html: invoiceHtml,
-            },
+            vars: orderVars,
           });
         }
 
-        // Event 3: Low Stock Alert Check
         for (const item of dto.items) {
-          if (item.variantId) {
-            const variant = await this.prisma.productVariant.findUnique({
-              where: { id: item.variantId },
-              include: { product: true },
-            });
+          if (!item.variantId) continue;
+          const variant = await this.prisma.productVariant.findUnique({
+            where: { id: item.variantId },
+            include: { product: true },
+          });
 
-            const threshold = variant?.lowStockThreshold ?? 5;
-            if (variant && variant.stock <= threshold) {
-              const owners = staffMembers.filter((m) => m.isOwner);
-              const variantName = `${variant.color ? `${variant.color} - ` : ''}${variant.size || variant.sku || 'Default'}`;
-              for (const owner of owners) {
-                await this.notificationService.send({
-                  tenantId: resolvedTenantId,
-                  userId: owner.userId,
-                  title: `Low Stock Alert: ${variant.product?.title || 'Product'}`,
-                  message: `Stock for variant "${variantName}" is low (${variant.stock} units remaining).`,
-                  type: 'INVENTORY',
-                  link: `/admin/inventory`,
-                });
-              }
-            }
+          const threshold = variant?.lowStockThreshold ?? 5;
+          if (!variant || variant.stock > threshold) continue;
+
+          const owners = staffMembers.filter((m) => m.isOwner);
+          const variantName = `${variant.color ? `${variant.color} - ` : ''}${variant.size || variant.sku || 'Default'}`;
+          for (const owner of owners) {
+            await this.notificationService.sendFromTemplate({
+              tenantId: resolvedTenantId,
+              key: 'LOW_STOCK',
+              userId: owner.userId,
+              emailTo: owner.user?.email,
+              type: 'INVENTORY',
+              link: `/admin/inventory`,
+              vars: {
+                product_title: variant.product?.title || 'Product',
+                variant_name: variantName,
+                remaining_stock: String(variant.stock),
+              },
+            });
           }
         }
       } catch (err) {
@@ -585,6 +602,160 @@ export class OrderService {
     }
 
     return ResponseHelper.success(order, 'Order details retrieved successfully');
+  }
+
+  private async restoreOrderStock(
+    tx: Prisma.TransactionClient,
+    order: {
+      id: string;
+      number: string;
+      tenantId: string;
+      items: Array<{ variantId: string | null; qty: number }>;
+    },
+    by: string,
+  ) {
+    for (const item of order.items) {
+      if (!item.variantId || item.qty <= 0) continue;
+      const variant = await tx.productVariant.findFirst({
+        where: { id: item.variantId, deletedAt: null },
+      });
+      if (!variant) continue;
+      const stockBefore = variant.stock;
+      const stockAfter = stockBefore + item.qty;
+      await tx.productVariant.update({
+        where: { id: variant.id },
+        data: { stock: { increment: item.qty } },
+      });
+      await tx.stockMovement.create({
+        data: {
+          tenantId: order.tenantId,
+          variantId: variant.id,
+          change: item.qty,
+          stockBefore,
+          stockAfter,
+          reason: StockMovementReason.CORRECTION,
+          ref: order.number,
+          note: 'Stock restored — customer cancelled order',
+          by,
+        },
+      });
+    }
+  }
+
+  /**
+   * Customer self-cancel before pack/ship. Restores stock.
+   * Prepaid (paid) orders stay PAID until the owner records a manual refund.
+   */
+  async cancelOrder(
+    orderNumberOrId: string,
+    userId: string,
+    tenantId?: string,
+  ) {
+    const resolvedTenantId = await this.resolveTenantId(tenantId);
+    const customerId = await this.resolveCustomerId(userId, resolvedTenantId);
+
+    if (!customerId) {
+      throw new NotFoundException('Customer profile not found');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true },
+    });
+
+    const order = await this.prisma.order.findFirst({
+      where: {
+        tenantId: resolvedTenantId,
+        deletedAt: null,
+        OR: [{ id: orderNumberOrId }, { number: orderNumberOrId }],
+      },
+      include: { items: true, shippingAddress: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const ownsByProfile = order.customerId === customerId;
+    const ownsByEmail =
+      !!user?.email &&
+      !!order.email &&
+      order.email.toLowerCase() === user.email.toLowerCase();
+    if (!ownsByProfile && !ownsByEmail) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (!CUSTOMER_CANCELLABLE.includes(order.status)) {
+      throw new BadRequestException(
+        'This order can no longer be cancelled. Contact the store if you need help.',
+      );
+    }
+
+    const actorName = user?.name || user?.email || 'Customer';
+    const wasPaid =
+      order.paymentStatus === PaymentStatus.PAID ||
+      order.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const cancelled = await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: OrderStatus.CANCELLED,
+          paymentStatus: wasPaid
+            ? order.paymentStatus
+            : PaymentStatus.CANCELLED,
+          timeline: {
+            create: {
+              label: wasPaid
+                ? 'Order cancelled by customer — prepaid amount pending manual refund'
+                : 'Order cancelled by customer — stock restored',
+              by: actorName,
+            },
+          },
+        },
+        include: {
+          items: true,
+          shippingAddress: true,
+          attempts: true,
+          timeline: { orderBy: { createdAt: 'asc' } },
+        },
+      });
+
+      await this.restoreOrderStock(tx, cancelled, actorName);
+      return cancelled;
+    });
+
+    (async () => {
+      try {
+        const tenant = await this.prisma.tenant.findUnique({
+          where: { id: updated.tenantId },
+          select: { name: true },
+        });
+        await this.notificationService.sendFromTemplate({
+          tenantId: updated.tenantId,
+          key: 'ORDER_CANCELLED',
+          userId,
+          emailTo: updated.email,
+          type: 'ORDER',
+          link: `/account/orders`,
+          vars: {
+            customer_name:
+              updated.shippingAddress?.name ||
+              updated.customerName ||
+              updated.email ||
+              '',
+            order_number: updated.number,
+            total_amount: `৳${Number(updated.total || 0).toLocaleString('en-BD')}`,
+            store_name: tenant?.name || 'Store',
+            payment_method: String(updated.paymentMethod || '—'),
+          },
+        });
+      } catch (err) {
+        this.logger.error('Failed to send cancel notification', err);
+      }
+    })();
+
+    return ResponseHelper.success(updated, 'Order cancelled successfully');
   }
 }
 

@@ -1,5 +1,28 @@
 import { apiClient, ApiResponse } from './api-client';
 
+export interface NotificationTemplateVariable {
+  tag: string;
+  name: string;
+  description: string;
+  example: string;
+}
+
+export interface NotificationTemplateDto {
+  id: string;
+  key: string;
+  event: string;
+  group: string;
+  description: string;
+  email: boolean;
+  inApp: boolean;
+  emailSubject: string;
+  emailBody: string;
+  inAppTitle: string;
+  inAppMessage: string;
+  variables: NotificationTemplateVariable[];
+  updatedAt?: string;
+}
+
 export interface NotificationItem {
   id: string;
   tenantId: string;
@@ -99,6 +122,39 @@ class NotificationService {
       console.error('Failed to delete notification:', error);
       return false;
     }
+  }
+
+  /** Owner: list notification event templates (DB only — no mock). */
+  async getTemplates(): Promise<NotificationTemplateDto[]> {
+    const res = await apiClient.get<ApiResponse<NotificationTemplateDto[]>>(
+      '/owner/notification-templates',
+    );
+    if (!Array.isArray(res?.data)) {
+      throw new Error('Failed to load notification templates');
+    }
+    return res.data;
+  }
+
+  /** Owner: update template channels / copy. */
+  async updateTemplate(
+    id: string,
+    payload: {
+      email?: boolean;
+      inApp?: boolean;
+      subject?: string;
+      body?: string;
+      inAppTitle?: string;
+      inAppMessage?: string;
+    },
+  ): Promise<NotificationTemplateDto> {
+    const res = await apiClient.patch<ApiResponse<NotificationTemplateDto>>(
+      `/owner/notification-templates/${encodeURIComponent(id)}`,
+      payload,
+    );
+    if (!res?.data?.id) {
+      throw new Error('Failed to update notification template');
+    }
+    return res.data;
   }
 }
 

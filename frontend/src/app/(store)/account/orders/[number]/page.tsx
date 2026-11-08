@@ -4,6 +4,7 @@ import React, { use, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useStore } from '@/contexts/StoreContext';
+import { useTenant } from '@/contexts/TenantContext';
 import {
   CancelOrderModal,
   OrderDetailHeader,
@@ -14,6 +15,11 @@ import {
   OrderPaymentCard,
   OrderActivityCard,
 } from '@/components/store/account/orders';
+import { orderService } from '@/services/order-service';
+import {
+  downloadOrderInvoicePdf,
+  resolveInvoiceStore,
+} from '@/utils/order-invoice';
 
 interface OrderDetailPageProps {
   params: Promise<{ number: string }>;
@@ -21,9 +27,12 @@ interface OrderDetailPageProps {
 
 export default function AccountOrderDetailPage({ params }: OrderDetailPageProps) {
   const { number } = use(params);
-  const { orders, cancelOrder, returns } = useStore();
+  const { orders, returns, refreshOrders } = useStore();
+  const { tenant } = useTenant();
   const order = orders.find((o) => o.number === number || o.id === number);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
 
   if (!order) {
     return (
@@ -40,6 +49,38 @@ export default function AccountOrderDetailPage({ params }: OrderDetailPageProps)
   const canReturn = order.status === 'delivered';
   const existingReturn = returns.find((r) => r.orderNumber === order.number);
 
+  const handleDownloadInvoice = async () => {
+    try {
+      setInvoiceLoading(true);
+      await downloadOrderInvoicePdf(order, resolveInvoiceStore(tenant));
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not generate PDF invoice. Please try again.');
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
+  const handleCancel = async (orderId: string) => {
+    try {
+      setCancelling(true);
+      await orderService.cancelCustomerOrder(order.number || orderId);
+      await refreshOrders?.();
+      setConfirmCancel(false);
+      toast.success(
+        order.paymentStatus === 'paid'
+          ? 'Order cancelled. If you already paid via bKash/Nagad, the store will refund you manually.'
+          : 'Order cancelled',
+      );
+    } catch (err: any) {
+      toast.error(
+        err?.response?.data?.message || err?.message || 'Could not cancel this order',
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
     <div>
       {/* Top Header & Quick Actions */}
@@ -48,8 +89,9 @@ export default function AccountOrderDetailPage({ params }: OrderDetailPageProps)
         canReturn={canReturn}
         canCancel={canCancel}
         hasExistingReturn={Boolean(existingReturn)}
-        onDownloadInvoice={() => toast.success(`Invoice ${order.number}.pdf downloaded`)}
+        onDownloadInvoice={handleDownloadInvoice}
         onRequestCancel={() => setConfirmCancel(true)}
+        invoiceLoading={invoiceLoading}
       />
 
       {/* Progress & Live Tracking Status */}
@@ -78,6 +120,7 @@ export default function AccountOrderDetailPage({ params }: OrderDetailPageProps)
           <OrderPaymentCard
             paymentMethod={order.paymentMethod}
             paymentStatus={order.paymentStatus}
+            order={order}
           />
           <OrderActivityCard
             timeline={order.timeline}
@@ -90,11 +133,9 @@ export default function AccountOrderDetailPage({ params }: OrderDetailPageProps)
       <CancelOrderModal
         isOpen={confirmCancel}
         order={order}
-        onClose={() => setConfirmCancel(false)}
-        onConfirm={(orderId) => {
-          cancelOrder(orderId, 'Customer');
-          toast.success('Order cancelled');
-        }}
+        busy={cancelling}
+        onClose={() => !cancelling && setConfirmCancel(false)}
+        onConfirm={handleCancel}
       />
     </div>
   );

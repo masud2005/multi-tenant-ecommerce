@@ -2,7 +2,13 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../shared/mail/email-service';
 import { NotificationGateway } from './notification.gateway';
-import { SendNotificationOptions, QueryNotificationDto } from './dto/notification.dto';
+import {
+  SendNotificationOptions,
+  SendFromTemplateOptions,
+  TemplateVarMap,
+  QueryNotificationDto,
+} from './dto/notification.dto';
+import { DEFAULT_NOTIFICATION_TEMPLATES } from './notification-template.defaults';
 
 @Injectable()
 export class NotificationService {
@@ -13,6 +19,123 @@ export class NotificationService {
     private readonly emailService: EmailService,
     private readonly notificationGateway: NotificationGateway,
   ) {}
+
+  /** Replace {{var}} tokens. Missing values become empty string (no fake defaults). */
+  renderTemplate(text: string | null | undefined, vars: TemplateVarMap = {}) {
+    const source = String(text || '');
+    return source.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, rawKey: string) => {
+      const key = rawKey.trim();
+      const val = vars[key];
+      if (val === null || val === undefined) return '';
+      return String(val);
+    });
+  }
+
+  private toEmailHtml(body: string) {
+    const escaped = body
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    return `<div style="font-family:system-ui,sans-serif;line-height:1.55;color:#1a1a1a;white-space:pre-wrap">${escaped}</div>`;
+  }
+
+  /**
+   * Ensure template row exists for tenant+key (from canonical defaults only).
+   * Does not invent content at send-time beyond seeded definitions.
+   */
+  private async resolveTemplate(tenantId: string, key: string) {
+    let row = await this.prisma.notificationTemplate.findUnique({
+      where: { tenantId_key: { tenantId, key } },
+    });
+    if (row) return row;
+
+    const def = DEFAULT_NOTIFICATION_TEMPLATES.find((d) => d.key === key);
+    if (!def) return null;
+
+    try {
+      row = await this.prisma.notificationTemplate.create({
+        data: {
+          tenantId,
+          key: def.key,
+          event: def.event,
+          group: def.group,
+          description: def.description,
+          email: def.email,
+          inApp: def.inApp,
+          sms: false,
+          push: false,
+          subject: def.subject,
+          body: def.body,
+          inAppTitle: def.inAppTitle,
+          inAppMessage: def.inAppMessage,
+          variables: def.variables,
+        },
+      });
+    } catch {
+      row = await this.prisma.notificationTemplate.findUnique({
+        where: { tenantId_key: { tenantId, key } },
+      });
+    }
+    return row;
+  }
+
+  /**
+   * Send using a DB notification template. Respects email/inApp toggles.
+   * If template is missing → no-op (no mock/fallback content).
+   */
+  async sendFromTemplate(options: SendFromTemplateOptions) {
+    const {
+      tenantId,
+      key,
+      userId,
+      emailTo,
+      type = 'SYSTEM',
+      link,
+      vars = {},
+    } = options;
+
+    const template = await this.resolveTemplate(tenantId, key);
+    if (!template) {
+      this.logger.warn(
+        `Notification template "${key}" not found for tenant ${tenantId} — skipped`,
+      );
+      return null;
+    }
+
+    const title = this.renderTemplate(template.inAppTitle || template.event, vars);
+    const message = this.renderTemplate(
+      template.inAppMessage || template.body || '',
+      vars,
+    );
+    const subject = this.renderTemplate(
+      template.subject || template.event,
+      vars,
+    );
+    const body = this.renderTemplate(template.body || '', vars);
+
+    const wantsInApp = Boolean(template.inApp) && Boolean(userId);
+    const wantsEmail = Boolean(template.email) && Boolean(emailTo?.trim());
+
+    if (!wantsInApp && !wantsEmail) {
+      return null;
+    }
+
+    return this.send({
+      tenantId,
+      userId: wantsInApp ? userId : undefined,
+      title: title || template.event,
+      message: message || title || template.event,
+      type,
+      link,
+      email: wantsEmail
+        ? {
+            to: emailTo!.trim(),
+            subject: subject || template.event,
+            html: this.toEmailHtml(body || subject || template.event),
+          }
+        : undefined,
+    });
+  }
 
   /**
    * Send notification: optional in-app + socket (when userId is a real User),

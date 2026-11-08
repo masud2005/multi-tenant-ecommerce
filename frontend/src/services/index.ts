@@ -7,7 +7,6 @@ export * from './customer-service';
 export * from './return-service';
 export * from './review-service';
 export * from './analytics-service';
-export * from './admin-service';
 export * from './category-service';
 export * from './brand-service';
 export * from './collection-service';

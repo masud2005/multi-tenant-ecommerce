@@ -576,28 +576,31 @@ export class ChatService {
     messageText: string,
   ) {
     try {
-      const staffMembers = await this.prisma.tenantMember.findMany({
+      const truncated =
+        messageText.length > 60 ? `${messageText.slice(0, 57)}...` : messageText;
+
+      const staffWithUsers = await this.prisma.tenantMember.findMany({
         where: {
           tenantId,
           deletedAt: null,
           status: 'active',
         },
+        include: { user: true },
       });
-
-      const truncated =
-        messageText.length > 60 ? `${messageText.slice(0, 57)}...` : messageText;
-
-      for (const member of staffMembers) {
-        if (member.userId) {
-          await this.notificationService.send({
-            tenantId,
-            userId: member.userId,
-            title: `New Message from ${senderName}`,
-            message: `"${truncated}"`,
-            type: 'SYSTEM',
-            link: `/admin/chat?id=${conversationId}`,
-          });
-        }
+      for (const member of staffWithUsers) {
+        if (!member.userId) continue;
+        await this.notificationService.sendFromTemplate({
+          tenantId,
+          key: 'NEW_SUPPORT_MESSAGE',
+          userId: member.userId,
+          emailTo: member.user?.email,
+          type: 'SYSTEM',
+          link: `/admin/messages?id=${conversationId}`,
+          vars: {
+            customer_name: senderName,
+            message_preview: truncated,
+          },
+        });
       }
     } catch (err) {
       this.logger.error('Failed to dispatch chat notification', err);

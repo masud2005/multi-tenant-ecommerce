@@ -125,7 +125,7 @@ export function StoreFooter() {
         </div>
         <div className="mt-14 flex flex-col gap-6 border-t border-canvas/15 pt-8 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            {(['bkash', 'nagad', 'sslcommerz', 'stripe', 'cod'] as const).map((m) => (
+            {(['bkash', 'nagad', 'cod'] as const).map((m) => (
               <PaymentMark key={m} method={m} />
             ))}
           </div>

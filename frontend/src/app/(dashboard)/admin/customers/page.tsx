@@ -369,7 +369,43 @@ function CustomersContent() {
               variant="secondary"
               size="sm"
               disabled={loading || rows.length === 0}
-              onClick={() => toast.success(`Exported ${rows.length} customers list`)}
+              onClick={() => {
+                const headers = [
+                  'Name',
+                  'Email',
+                  'Phone',
+                  'Status',
+                  'Orders',
+                  'Total Spent',
+                  'Tags',
+                ];
+                const csvRows = [headers.join(',')];
+                for (const c of rows) {
+                  csvRows.push(
+                    [
+                      `"${(c.name || '').replace(/"/g, '""')}"`,
+                      `"${(c.email || '').replace(/"/g, '""')}"`,
+                      `"${(c.phone || '').replace(/"/g, '""')}"`,
+                      `"${c.status || ''}"`,
+                      `"${c.orders ?? 0}"`,
+                      `"${c.spent ?? 0}"`,
+                      `"${(c.tags || []).join('; ').replace(/"/g, '""')}"`,
+                    ].join(','),
+                  );
+                }
+                const blob = new Blob([csvRows.join('\n')], {
+                  type: 'text/csv;charset=utf-8;',
+                });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `customers_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                toast.success(`Exported ${rows.length} customers`);
+              }}
             >
               <Download className="h-4 w-4" aria-hidden /> Export
             </GuardedButton>

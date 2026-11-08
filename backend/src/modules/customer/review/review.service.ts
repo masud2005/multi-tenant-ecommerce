@@ -277,25 +277,30 @@ export class ReviewService {
 
     (async () => {
       try {
-        const staffMembers = await this.prisma.tenantMember.findMany({
+        const staffWithUsers = await this.prisma.tenantMember.findMany({
           where: {
             tenantId: product.tenantId || resolvedTenantId,
             deletedAt: null,
             status: 'active',
           },
+          include: { user: true },
         });
-
-        for (const member of staffMembers) {
-          if (member.userId) {
-            await this.notificationService.send({
-              tenantId: product.tenantId || resolvedTenantId,
-              userId: member.userId,
-              title: `New Review on "${product.title}"`,
-              message: `${dto.author.trim()} rated ${dto.rating} ★: "${trimmedBody.slice(0, 80)}"`,
-              type: 'SYSTEM',
-              link: `/admin/reviews`,
-            });
-          }
+        for (const member of staffWithUsers) {
+          if (!member.userId) continue;
+          await this.notificationService.sendFromTemplate({
+            tenantId: product.tenantId || resolvedTenantId,
+            key: 'NEW_REVIEW',
+            userId: member.userId,
+            emailTo: member.user?.email,
+            type: 'SYSTEM',
+            link: `/admin/reviews`,
+            vars: {
+              customer_name: dto.author.trim(),
+              product_title: product.title,
+              review_rating: String(dto.rating),
+              review_text: trimmedBody.slice(0, 120),
+            },
+          });
         }
       } catch (err) {
         this.logger.error('Failed to dispatch review notification', err);

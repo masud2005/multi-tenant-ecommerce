@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import { Monitor, Smartphone, ExternalLink, RotateCw } from 'lucide-react';
 import { useTenant } from '@/contexts/TenantContext';
 import { useStore } from '@/contexts/StoreContext';
-import { products as seedProducts } from '@/data/products';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { cn } from '@/utils/cn';
 import type { TenantTheme, ThemeSection } from '@/types/theme';
@@ -147,20 +146,19 @@ export function ThemePreviewCanvas({ theme, focus = 'landing' }: ThemePreviewCan
 
   const storeName = tenant?.name || 'Store';
 
-  // Ensure products are published so Bestsellers & NewArrivals sections render in preview
+  // Use real store products only — empty catalog means empty product sections in preview
   const displayProducts = useMemo(() => {
-    const base = products && products.length > 0 ? products : seedProducts;
-    return base.map((p) => ({
+    if (!products || products.length === 0) return [];
+    return products.map((p) => ({
       ...p,
       status: 'published' as const,
       isNew: p.isNew ?? true,
     }));
   }, [products]);
 
-  // Ensure recentlyViewed has at least one item for the Recommended section to preview
   const displayRecentlyViewed = useMemo(() => {
     if (recentlyViewed && recentlyViewed.length > 0) return recentlyViewed;
-    return displayProducts.length > 0 ? [displayProducts[0].id] : ['seed-1'];
+    return displayProducts.length > 0 ? [displayProducts[0].id] : [];
   }, [recentlyViewed, displayProducts]);
 
   // Active theme sections sorted by orderIndex

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useStore } from '@/contexts/StoreContext';
-import { brands, collections } from '@/data/products';
 import { emptyFilters, type FilterState } from '../ShopFilters';
 import type { Sort, ActiveChip } from '../view';
 import { searchProducts } from '@/utils/search';
@@ -148,12 +147,11 @@ export function useShopProducts(mode: ShopMode = 'shop', slug?: string) {
       : selectedCatObj;
   const collection: CollectionItem | undefined =
     mode === 'collection'
-      ? dbCollection || (storeCollections || (collections as CollectionItem[])).find((c) => c.slug === slug)
+      ? dbCollection ||
+        (storeCollections || []).find((c) => c.slug === slug)
       : undefined;
   const brand: BrandItem | undefined =
-    mode === 'brand'
-      ? dbBrand || (brands as BrandItem[]).find((b) => b.slug === slug)
-      : undefined;
+    mode === 'brand' ? dbBrand || undefined : undefined;
 
   // 1. Filter base products list based on view mode
   const { base, suggestion } = useMemo(() => {

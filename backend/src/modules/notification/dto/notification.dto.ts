@@ -45,3 +45,20 @@ export interface SendNotificationOptions {
     html: string;
   };
 }
+
+export type TemplateVarMap = Record<
+  string,
+  string | number | null | undefined
+>;
+
+export interface SendFromTemplateOptions {
+  tenantId: string;
+  /** Canonical template key, e.g. NEW_ORDER */
+  key: string;
+  userId?: string;
+  /** Recipient email — required if template.email is enabled */
+  emailTo?: string | null;
+  type?: NotificationType | string;
+  link?: string;
+  vars?: TemplateVarMap;
+}

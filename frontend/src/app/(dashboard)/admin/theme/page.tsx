@@ -15,66 +15,35 @@ import {
   ThemeVersionHistory,
   ThemePreviewCanvas,
   LandingTemplateStudio,
-  getEcommerceThemePreset,
-  DEFAULT_LIGHT_THEME_ID,
-  applyEcommerceTheme,
 } from '@/components/dashboard/theme';
 import { cn } from '@/utils/cn';
 import type { TenantTheme, ThemeSection, ThemeVersion } from '@/types/theme';
-
-function createFallbackTheme(): TenantTheme {
-  const defaultPreset = getEcommerceThemePreset(DEFAULT_LIGHT_THEME_ID);
-  return {
-    id: 'theme-default',
-    tenantId: 'tenant-1',
-    name: defaultPreset.name,
-    status: 'PUBLISHED',
-    isLive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    primaryColor: defaultPreset.colors.accent,
-    secondaryColor: defaultPreset.colors.accentForeground,
-    accentColor: defaultPreset.colors.accent,
-    canvasColor: defaultPreset.colors.background,
-    surfaceColor: defaultPreset.colors.card,
-    inkColor: defaultPreset.colors.foreground,
-    fontHeading: defaultPreset.fontHeading,
-    fontBody: defaultPreset.fontBody,
-    borderRadius: defaultPreset.borderRadius,
-    cardStyle: defaultPreset.cardStyle,
-    sections: [
-      { id: 'sec-hero', sectionType: 'hero', label: 'Hero Banner', orderIndex: 0, isVisible: true },
-      { id: 'sec-featured', sectionType: 'featured-products', label: 'Featured Products', orderIndex: 1, isVisible: true },
-      { id: 'sec-categories', sectionType: 'categories-grid', label: 'Curated Categories', orderIndex: 2, isVisible: true },
-      { id: 'sec-story', sectionType: 'brand-story', label: 'Artisanal Heritage Story', orderIndex: 3, isVisible: true },
-      { id: 'sec-newsletter', sectionType: 'newsletter', label: 'VIP Newsletter Club', orderIndex: 4, isVisible: true },
-    ],
-    versions: [],
-  };
-}
 
 export default function AdminThemePage() {
   const [theme, setTheme] = useState<TenantTheme | null>(null);
   const [activeTab, setActiveTab] = useState<'styling' | 'landing'>('landing');
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
   const [dirty, setDirty] = useState<boolean>(false);
 
-  // ─── Load theme data (single API call with graceful frontend fallback) ─────────
+  // ─── Load theme data ───────────────────────────────────────────────────────────
   const loadThemeData = useCallback(async () => {
     try {
       setIsLoading(true);
+      setLoadError(null);
       const res = await themeService.getThemeData();
       if (res.success && res.data?.liveTheme) {
         setTheme(res.data.liveTheme);
       } else {
-        setTheme(createFallbackTheme());
+        setTheme(null);
+        setLoadError('Unable to load store theme.');
       }
     } catch {
-      // Offline / backend not running fallback: ensure 100% frontend usability
-      setTheme(createFallbackTheme());
+      setTheme(null);
+      setLoadError('Unable to load store theme. Check your connection and try again.');
     } finally {
       setIsLoading(false);
       setDirty(false);
@@ -113,11 +82,11 @@ export default function AdminThemePage() {
         setTheme((prev) =>
           prev ? { ...prev, ...res.data, versions: prev.versions } : null
         );
+        return true;
       }
-      return true;
+      return false;
     } catch {
-      // Even if backend fails, local draft persisted successfully
-      return true;
+      return false;
     }
   };
 
@@ -145,31 +114,30 @@ export default function AdminThemePage() {
       setIsPublishing(true);
 
       if (dirty) {
-        await persistDraft(theme);
+        const saved = await persistDraft(theme);
+        if (!saved) {
+          toast.error('Failed to save draft before publish. Please try again.');
+          return;
+        }
         setDirty(false);
       }
 
-      try {
-        const res = await themeService.publishTheme(theme.id);
-        if (res && res.success && res.data) {
-          const detailRes = await themeService.getThemeById(res.data.id).catch(() => null);
-          const finalTheme = detailRes && detailRes.success && detailRes.data
+      const res = await themeService.publishTheme(theme.id);
+      if (res && res.success && res.data) {
+        const detailRes = await themeService.getThemeById(res.data.id).catch(() => null);
+        const finalTheme =
+          detailRes && detailRes.success && detailRes.data
             ? detailRes.data
             : { ...res.data, versions: theme.versions };
-          setTheme(finalTheme);
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('tanti-theme-published', { detail: finalTheme }));
-          }
-        }
-      } catch {
-        // Local publish fallback
+        setTheme(finalTheme);
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('tanti-theme-published', { detail: theme }));
+          window.dispatchEvent(new CustomEvent('tanti-theme-published', { detail: finalTheme }));
         }
+        setDirty(false);
+        toast.success('Theme published live to storefront!');
+      } else {
+        toast.error('Failed to publish theme. Please try again.');
       }
-
-      setDirty(false);
-      toast.success('Theme published live to storefront!');
     } catch {
       toast.error('Failed to publish theme. Please try again.');
     } finally {
@@ -192,7 +160,7 @@ export default function AdminThemePage() {
         })),
       });
     } catch {
-      // Local optimistic reorder preserved
+      // Local optimistic reorder preserved; API will sync on next save
     }
   };
 
@@ -225,17 +193,20 @@ export default function AdminThemePage() {
       const res = await themeService.restoreVersion(theme.id, ver.id);
       if (res && res.success && res.data) {
         const detailRes = await themeService.getThemeById(res.data.id).catch(() => null);
-        const finalTheme = detailRes && detailRes.success && detailRes.data
-          ? detailRes.data
-          : { ...res.data, versions: theme.versions };
+        const finalTheme =
+          detailRes && detailRes.success && detailRes.data
+            ? detailRes.data
+            : { ...res.data, versions: theme.versions };
         setTheme(finalTheme);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('tanti-theme-published', { detail: finalTheme }));
         }
+        setDirty(false);
+        setHistoryOpen(false);
+        toast.success(`Rolled back to ${ver.version}`);
+      } else {
+        toast.error('Failed to restore version snapshot.');
       }
-      setDirty(false);
-      setHistoryOpen(false);
-      toast.success(`Rolled back to ${ver.version}`);
     } catch {
       toast.error('Failed to restore version snapshot.');
     } finally {
@@ -257,7 +228,7 @@ export default function AdminThemePage() {
     return (
       <ModuleGate module="theme">
         <div className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-3">
-          <p className="text-sm text-ink-muted">Unable to load store theme.</p>
+          <p className="text-sm text-ink-muted">{loadError || 'Unable to load store theme.'}</p>
           <button
             type="button"
             onClick={loadThemeData}

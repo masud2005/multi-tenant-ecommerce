@@ -864,8 +864,9 @@ export const shippingZones = [
   { id: 'z4', name: 'Store pickup', districts: ['Dhanmondi 27 flagship'], rates: [{ name: 'Pickup', rule: 'Free', price: 0 }] },
 ];
 
+/** Courier name options for manual fulfillment (no live success-rate API). */
 export const couriers = [
-  { id: 'pathao', name: 'Pathao Courier', status: 'connected', coverage: '64 districts', avgDays: 2.1, successRate: 96.2 },
-  { id: 'steadfast', name: 'Steadfast', status: 'connected', coverage: '64 districts', avgDays: 2.8, successRate: 94.5 },
-  { id: 'redx', name: 'RedX', status: 'available', coverage: '64 districts', avgDays: 2.6, successRate: 93.8 },
+  { id: 'pathao', name: 'Pathao Courier' },
+  { id: 'steadfast', name: 'Steadfast' },
+  { id: 'redx', name: 'RedX' },
 ];

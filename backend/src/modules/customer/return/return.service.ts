@@ -145,25 +145,34 @@ export class ReturnService {
     // Notify store owner & active staff members about Return Request (In-App)
     (async () => {
       try {
-        const staffMembers = await this.prisma.tenantMember.findMany({
+        const staffWithUsers = await this.prisma.tenantMember.findMany({
           where: {
             tenantId: resolvedTenantId,
             deletedAt: null,
             status: 'active',
           },
+          include: { user: true },
         });
-
-        for (const member of staffMembers) {
-          if (member.userId) {
-            await this.notificationService.send({
-              tenantId: resolvedTenantId,
-              userId: member.userId,
-              title: `Return Requested: Order #${order.number}`,
-              message: `${customerName} requested a return for order #${order.number} (Reason: ${dto.reason.trim()}).`,
-              type: 'ORDER',
-              link: `/admin/returns`,
-            });
-          }
+        const tenant = await this.prisma.tenant.findUnique({
+          where: { id: resolvedTenantId },
+          select: { name: true },
+        });
+        for (const member of staffWithUsers) {
+          if (!member.userId) continue;
+          await this.notificationService.sendFromTemplate({
+            tenantId: resolvedTenantId,
+            key: 'RETURN_REQUESTED',
+            userId: member.userId,
+            emailTo: member.user?.email,
+            type: 'ORDER',
+            link: `/admin/returns`,
+            vars: {
+              customer_name: customerName,
+              order_number: order.number,
+              return_reason: dto.reason.trim(),
+              store_name: tenant?.name || 'Store',
+            },
+          });
         }
       } catch (err) {
         this.logger.error('Failed to dispatch return request notification', err);

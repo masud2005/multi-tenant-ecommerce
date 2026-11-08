@@ -1,15 +1,51 @@
 'use client';
 
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { formatDateTime } from '@/utils/format';
-import type { StockMovementItem } from '@/data/admin';
+import type { StockMovementItem } from '@/services/inventory-service';
 
 interface InventoryLedgerTableProps {
   movements: StockMovementItem[];
+  loading?: boolean;
+  error?: string | null;
 }
 
-export function InventoryLedgerTable({ movements }: InventoryLedgerTableProps) {
+export function InventoryLedgerTable({
+  movements,
+  loading = false,
+  error = null,
+}: InventoryLedgerTableProps) {
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 border-t border-line py-16 text-ink-muted">
+        <Loader2 className="h-6 w-6 animate-spin text-clay" />
+        <span className="text-xs">Loading movement ledger…</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="border-t border-line py-16 text-center">
+        <p className="text-sm font-medium text-ink">Could not load movements</p>
+        <p className="mt-1 text-xs text-ink-muted">{error}</p>
+      </div>
+    );
+  }
+
+  if (movements.length === 0) {
+    return (
+      <div className="border-t border-line py-16 text-center">
+        <p className="text-sm font-medium text-ink">No stock movements yet</p>
+        <p className="mt-1 text-xs text-ink-muted">
+          Adjustments and inventory changes will appear here once recorded.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto border-t border-line">
       <table className="w-full min-w-[760px] text-sm">
@@ -40,13 +76,15 @@ export function InventoryLedgerTable({ movements }: InventoryLedgerTableProps) {
                   'px-3 py-2.5 text-right font-semibold tabular-nums',
                   m.change > 0
                     ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-red-600 dark:text-red-400'
+                    : 'text-red-600 dark:text-red-400',
                 )}
               >
                 {m.change > 0 ? `+${m.change}` : m.change}
               </td>
               <td className="px-3 py-2.5 text-right tabular-nums text-ink font-medium">
-                {m.stockAfter !== undefined ? m.stockAfter : '—'}
+                {m.stockAfter !== undefined && m.stockAfter !== null
+                  ? m.stockAfter
+                  : '—'}
               </td>
               <td className="px-3 py-2.5 text-ink">
                 <div className="flex items-center gap-1.5 flex-wrap">

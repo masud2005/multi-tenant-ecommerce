@@ -96,6 +96,26 @@ export interface AdjustStockResponseData {
   };
 }
 
+export interface StockMovementItem {
+  id: string;
+  at: string;
+  sku: string;
+  product: string;
+  change: number;
+  stockBefore?: number | null;
+  stockAfter?: number | null;
+  reason: string;
+  by: string;
+  ref?: string | null;
+  note?: string | null;
+  variantId?: string;
+}
+
+export interface StockMovementsData {
+  items: StockMovementItem[];
+  total: number;
+}
+
 export const inventoryService = {
   /**
    * Get inventory stock overview, statistics, and variants
@@ -136,6 +156,15 @@ export const inventoryService = {
     return await apiClient.post<ApiResponse<AdjustStockResponseData>>(
       '/owner/inventory/adjust',
       payload,
+    );
+  },
+
+  /** Recent stock movement ledger from DB (no mock). */
+  async getMovements(
+    limit = 100,
+  ): Promise<ApiResponse<StockMovementsData>> {
+    return await apiClient.get<ApiResponse<StockMovementsData>>(
+      `/owner/inventory/movements?limit=${encodeURIComponent(String(limit))}`,
     );
   },
 };

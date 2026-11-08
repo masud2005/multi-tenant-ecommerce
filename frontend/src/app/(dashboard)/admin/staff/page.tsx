@@ -4,8 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { UserPlus, ShieldCheck, Check, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import {
-  staff as seedStaff,
-  roles as seedRoles,
   rolePermissions,
   permissionModules,
   permissionActions,
@@ -22,10 +20,20 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { timeAgo } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { staffService } from '@/services/staff-service';
 import type { PermissionAction, AdminModule } from '@/types/commerce';
+
+const EMPTY_COUNTERS = {
+  total: 0,
+  active: 0,
+  invited: 0,
+  deactivated: 0,
+  seatsUsed: 0,
+  maxSeats: 10,
+};
 
 type Matrix = Record<string, PermissionAction[]>;
 
@@ -96,17 +104,9 @@ export default function AdminStaffPage() {
   const { can } = useAdmin();
   const [tab, setTab] = useState<'members' | 'roles'>('members');
   
-  // State for Staff & Roles with initial fallback seeds
-  const [members, setMembers] = useState<StaffRowItem[]>(seedStaff as StaffRowItem[]);
-  const [roleList, setRoleList] = useState<RoleItem[]>(seedRoles as RoleItem[]);
-  const [counters, setCounters] = useState({
-    total: seedStaff.length,
-    active: seedStaff.filter((s) => s.status === 'active').length,
-    invited: seedStaff.filter((s) => s.status === 'invited').length,
-    deactivated: seedStaff.filter((s) => s.status === 'deactivated').length,
-    seatsUsed: seedStaff.length,
-    maxSeats: 10,
-  });
+  const [members, setMembers] = useState<StaffRowItem[]>([]);
+  const [roleList, setRoleList] = useState<RoleItem[]>([]);
+  const [counters, setCounters] = useState(EMPTY_COUNTERS);
 
   // Modal / Drawer loading and form states
   const [invite, setInvite] = useState(false);
@@ -117,14 +117,8 @@ export default function AdminStaffPage() {
   const [isCreatingRole, setIsCreatingRole] = useState(false);
 
   // Active role & matrix state
-  const [activeRole, setActiveRole] = useState('Store Manager');
-  const [roleMatrices, setRoleMatrices] = useState<Record<string, Matrix>>(() => {
-    const initial: Record<string, Matrix> = {};
-    seedRoles.forEach((r) => {
-      initial[r.name] = buildInitialMatrix(r.name);
-    });
-    return initial;
-  });
+  const [activeRole, setActiveRole] = useState('');
+  const [roleMatrices, setRoleMatrices] = useState<Record<string, Matrix>>({});
 
   // Drawer state for creating new staff role
   const [isNewRoleOpen, setIsNewRoleOpen] = useState(false);
@@ -144,7 +138,7 @@ export default function AdminStaffPage() {
   const [deletingRole, setDeletingRole] = useState<RoleItem | null>(null);
   const [isDeletingRole, setIsDeletingRole] = useState(false);
 
-  // Real-time API data loader
+  // Real-time API data loader — never fall back to seed data
   const loadData = useCallback(async () => {
     try {
       const [membersResult, rolesResult] = await Promise.allSettled([
@@ -155,8 +149,7 @@ export default function AdminStaffPage() {
       if (
         rolesResult.status === 'fulfilled' &&
         rolesResult.value?.success &&
-        Array.isArray(rolesResult.value.data) &&
-        rolesResult.value.data.length > 0
+        Array.isArray(rolesResult.value.data)
       ) {
         const liveRoles: RoleItem[] = rolesResult.value.data.map((r) => ({
           id: r.id,
@@ -169,33 +162,39 @@ export default function AdminStaffPage() {
 
         setRoleList(liveRoles);
 
-        setRoleMatrices((prev) => {
-          const next = { ...prev };
-          liveRoles.forEach((r) => {
-            if (r.permissions && Object.keys(r.permissions).length > 0) {
-              const formatted: Matrix = {};
-              permissionModules.forEach((m) => {
-                formatted[m.key] = (r.permissions?.[m.key] as PermissionAction[]) || [];
-              });
-              next[r.name] = formatted;
-            } else if (!next[r.name]) {
-              next[r.name] = buildInitialMatrix(r.name);
-            }
-          });
-          return next;
+        const nextMatrices: Record<string, Matrix> = {};
+        liveRoles.forEach((r) => {
+          if (r.permissions && Object.keys(r.permissions).length > 0) {
+            const formatted: Matrix = {};
+            permissionModules.forEach((m) => {
+              formatted[m.key] = (r.permissions?.[m.key] as PermissionAction[]) || [];
+            });
+            nextMatrices[r.name] = formatted;
+          } else {
+            nextMatrices[r.name] = buildInitialMatrix(r.name);
+          }
         });
+        setRoleMatrices(nextMatrices);
 
         if (!activeRole || !liveRoles.some((r) => r.name === activeRole)) {
           const firstNonOwner = liveRoles.find((r) => r.name !== 'Owner') || liveRoles[0];
-          if (firstNonOwner) setActiveRole(firstNonOwner.name);
+          setActiveRole(firstNonOwner?.name || '');
         }
+      } else {
+        const msg =
+          rolesResult.status === 'rejected'
+            ? rolesResult.reason?.message
+            : rolesResult.value?.message;
+        toast.error(msg || 'Failed to load roles');
+        setRoleList([]);
+        setRoleMatrices({});
+        setActiveRole('');
       }
 
       if (
         membersResult.status === 'fulfilled' &&
         membersResult.value?.success &&
-        membersResult.value.data?.members &&
-        membersResult.value.data.members.length > 0
+        Array.isArray(membersResult.value.data?.members)
       ) {
         const liveMembers: StaffRowItem[] = membersResult.value.data.members.map((m) => ({
           id: m.id,
@@ -211,12 +210,30 @@ export default function AdminStaffPage() {
         }));
 
         setMembers(liveMembers);
-        if (membersResult.value.data.counters) {
-          setCounters(membersResult.value.data.counters);
-        }
+        setCounters(membersResult.value.data.counters ?? {
+          ...EMPTY_COUNTERS,
+          total: liveMembers.length,
+          seatsUsed: liveMembers.length,
+          active: liveMembers.filter((s) => s.status === 'active').length,
+          invited: liveMembers.filter((s) => s.status === 'invited').length,
+          deactivated: liveMembers.filter((s) => s.status === 'deactivated').length,
+        });
+      } else {
+        const msg =
+          membersResult.status === 'rejected'
+            ? membersResult.reason?.message
+            : membersResult.value?.message;
+        toast.error(msg || 'Failed to load staff members');
+        setMembers([]);
+        setCounters(EMPTY_COUNTERS);
       }
-    } catch {
-      // Graceful fallback to seed data
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to load staff data');
+      setMembers([]);
+      setRoleList([]);
+      setRoleMatrices({});
+      setActiveRole('');
+      setCounters(EMPTY_COUNTERS);
     }
   }, [activeRole]);
 
@@ -382,7 +399,7 @@ export default function AdminStaffPage() {
 
       if (activeRole === deletingRole.name) {
         const remaining = roleList.filter((r) => r.id !== deletingRole.id);
-        setActiveRole(remaining[0]?.name || 'Store Manager');
+        setActiveRole(remaining[0]?.name || '');
       }
 
       toast.success(`Role "${deletingRole.name}" deleted successfully`);
@@ -631,116 +648,144 @@ export default function AdminStaffPage() {
         {/* 1. Members Tab with serial-wise aligned columns in table */}
         {tab === 'members' && (
           <Panel flush>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-line bg-canvas/60 text-xs font-medium text-ink-muted">
-                    <th scope="col" className="px-5 py-3">Member</th>
-                    <th scope="col" className="px-5 py-3 w-48">Role</th>
-                    <th scope="col" className="px-5 py-3 w-36">2FA</th>
-                    <th scope="col" className="px-5 py-3 w-36">Status</th>
-                    <th scope="col" className="px-5 py-3 w-36 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {members.map((s) => (
-                    <tr key={s.id} className="hover:bg-subtle/30 transition-colors">
-                      {/* Column 1: Member Info */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-subtle text-xs font-semibold text-ink">
-                            {s.status === 'invited'
-                              ? '@'
-                              : s.name
-                                  .split(' ')
-                                  .map((x) => x[0])
-                                  .join('')}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-ink truncate">{s.name}</p>
-                            <p className="text-xs text-ink-muted truncate">
-                              {s.email}
-                              {s.lastActive && ` · active ${timeAgo(s.lastActive)}`}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Column 2: Role */}
-                      <td className="px-5 py-3.5 whitespace-nowrap text-sm text-ink-soft">
-                        {s.role}
-                      </td>
-
-                      {/* Column 3: 2FA */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        {s.twoFactor ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> 2FA
-                          </span>
-                        ) : (
-                          <span className="text-xs text-ink-muted">No 2FA</span>
-                        )}
-                      </td>
-
-                      {/* Column 4: Status */}
-                      <td className="px-5 py-3.5 whitespace-nowrap">
-                        <Badge
-                          tone={
-                            s.status === 'active'
-                              ? 'success'
-                              : s.status === 'invited'
-                              ? 'info'
-                              : 'neutral'
-                          }
-                          dot
-                        >
-                          {s.status}
-                        </Badge>
-                      </td>
-
-                      {/* Column 5: Action */}
-                      <td className="px-5 py-3.5 whitespace-nowrap text-right">
-                        {!s.isOwner && s.role !== 'Owner' ? (
-                          <div className="inline-flex items-center justify-end gap-1">
-                            <GuardedButton
-                              module="staff"
-                              action="update"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleToggleMemberStatus(s)}
-                            >
-                              {s.status === 'invited'
-                                ? 'Resend'
-                                : s.status === 'active'
-                                ? 'Deactivate'
-                                : 'Reactivate'}
-                            </GuardedButton>
-                            <GuardedButton
-                              module="staff"
-                              action="delete"
-                              size="sm"
-                              variant="ghost"
-                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                              title="Remove staff member"
-                              onClick={() => handleRemoveMember(s)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </GuardedButton>
-                          </div>
-                        ) : (
-                          <span className="inline-block px-3 text-xs text-ink-muted">—</span>
-                        )}
-                      </td>
+            {members.length === 0 ? (
+              <EmptyState
+                icon={UserPlus}
+                title="No staff members yet"
+                description="Invite teammates to help manage your store. They’ll appear here once invited."
+                action={
+                  <GuardedButton
+                    module="staff"
+                    action="create"
+                    size="sm"
+                    onClick={() => setInvite(true)}
+                  >
+                    <UserPlus className="h-4 w-4" aria-hidden /> Invite staff
+                  </GuardedButton>
+                }
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-line bg-canvas/60 text-xs font-medium text-ink-muted">
+                      <th scope="col" className="px-5 py-3">Member</th>
+                      <th scope="col" className="px-5 py-3 w-48">Role</th>
+                      <th scope="col" className="px-5 py-3 w-36">2FA</th>
+                      <th scope="col" className="px-5 py-3 w-36">Status</th>
+                      <th scope="col" className="px-5 py-3 w-36 text-right">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {members.map((s) => (
+                      <tr key={s.id} className="hover:bg-subtle/30 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-subtle text-xs font-semibold text-ink">
+                              {s.status === 'invited'
+                                ? '@'
+                                : s.name
+                                    .split(' ')
+                                    .map((x) => x[0])
+                                    .join('')}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-ink truncate">{s.name}</p>
+                              <p className="text-xs text-ink-muted truncate">
+                                {s.email}
+                                {s.lastActive && ` · active ${timeAgo(s.lastActive)}`}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 whitespace-nowrap text-sm text-ink-soft">
+                          {s.role}
+                        </td>
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          {s.twoFactor ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                              <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> 2FA
+                            </span>
+                          ) : (
+                            <span className="text-xs text-ink-muted">No 2FA</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          <Badge
+                            tone={
+                              s.status === 'active'
+                                ? 'success'
+                                : s.status === 'invited'
+                                ? 'info'
+                                : 'neutral'
+                            }
+                            dot
+                          >
+                            {s.status}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-3.5 whitespace-nowrap text-right">
+                          {!s.isOwner && s.role !== 'Owner' ? (
+                            <div className="inline-flex items-center justify-end gap-1">
+                              <GuardedButton
+                                module="staff"
+                                action="update"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleToggleMemberStatus(s)}
+                              >
+                                {s.status === 'invited'
+                                  ? 'Resend'
+                                  : s.status === 'active'
+                                  ? 'Deactivate'
+                                  : 'Reactivate'}
+                              </GuardedButton>
+                              <GuardedButton
+                                module="staff"
+                                action="delete"
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                title="Remove staff member"
+                                onClick={() => handleRemoveMember(s)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </GuardedButton>
+                            </div>
+                          ) : (
+                            <span className="inline-block px-3 text-xs text-ink-muted">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Panel>
         )}
 
         {/* 2. Roles & Permissions Tab */}
         {tab === 'roles' && (
+          roleList.length === 0 ? (
+            <Panel flush>
+              <EmptyState
+                icon={ShieldCheck}
+                title="No roles yet"
+                description="Create a custom role to define module-level access for your staff."
+                action={
+                  <GuardedButton
+                    module="staff"
+                    action="create"
+                    size="sm"
+                    onClick={handleOpenNewRoleDrawer}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> New role
+                  </GuardedButton>
+                }
+              />
+            </Panel>
+          ) : (
           <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
             {/* Left side: Roles List */}
             <Panel
@@ -817,7 +862,7 @@ export default function AdminStaffPage() {
 
             {/* Right side: Active Role Permissions Table */}
             <Panel
-              title={`${activeRole} permissions`}
+              title={`${activeRole || 'Role'} permissions`}
               description={
                 activeRole === 'Owner' || activeRole === 'Administrator'
                   ? 'System default roles have predefined access. Custom role permissions can be tailored freely.'
@@ -847,7 +892,7 @@ export default function AdminStaffPage() {
                     </>
                   )}
 
-                  {!locked && (
+                  {!locked && activeRole && (
                     <Button
                       size="sm"
                       loading={isSavingPermissions}
@@ -911,6 +956,7 @@ export default function AdminStaffPage() {
               </div>
             </Panel>
           </div>
+          )
         )}
 
         {/* Right-Side Drawer: Create New Staff Role */}

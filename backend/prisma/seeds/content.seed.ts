@@ -49,7 +49,7 @@ const POLICIES: PolicySeed[] = [
       },
       {
         heading: 'How refunds work',
-        body: 'Once we receive and inspect your item (usually within 2 working days), refunds are issued to your original payment method: bKash/Nagad within 3 days, cards within 7–10 days.',
+        body: 'Once we receive and inspect your item (usually within 2 working days), refunds are sent manually to your original bKash or Nagad number within a few working days. COD orders are not charged if the return is accepted before payment.',
       },
       {
         heading: 'Exchanges',
@@ -64,7 +64,7 @@ const POLICIES: PolicySeed[] = [
     sections: [
       {
         heading: 'What we collect',
-        body: 'Your name, contact details, delivery addresses, order history and — if you consent — browsing behaviour to improve recommendations. We never store full card numbers; payments are processed by certified gateways.',
+        body: 'Your name, contact details, delivery addresses, order history and — if you consent — browsing behaviour to improve recommendations. We do not store card numbers; store payments are cash on delivery or manual bKash/Nagad only.',
       },
       {
         heading: 'How we use it',
@@ -162,14 +162,14 @@ const FAQ_ITEMS: { category: string; question: string; answer: string; order: nu
     category: 'Payments',
     question: 'Which payment methods do you accept?',
     answer:
-      'bKash, Nagad, Visa/Mastercard/Amex and mobile banking via SSLCommerz, and cash on delivery where available.',
+      'Cash on delivery (COD), and manual bKash or Nagad send-money. Enter your sender number and TrxID at checkout; the store verifies the payment before fulfilling. There is no card or online payment gateway.',
     order: 3,
   },
   {
     category: 'Payments',
-    question: 'My payment was deducted but the order failed. What now?',
+    question: 'I sent bKash/Nagad but my order is still pending. What now?',
     answer:
-      'Do not worry — we verify every transaction with the gateway. If the payment is confirmed, your order will be placed automatically within 30 minutes; otherwise the amount is reversed within 5–7 working days.',
+      'We verify every TrxID manually against our bKash/Nagad statement. Once confirmed, your order moves to confirmed/processing. If the TrxID cannot be verified, the payment is rejected and you will be notified — contact the store with your order number if you need a refund of a mistaken send.',
     order: 4,
   },
   {
@@ -190,7 +190,7 @@ const FAQ_ITEMS: { category: string; question: string; answer: string; order: nu
     category: 'Returns',
     question: 'What is your return policy?',
     answer:
-      'Unworn items with tags can be returned within 7 days of delivery. Sarees and jewellery can only be returned if damaged. Refunds go to your original payment method.',
+      'Unworn items with tags can be returned within 7 days of delivery. Sarees and jewellery can only be returned if damaged. Approved refunds are sent manually via bKash/Nagad (or nothing is collected for COD).',
     order: 7,
   },
   {
