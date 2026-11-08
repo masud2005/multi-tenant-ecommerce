@@ -154,7 +154,7 @@ function HeroSection({ config, model, design }: SectionProps) {
   }
 
   return (
-    <section className="relative min-h-[100svh] overflow-hidden bg-canvas">
+    <section className="relative min-h-[90svh] overflow-hidden bg-canvas">
       {slide && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -165,7 +165,7 @@ function HeroSection({ config, model, design }: SectionProps) {
       )}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-canvas/75 via-transparent to-ink/20" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-canvas from-[6%] via-canvas/80 via-[42%] to-transparent to-[74%]" />
-      <div className="relative z-10 flex min-h-[100svh] items-center">
+      <div className="relative z-10 flex min-h-[90svh] items-center">
         <div className="w-full px-4 pb-16 pt-36 sm:px-6 lg:pl-[max(1.5rem,calc((100vw-80rem)/2+2rem))] lg:pr-16">
           <div className="max-w-xl">
             <Eyebrow>{config.heroEyebrow}</Eyebrow>
@@ -409,7 +409,11 @@ function PromoSection({ config, model, design }: SectionProps) {
           <div className="relative min-h-[240px] bg-subtle">
             {model.promoImage && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={model.promoImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <img
+                src={model.promoImage}
+                alt={model.promoImageAlt || ''}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
             )}
           </div>
           <div className="flex flex-col justify-center px-6 py-8 sm:px-10">
@@ -442,7 +446,11 @@ function PromoSection({ config, model, design }: SectionProps) {
         <div className="relative min-h-[280px] overflow-hidden rounded-lg bg-subtle">
           {model.promoImage && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={model.promoImage} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img
+              src={model.promoImage}
+              alt={model.promoImageAlt || ''}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-ink/45 to-transparent" />
           <p className="absolute bottom-8 right-8 max-w-[14rem] text-right font-display text-3xl italic leading-none text-white drop-shadow-md">

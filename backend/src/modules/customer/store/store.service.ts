@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
+import { mergeStoreShippingDefaults } from '../../../common/constants/shipping.constant';
 
 @Injectable()
 export class StoreService {
@@ -31,46 +32,52 @@ export class StoreService {
       throw new NotFoundException('Store information not found');
     }
 
+    // No mock contact/social fallbacks — empty if admin has not configured them
     const contactObj = (tenant.contact as Record<string, any>) || {};
-    const defaultContact = {
-      email: contactObj.email || 'care@tanti.com.bd',
-      phone: contactObj.phone || '09612-826842',
-      whatsapp: contactObj.whatsapp || '+880 1700-000000',
-      address:
-        contactObj.address ||
-        'House 14, Road 27 (old), Dhanmondi, Dhaka 1209',
-      workingHours: contactObj.workingHours || 'Sat–Thu, 10 AM – 9 PM',
-      responseTime:
-        contactObj.responseTime || 'Replies within 2 to 4 working hours',
-      supportTeam: contactObj.supportTeam || `${tenant.name} Care team`,
+    const publicContact = {
+      email: contactObj.email || '',
+      phone: contactObj.phone || '',
+      whatsapp: contactObj.whatsapp || '',
+      address: contactObj.address || '',
+      workingHours: contactObj.workingHours || '',
+      responseTime: contactObj.responseTime || '',
+      supportTeam: contactObj.supportTeam || '',
     };
 
     const socialsObj = (tenant.socials as Record<string, any>) || {};
-    const defaultSocials = {
-      facebook: socialsObj.facebook || 'https://facebook.com/tanti',
-      instagram: socialsObj.instagram || 'https://instagram.com/tanti',
-      twitter: socialsObj.twitter || 'https://twitter.com/tanti',
+    const publicSocials = {
+      facebook: socialsObj.facebook || '',
+      instagram: socialsObj.instagram || '',
+      twitter: socialsObj.twitter || '',
       youtube: socialsObj.youtube || '',
       tiktok: socialsObj.tiktok || '',
+    };
+
+    const existingSettings = (tenant.settings as Record<string, any>) || {};
+    const settings = {
+      ...existingSettings,
+      shipping: mergeStoreShippingDefaults(
+        (existingSettings.shipping as Record<string, any>) || {},
+      ),
     };
 
     const publicData = {
       id: tenant.id,
       name: tenant.name,
       slug: tenant.slug,
-      tagline: tenant.tagline || 'Handloom & Contemporary Bangladeshi Fashion',
-      logo: tenant.logo || '/images/tanti-logo.svg',
-      favicon: tenant.favicon || '/favicon.ico',
+      tagline: tenant.tagline || null,
+      logo: tenant.logo || null,
+      favicon: tenant.favicon || null,
       currency: tenant.currency || 'BDT',
       currencySymbol: tenant.currencySymbol || '৳',
       currencyPosition: tenant.currencyPosition || 'prefix',
-      contact: defaultContact,
-      socials: defaultSocials,
+      contact: publicContact,
+      socials: publicSocials,
       announcement: tenant.announcement,
       announcementEnabled: tenant.announcementEnabled,
       theme: tenant.theme,
       modules: tenant.modules,
-      settings: tenant.settings,
+      settings,
     };
 
     return ResponseHelper.success(

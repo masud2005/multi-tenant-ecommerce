@@ -51,12 +51,10 @@ export function orderTotals(opts: {
   coupon?: Coupon;
   shipping: number;
   cod: boolean;
-  storeCredit?: number;
 }) {
   const discount = couponDiscount(opts.coupon, opts.subtotal);
   const shipping = opts.coupon?.type === 'free_shipping' ? 0 : opts.shipping;
   const codFee = opts.cod ? COD_FEE : 0;
-  const credit = Math.min(opts.storeCredit ?? 0, opts.subtotal - discount + shipping + codFee);
-  const total = opts.subtotal - discount + shipping + codFee - credit;
-  return { discount, shipping, codFee, credit, total };
+  const total = opts.subtotal - discount + shipping + codFee;
+  return { discount, shipping, codFee, total };
 }

@@ -12,9 +12,11 @@ import {
   SECTION_DESIGNS,
   SECTION_LABELS,
   type LandingConfig,
+  type LandingHeroSlide,
   type LandingSectionId,
 } from '@/lib/landing-config';
 import { cn } from '@/utils/cn';
+import { HeroSlidesEditor, PromoImageEditor } from './LandingMediaFields';
 
 const SECTION_COPY: Record<
   LandingSectionId,
@@ -108,6 +110,14 @@ export function LandingTemplateStudio() {
     save(next);
   };
 
+  const saveHeroSlides = (heroSlides: LandingHeroSlide[]) => {
+    commit({ ...draft, heroSlides });
+  };
+
+  const savePromoImage = (patch: Pick<LandingConfig, 'promoImage' | 'promoImageAlt'>) => {
+    commit({ ...draft, ...patch });
+  };
+
   if (editing) {
     const sectionId = editing;
     const setting = draft.designs[sectionId];
@@ -119,7 +129,13 @@ export function LandingTemplateStudio() {
     return (
       <Panel
         title={SECTION_LABELS[sectionId]}
-        description="Choose a design, then edit only this section’s text."
+        description={
+          sectionId === 'hero'
+            ? 'Choose a design, edit copy, and manage hero carousel images.'
+            : sectionId === 'promo'
+              ? 'Choose a design, edit offer copy, and set the offer image.'
+              : 'Choose a design, then edit only this section’s text.'
+        }
         actions={
           <button
             type="button"
@@ -165,6 +181,18 @@ export function LandingTemplateStudio() {
             })}
           </div>
 
+          {sectionId === 'hero' && (
+            <HeroSlidesEditor slides={draft.heroSlides || []} onChange={saveHeroSlides} />
+          )}
+
+          {sectionId === 'promo' && (
+            <PromoImageEditor
+              image={draft.promoImage || ''}
+              alt={draft.promoImageAlt || ''}
+              onChange={savePromoImage}
+            />
+          )}
+
           {fields.length > 0 && (
             <div className="space-y-3 border-t border-line pt-4">
               {fields.map((field) => {
@@ -207,7 +235,7 @@ export function LandingTemplateStudio() {
   return (
     <Panel
       title="Homepage sections"
-      description="Open a section to choose its design and edit its text."
+      description="Open a section to choose its design, edit text, and manage Hero / Offer images."
     >
       <ul className="divide-y divide-line">
         {LANDING_SECTION_IDS.map((sectionId) => {
@@ -226,7 +254,13 @@ export function LandingTemplateStudio() {
                     {SECTION_LABELS[sectionId]}
                   </span>
                   <span className="block text-xs text-ink-muted">
-                    {setting.visible ? active.name : 'Hidden'}
+                    {!setting.visible
+                      ? 'Hidden'
+                      : sectionId === 'hero' && (draft.heroSlides?.length || 0) > 0
+                        ? `${active.name} · ${draft.heroSlides.length} image${draft.heroSlides.length === 1 ? '' : 's'}`
+                        : sectionId === 'promo' && draft.promoImage
+                          ? `${active.name} · custom image`
+                          : active.name}
                   </span>
                 </span>
                 <span className="text-sm font-medium text-ink-muted">Edit</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   Store,
@@ -23,6 +23,9 @@ import {
   Server,
   Building,
   RefreshCw,
+  Upload,
+  Trash2,
+  ImageIcon,
 } from 'lucide-react';
 import { paymentMethods } from '@/data/shipping';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -60,21 +63,24 @@ export default function AdminSettingsPage() {
   const [section, setSection] = useState<SectionId>('Store Profile');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLogoUploading, setIsLogoUploading] = useState(false);
+  const [isLogoRemoving, setIsLogoRemoving] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Store Identity Form State
+  // 1. Store Identity Form State — no mock branding defaults
   const [storeForm, setStoreForm] = useState({
-    name: 'Tanti Fashion',
-    tagline: 'Handloom & Contemporary Bangladeshi Fashion',
-    logo: '/images/tanti-logo.svg',
-    favicon: '/favicon.ico',
+    name: '',
+    tagline: '',
+    logo: '',
+    favicon: '',
     currency: 'BDT',
     currencySymbol: '৳',
     currencyPosition: 'prefix' as 'prefix' | 'suffix',
     timezone: '(GMT+06:00) Dhaka',
     language: 'English',
-    orderNumberFormat: 'TN-{number}',
-    announcement: 'Use EID500 for ৳500 off orders over ৳3,000.',
-    announcementEnabled: true,
+    orderNumberFormat: 'OR-{number}',
+    announcement: '',
+    announcementEnabled: false,
   });
 
   // 2. Public Contact Details Form State
@@ -94,20 +100,20 @@ export default function AdminSettingsPage() {
     instagram: 'https://instagram.com/tanti',
   });
 
-  // 4. Payment Methods State
+  // 4. Payment Methods State — start OFF until owner settings load (avoid fake “enabled” UI)
   const [pm, setPm] = useState<Record<string, boolean>>({
-    bkash: true,
-    nagad: true,
+    bkash: false,
+    nagad: false,
     cod: true,
   });
 
   const [paymentConfig, setPaymentConfig] = useState({
-    bkashNumber: '01700-000000',
+    bkashNumber: '',
     bkashType: 'Personal',
-    bkashEnabled: true,
-    nagadNumber: '01800-000000',
+    bkashEnabled: false,
+    nagadNumber: '',
     nagadType: 'Personal',
-    nagadEnabled: true,
+    nagadEnabled: false,
     codEnabled: true,
   });
 
@@ -143,20 +149,18 @@ export default function AdminSettingsPage() {
           const d = res.data;
           setStoreForm((prev) => ({
             ...prev,
-            name: d.name || prev.name,
-            tagline: d.tagline || prev.tagline,
-            logo: d.logo || prev.logo,
-            favicon: d.favicon || prev.favicon,
+            name: typeof d.name === 'string' ? d.name : '',
+            tagline: typeof d.tagline === 'string' ? d.tagline : '',
+            logo: typeof d.logo === 'string' ? d.logo : '',
+            favicon: typeof d.favicon === 'string' ? d.favicon : '',
             currency: d.currency || prev.currency,
             currencySymbol: d.currencySymbol || prev.currencySymbol,
             currencyPosition: d.currencyPosition || prev.currencyPosition,
             orderNumberFormat:
               d.settings?.orderNumberFormat || prev.orderNumberFormat,
-            announcement: d.announcement || prev.announcement,
-            announcementEnabled:
-              d.announcementEnabled !== undefined
-                ? d.announcementEnabled
-                : prev.announcementEnabled,
+            announcement:
+              typeof d.announcement === 'string' ? d.announcement : '',
+            announcementEnabled: Boolean(d.announcementEnabled),
           }));
 
           if (d.contact) {
@@ -182,9 +186,60 @@ export default function AdminSettingsPage() {
           }
 
           if (d.settings?.payment) {
+            const pay = d.settings.payment;
             setPaymentConfig((prev) => ({
               ...prev,
-              ...d.settings.payment,
+              ...pay,
+              bkashEnabled:
+                typeof pay.bkashEnabled === 'boolean'
+                  ? pay.bkashEnabled
+                  : typeof d.settings?.pm?.bkash === 'boolean'
+                    ? d.settings.pm.bkash
+                    : prev.bkashEnabled,
+              nagadEnabled:
+                typeof pay.nagadEnabled === 'boolean'
+                  ? pay.nagadEnabled
+                  : typeof d.settings?.pm?.nagad === 'boolean'
+                    ? d.settings.pm.nagad
+                    : prev.nagadEnabled,
+              codEnabled:
+                typeof pay.codEnabled === 'boolean'
+                  ? pay.codEnabled
+                  : typeof d.settings?.pm?.cod === 'boolean'
+                    ? d.settings.pm.cod
+                    : prev.codEnabled,
+            }));
+            setPm((prev) => ({
+              ...prev,
+              bkash:
+                typeof pay.bkashEnabled === 'boolean'
+                  ? pay.bkashEnabled
+                  : typeof d.settings?.pm?.bkash === 'boolean'
+                    ? d.settings.pm.bkash
+                    : prev.bkash,
+              nagad:
+                typeof pay.nagadEnabled === 'boolean'
+                  ? pay.nagadEnabled
+                  : typeof d.settings?.pm?.nagad === 'boolean'
+                    ? d.settings.pm.nagad
+                    : prev.nagad,
+              cod:
+                typeof pay.codEnabled === 'boolean'
+                  ? pay.codEnabled
+                  : typeof d.settings?.pm?.cod === 'boolean'
+                    ? d.settings.pm.cod
+                    : prev.cod,
+            }));
+          } else if (d.settings?.pm) {
+            setPm((prev) => ({ ...prev, ...d.settings.pm }));
+            setPaymentConfig((prev) => ({
+              ...prev,
+              bkashEnabled:
+                typeof d.settings.pm.bkash === 'boolean' ? d.settings.pm.bkash : prev.bkashEnabled,
+              nagadEnabled:
+                typeof d.settings.pm.nagad === 'boolean' ? d.settings.pm.nagad : prev.nagadEnabled,
+              codEnabled:
+                typeof d.settings.pm.cod === 'boolean' ? d.settings.pm.cod : prev.codEnabled,
             }));
           }
         }
@@ -202,39 +257,106 @@ export default function AdminSettingsPage() {
     try {
       setIsSaving(true);
 
+      const contactEmail = contactForm.email.trim();
       const payload: any = {
-        name: storeForm.name,
-        tagline: storeForm.tagline,
-        currency: storeForm.currency,
-        currencySymbol: storeForm.currencySymbol,
-        currencyPosition: storeForm.currencyPosition,
-        announcement: storeForm.announcement,
+        name: storeForm.name || undefined,
+        tagline: storeForm.tagline || undefined,
+        logo: storeForm.logo || undefined,
+        favicon: storeForm.favicon || undefined,
+        currency: storeForm.currency || undefined,
+        currencySymbol: storeForm.currencySymbol || undefined,
+        currencyPosition: storeForm.currencyPosition || undefined,
+        announcement: storeForm.announcement ?? '',
         announcementEnabled: storeForm.announcementEnabled,
         contact: {
-          email: contactForm.email,
-          phone: contactForm.phone,
-          whatsapp: contactForm.whatsapp,
-          address: contactForm.address,
-          workingHours: contactForm.workingHours,
-          responseTime: contactForm.responseTime,
-          supportTeam: contactForm.supportTeam,
+          ...(contactEmail ? { email: contactEmail } : {}),
+          phone: contactForm.phone || undefined,
+          whatsapp: contactForm.whatsapp || undefined,
+          address: contactForm.address || undefined,
+          workingHours: contactForm.workingHours || undefined,
+          responseTime: contactForm.responseTime || undefined,
+          supportTeam: contactForm.supportTeam || undefined,
         },
         socials: socialsForm,
         settings: {
           orderNumberFormat: storeForm.orderNumberFormat,
           flags,
-          pm,
-          payment: paymentConfig,
+          pm: {
+            bkash: !!paymentConfig.bkashEnabled,
+            nagad: !!paymentConfig.nagadEnabled,
+            cod: !!paymentConfig.codEnabled,
+          },
+          payment: {
+            bkashNumber: paymentConfig.bkashNumber || '',
+            bkashType: paymentConfig.bkashType || 'Personal',
+            bkashEnabled: !!paymentConfig.bkashEnabled,
+            nagadNumber: paymentConfig.nagadNumber || '',
+            nagadType: paymentConfig.nagadType || 'Personal',
+            nagadEnabled: !!paymentConfig.nagadEnabled,
+            codEnabled: !!paymentConfig.codEnabled,
+          },
         },
       };
 
-      await storeService.updateOwnerSettings(payload);
+      const res = await storeService.updateOwnerSettings(payload);
+      const savedPayment = (res as any)?.data?.settings?.payment;
+      if (section === 'Payments' && !savedPayment) {
+        throw new Error('Payment settings were not saved. Please try again.');
+      }
       await refetchTenant();
       toast.success(`${section} settings saved & published successfully!`);
     } catch (err: any) {
+      console.error('Settings save failed:', err);
       toast.error(err?.message || 'Failed to save settings');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (file: File | null | undefined) => {
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose a valid image file (PNG, JPG, WEBP, SVG)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Logo image must be under 5MB');
+      return;
+    }
+
+    try {
+      setIsLogoUploading(true);
+      const res = await storeService.uploadOwnerLogo(file);
+      const logoUrl =
+        typeof res?.data?.logo === 'string' ? res.data.logo : '';
+      setStoreForm((prev) => ({ ...prev, logo: logoUrl }));
+      await refetchTenant();
+      toast.success('Store logo uploaded — live on the storefront');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to upload store logo');
+    } finally {
+      setIsLogoUploading(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    try {
+      setIsLogoRemoving(true);
+      await storeService.removeOwnerLogo();
+      setStoreForm((prev) => ({ ...prev, logo: '' }));
+      await refetchTenant();
+      toast.success(
+        storeForm.name.trim()
+          ? 'Logo removed — store name will show on the storefront'
+          : 'Logo removed'
+      );
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to remove store logo');
+    } finally {
+      setIsLogoRemoving(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
     }
   };
 
@@ -257,7 +379,7 @@ export default function AdminSettingsPage() {
               </Button>
               <GuardedButton
                 module="settings"
-                action="settings"
+                action="update"
                 size="sm"
                 loading={isSaving}
                 onClick={handleSave}
@@ -325,18 +447,87 @@ export default function AdminSettingsPage() {
                 {/* Brand Identity Card */}
                 <Panel
                   title="Brand Identity & Store Naming"
-                  description="General information about your business shown to customers."
+                  description="Logo and name shown in the storefront header. Logo takes priority; without a logo the store name is shown."
                 >
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div className="sm:col-span-2">
+                      <p className="mb-1.5 text-sm font-medium text-ink">Store logo</p>
+                      <div className="flex flex-col gap-4 rounded-lg border border-line bg-subtle/30 p-4 sm:flex-row sm:items-center">
+                        <div className="flex h-20 w-40 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-line-strong bg-surface">
+                          {storeForm.logo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={storeForm.logo}
+                              alt={storeForm.name || 'Store logo preview'}
+                              className="max-h-16 max-w-full object-contain"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center gap-1 px-3 text-center">
+                              <ImageIcon className="h-5 w-5 text-ink-muted" aria-hidden />
+                              <span className="text-[11px] text-ink-muted">
+                                {storeForm.name.trim()
+                                  ? 'Name will show'
+                                  : 'No logo yet'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <p className="text-xs text-ink-muted">
+                            PNG/SVG · max 5MB · Recommended{' '}
+                            <span className="font-medium text-ink">320 × 80 px</span>
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input
+                              ref={logoInputRef}
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                              className="sr-only"
+                              onChange={(e) =>
+                                handleLogoUpload(e.target.files?.[0])
+                              }
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              loading={isLogoUploading}
+                              disabled={isLogoUploading || isLogoRemoving || isLoading}
+                              onClick={() => logoInputRef.current?.click()}
+                              className="cursor-pointer"
+                            >
+                              <Upload className="h-4 w-4" aria-hidden />
+                              {storeForm.logo ? 'Replace logo' : 'Upload logo'}
+                            </Button>
+                            {storeForm.logo ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                loading={isLogoRemoving}
+                                disabled={isLogoUploading || isLogoRemoving}
+                                onClick={handleLogoRemove}
+                                className="cursor-pointer text-danger hover:text-danger"
+                              >
+                                <Trash2 className="h-4 w-4" aria-hidden />
+                                Remove
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2">
                       <Input
-                        label="Store brand name *"
+                        label="Store brand name"
                         value={storeForm.name}
                         onChange={(e) =>
                           setStoreForm({ ...storeForm, name: e.target.value })
                         }
                         placeholder="e.g. Tanti Fashion"
-                        hint="This is the main public brand name displayed across your website"
+                        hint="Shown in the storefront header when no logo is set. Save Changes to publish name updates."
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -395,7 +586,7 @@ export default function AdminSettingsPage() {
                           orderNumberFormat: e.target.value,
                         })
                       }
-                      placeholder="TN-{number}"
+                      placeholder="OR-{number}"
                       hint="Next order number will look like: TN-10498"
                     />
                   </div>
@@ -502,9 +693,10 @@ export default function AdminSettingsPage() {
                         </div>
                         <Switch
                           checked={paymentConfig.bkashEnabled}
-                          onChange={(v) =>
-                            setPaymentConfig({ ...paymentConfig, bkashEnabled: v })
-                          }
+                          onChange={(v) => {
+                            setPaymentConfig({ ...paymentConfig, bkashEnabled: v });
+                            setPm((prev) => ({ ...prev, bkash: v }));
+                          }}
                           label="Enable bKash"
                           hideLabel
                         />
@@ -549,9 +741,10 @@ export default function AdminSettingsPage() {
                         </div>
                         <Switch
                           checked={paymentConfig.nagadEnabled}
-                          onChange={(v) =>
-                            setPaymentConfig({ ...paymentConfig, nagadEnabled: v })
-                          }
+                          onChange={(v) => {
+                            setPaymentConfig({ ...paymentConfig, nagadEnabled: v });
+                            setPm((prev) => ({ ...prev, nagad: v }));
+                          }}
                           label="Enable Nagad"
                           hideLabel
                         />
@@ -603,9 +796,10 @@ export default function AdminSettingsPage() {
                     </div>
                     <Switch
                       checked={paymentConfig.codEnabled}
-                      onChange={(v) =>
-                        setPaymentConfig({ ...paymentConfig, codEnabled: v })
-                      }
+                      onChange={(v) => {
+                        setPaymentConfig({ ...paymentConfig, codEnabled: v });
+                        setPm((prev) => ({ ...prev, cod: v }));
+                      }}
                       label="Enable COD"
                       hideLabel
                     />
@@ -656,8 +850,8 @@ export default function AdminSettingsPage() {
                   <Select
                     label="Refund payout methods"
                     options={[
-                      'Original payment or store credit',
-                      'Store credit only',
+                      'Original payment method',
+                      'Manual refund review',
                     ]}
                   />
                 </div>
@@ -748,7 +942,7 @@ export default function AdminSettingsPage() {
                 </Button>
                 <GuardedButton
                   module="settings"
-                  action="settings"
+                  action="update"
                   size="sm"
                   loading={isSaving}
                   onClick={handleSave}

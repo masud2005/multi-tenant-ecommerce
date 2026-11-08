@@ -56,9 +56,7 @@ export function returnEventLabel(status: ReturnStatus, r: ReturnRequest): string
     case 'received':
       return 'Item received at warehouse';
     case 'refunded':
-      return r.resolution === 'store_credit'
-        ? `Store credit of ৳${r.amount.toLocaleString('en-IN')} issued`
-        : `Refund of ৳${r.amount.toLocaleString('en-IN')} issued`;
+      return `Refund of ৳${r.amount.toLocaleString('en-IN')} issued`;
     case 'exchanged':
       return 'Replacement shipped';
     default:

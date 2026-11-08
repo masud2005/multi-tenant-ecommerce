@@ -8,7 +8,6 @@ export const mockTenants: Record<string, Tenant> = {
     tagline: 'Handloom & Contemporary Bangladeshi Fashion',
     domain: 'tanti.com.bd',
     customDomain: 'tanti.com.bd',
-    logoUrl: '/images/tanti-logo.svg',
     plan: 'growth',
     planState: 'active',
     currency: {
@@ -45,7 +44,7 @@ export const mockTenants: Record<string, Tenant> = {
       facebook: 'https://facebook.com/tanti',
       instagram: 'https://instagram.com/tanti',
       twitter: 'https://twitter.com/tanti',
-    }
+    },
   },
   'orvio-demo': {
     id: 'tenant-orvio-02',

@@ -70,7 +70,11 @@ export function mapBackendReturnToFrontend(
     details: item.details || '',
     photos: photosArray.length,
     photoUrls: photosArray,
-    resolution: (item.resolution?.toLowerCase() || 'refund') as ReturnResolution,
+    resolution: (() => {
+      const raw = String(item.resolution || 'refund').toLowerCase();
+      if (raw === 'exchange') return 'exchange' as ReturnResolution;
+      return 'refund' as ReturnResolution;
+    })(),
     status: (item.status?.toLowerCase() || 'requested') as ReturnStatus,
     amount: Number(item.amount) || 0,
     inspectionNote: item.inspectionNote || undefined,

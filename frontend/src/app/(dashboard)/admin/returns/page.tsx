@@ -598,8 +598,8 @@ function ReturnsContent() {
                     onClick={() =>
                       handleUpdateStatus(
                         'received',
-                        'Marked as received at warehouse — ready for inspection',
-                        'Returned parcel received at warehouse',
+                        'Received at warehouse — inventory restocked automatically',
+                        'Returned parcel received; sellable stock restored',
                       )
                     }
                   >

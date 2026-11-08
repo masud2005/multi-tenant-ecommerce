@@ -6,6 +6,7 @@ import {
     TenantPlan,
 } from '../generated/client';
 import * as bcrypt from 'bcrypt';
+import { DEFAULT_STORE_SHIPPING } from '../../src/common/constants/shipping.constant';
 
 export async function seedAdmin(prisma: PrismaClient) {
     const ownerEmail = process.env.OWNER_EMAIL || 'owner@gmail.com';
@@ -75,8 +76,46 @@ export async function seedAdmin(prisma: PrismaClient) {
                 instagram: 'https://instagram.com/tanti',
                 twitter: 'https://twitter.com/tanti',
             },
+            settings: {
+                shipping: { ...DEFAULT_STORE_SHIPPING },
+            },
         },
     });
+
+    // Ensure default delivery rates exist (Inside Dhaka ৳70 / Outside ৳150) without wiping other settings
+    const existingSettings =
+        (defaultTenant.settings as Record<string, any> | null) || {};
+    const existingShipping =
+        (existingSettings.shipping as Record<string, any> | null) || {};
+    const needsShippingDefaults =
+        typeof existingShipping.insideDhaka !== 'number' ||
+        typeof existingShipping.outsideDhaka !== 'number';
+
+    if (needsShippingDefaults) {
+        await prisma.tenant.update({
+            where: { id: defaultTenant.id },
+            data: {
+                settings: {
+                    ...existingSettings,
+                    shipping: {
+                        ...DEFAULT_STORE_SHIPPING,
+                        ...existingShipping,
+                        insideDhaka:
+                            typeof existingShipping.insideDhaka === 'number'
+                                ? existingShipping.insideDhaka
+                                : DEFAULT_STORE_SHIPPING.insideDhaka,
+                        outsideDhaka:
+                            typeof existingShipping.outsideDhaka === 'number'
+                                ? existingShipping.outsideDhaka
+                                : DEFAULT_STORE_SHIPPING.outsideDhaka,
+                    },
+                },
+            },
+        });
+        console.log(
+            `Default shipping rates applied: Inside Dhaka ৳${DEFAULT_STORE_SHIPPING.insideDhaka}, Outside Dhaka ৳${DEFAULT_STORE_SHIPPING.outsideDhaka}`,
+        );
+    }
 
     console.log(`Default tenant seeded: ${defaultTenant.name} (${defaultTenant.slug})`);
 

@@ -1,11 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsOptional, IsString, ValidateIf } from 'class-validator';
 
 export class StoreContactDto {
   @ApiPropertyOptional({
     description: 'Public customer support email address',
     example: 'care@tanti.com.bd',
   })
+  @ValidateIf((_, v) => v !== undefined && v !== null && String(v).trim() !== '')
   @IsEmail({}, { message: 'Invalid support email format' })
   @IsOptional()
   email?: string;

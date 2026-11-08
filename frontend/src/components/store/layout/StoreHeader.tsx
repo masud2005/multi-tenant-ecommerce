@@ -23,7 +23,7 @@ export function StoreHeader() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategory = searchParams.get('category');
-  const { tenant } = useTenant();
+  const { tenant, isLoading: tenantLoading } = useTenant();
   const {
     cart,
     wishlist,
@@ -75,8 +75,9 @@ export function StoreHeader() {
   return (
     <>
     <header className="fixed inset-x-0 top-0 z-40">
-      {/* Top Announcement Bar - Dynamic from Store Tenant Settings in DB */}
-      {Boolean(tenant.announcementEnabled && tenant.announcement?.trim()) && (
+      {/* Top Announcement Bar — only after live tenant settings load (no mock flash) */}
+      {!tenantLoading &&
+        Boolean(tenant.announcementEnabled && tenant.announcement?.trim()) && (
         <div className="bg-ink text-canvas px-4 py-1.5 text-center text-xs font-medium tracking-wide border-b border-ink-soft/20 shadow-xs">
           {tenant.announcement}
         </div>
@@ -103,9 +104,24 @@ export function StoreHeader() {
             <MenuIcon className="h-6 w-6" />
           </button>
 
-          {/* Store Logo */}
-          <Link href="/" className="font-display text-2xl font-bold tracking-tight text-ink">
-            {tenant.name}
+          {/* Store brand: uploaded logo, else name, else empty — no mock assets */}
+          <Link
+            href="/"
+            className="flex min-h-9 min-w-[2.5rem] items-center"
+            aria-label={tenant.name?.trim() || 'Store home'}
+          >
+            {!tenantLoading && tenant.logoUrl?.trim() ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={tenant.logoUrl}
+                alt={tenant.name?.trim() || 'Store logo'}
+                className="h-9 w-auto max-w-[160px] object-contain"
+              />
+            ) : !tenantLoading && tenant.name?.trim() ? (
+              <span className="font-display text-2xl font-bold tracking-tight text-ink">
+                {tenant.name}
+              </span>
+            ) : null}
           </Link>
 
           {/* Desktop Navigation */}

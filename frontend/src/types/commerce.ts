@@ -139,7 +139,7 @@ export type ReturnStatus =
   | 'refunded'
   | 'exchanged';
 
-export type ReturnResolution = 'refund' | 'store_credit' | 'exchange';
+export type ReturnResolution = 'refund' | 'exchange';
 
 export interface ReturnRequest {
   id: string;
@@ -171,7 +171,6 @@ export interface Customer {
   segment: 'VIP' | 'Loyal' | 'New' | 'At risk' | 'Wholesale';
   status: 'active' | 'inactive';
   marketingConsent: boolean;
-  storeCredit: number;
   avatar?: string;
 }
 

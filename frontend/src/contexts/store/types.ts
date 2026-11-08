@@ -48,6 +48,7 @@ export interface StoreContextValue {
   reviews: Review[];
   customers: Customer[];
   cart: CartItem[];
+  isCartLoading?: boolean;
   wishlist: string[];
   compare: string[];
   recentlyViewed: string[];
@@ -56,7 +57,6 @@ export interface StoreContextValue {
   addresses: Address[];
   isAddressesLoading?: boolean;
   refreshAddresses?: () => Promise<void>;
-  storeCredit: number;
   miniCartOpen: boolean;
   quickViewId: string | null;
   compareOpen: boolean;

@@ -303,21 +303,6 @@ function CustomersContent() {
       ),
     },
     {
-      key: 'credit',
-      header: 'Store Credit',
-      align: 'right',
-      render: (c) => (
-        <span className="tabular-nums text-xs font-medium text-ink-soft">
-          {c.storeCredit > 0 ? (
-            <span className="text-success font-semibold">{formatBDT(c.storeCredit)}</span>
-          ) : (
-            '৳0'
-          )}
-        </span>
-      ),
-      hideOnMobile: true,
-    },
-    {
       key: 'joined',
       header: 'Joined',
       render: (c) => (
@@ -779,13 +764,6 @@ function CustomersContent() {
                       Marketing Consent:{' '}
                       <span className={cn('font-medium', active.marketingConsent ? 'text-success' : 'text-ink-muted')}>
                         {active.marketingConsent ? 'Subscribed' : 'Not subscribed'}
-                      </span>
-                    </p>
-                    <p className="flex items-center gap-2.5 text-xs text-ink-muted">
-                      <ShoppingBag className="h-4 w-4 text-ink-muted shrink-0" aria-hidden />
-                      Store Credit Balance:{' '}
-                      <span className="font-semibold text-success font-mono">
-                        {formatBDT(active.storeCredit)}
                       </span>
                     </p>
                   </div>

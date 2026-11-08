@@ -183,21 +183,6 @@ export function ProductCard({
             </span>
           )}
         </div>
-        {product.colors.length > 1 && (
-          <div
-            className="mt-2 flex gap-1"
-            aria-label={`${product.colors.length} colours`}
-          >
-            {product.colors.map((c) => (
-              <span
-                key={c.name}
-                title={c.name}
-                className="h-3 w-3 rounded-full border border-line-strong"
-                style={{ backgroundColor: c.hex }}
-              />
-            ))}
-          </div>
-        )}
         {layout === 'list' && (
           <>
             <p className="mt-3 line-clamp-2 max-w-lg text-sm text-ink-muted">
