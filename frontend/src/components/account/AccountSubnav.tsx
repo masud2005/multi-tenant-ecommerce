@@ -13,7 +13,6 @@ import {
   User,
   Shield,
   LifeBuoy,
-  Bell,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
@@ -34,7 +33,6 @@ export const accountNavLinks: AccountLink[] = [
   { href: '/account/reviews', label: 'Reviews', icon: Star, group: 'main' },
   { href: '/account/profile', label: 'Profile', icon: User, group: 'settings' },
   { href: '/account/security', label: 'Login & security', icon: Shield, group: 'settings' },
-  { href: '/account/notifications', label: 'Notifications', icon: Bell, group: 'settings' },
   { href: '/account/support', label: 'Help & support', icon: LifeBuoy, group: 'settings' },
 ];
 

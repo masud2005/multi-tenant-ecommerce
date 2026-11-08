@@ -118,18 +118,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   handleDisconnect(client: AuthenticatedSocket) {
     this.logger.log(`Client disconnected: ${client.id}`);
-    this.trackUserOffline(client);
+    try {
+      this.trackUserOffline(client);
 
-    // If staff/owner disconnected, check if any admin sockets remain in /chat namespace
-    if (client.user?.role === 'OWNER' || client.user?.role === 'STAFF') {
-      const adminRoom = client.nsp?.adapter?.rooms?.get('admins');
-      const hasAdminsLeft = adminRoom ? adminRoom.size > 0 : false;
-      if (!hasAdminsLeft) {
-        client.broadcast.emit('presence_status', {
-          role: 'OWNER',
-          isOnline: false,
-        });
+      // If staff/owner disconnected, check if any admin sockets remain in /chat namespace
+      if (client.user?.role === 'OWNER' || client.user?.role === 'STAFF') {
+        const adminRoom = client.nsp?.adapter?.rooms?.get('admins');
+        const hasAdminsLeft = adminRoom ? adminRoom.size > 0 : false;
+        if (!hasAdminsLeft) {
+          client.broadcast.emit('presence_status', {
+            role: 'OWNER',
+            isOnline: false,
+          });
+        }
       }
+    } catch (error) {
+      this.logger.error(`Socket disconnect error for client ${client.id}`, error);
     }
   }
 
@@ -389,8 +393,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     tenantMap.get(userId)!.socketIds.add(client.id);
 
-    // Broadcast to tenant that user is online
-    this.server.of('/chat').to(`tenant_${tenantId}`).emit('tenant_presence', {
+    // this.server is already the /chat namespace (see @WebSocketGateway namespace)
+    this.server.to(`tenant_${tenantId}`).emit('tenant_presence', {
       userId,
       role,
       name,
@@ -410,8 +414,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (entry.socketIds.size === 0) {
           tenantMap.delete(userId);
-          // Broadcast offline
-          this.server.of('/chat').to(`tenant_${tenantId}`).emit('tenant_presence', {
+          this.server.to(`tenant_${tenantId}`).emit('tenant_presence', {
             userId,
             role: entry.role,
             name: entry.name,
