@@ -67,15 +67,41 @@ export class ChatService {
       tags: ['chat', resolvedTenantId],
     });
 
+    const resourceType =
+      file.mimetype === 'application/pdf' ? 'raw' : 'image';
+
     return ResponseHelper.success(
       {
         url: upload.url,
+        publicId: upload.publicId,
         name: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
+        resourceType,
       },
       'Attachment uploaded',
     );
+  }
+
+  /**
+   * Discard a pending chat attachment from Cloudinary (rollback before send).
+   */
+  async deleteAttachment(
+    publicIdOrUrl: string,
+    resourceType?: 'image' | 'raw' | 'video',
+  ) {
+    if (!publicIdOrUrl?.trim()) {
+      throw new BadRequestException('publicIdOrUrl is required');
+    }
+
+    const inferred =
+      resourceType ||
+      this.storageService.inferResourceType(publicIdOrUrl) ||
+      'image';
+
+    await this.storageService.deleteFile(publicIdOrUrl.trim(), inferred);
+
+    return ResponseHelper.success(null, 'Attachment discarded');
   }
 
   // Helper to resolve active tenant ID

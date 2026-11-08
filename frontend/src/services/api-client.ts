@@ -198,8 +198,12 @@ class ApiClient {
     });
   }
 
-  delete<T>(endpoint: string, headers?: HeadersInit) {
-    return this.request<T>(endpoint, { method: 'DELETE', headers });
+  delete<T>(endpoint: string, body?: any, headers?: HeadersInit) {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      headers,
+      body: body != null ? JSON.stringify(body) : undefined,
+    });
   }
 }
 

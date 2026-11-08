@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { StorageService } from '../../../shared/storage/storage.service';
 import { QueryMediaDto } from './dto/query-media.dto';
 import { CreateMediaDto } from './dto/create-media.dto';
 import { UpdateMediaDto } from './dto/update-media.dto';
@@ -9,7 +10,10 @@ import { ResponseHelper } from '../../../common/helpers/response.helper';
 export class MediaService {
   private readonly logger = new Logger(MediaService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storageService: StorageService,
+  ) {}
 
   private async resolveTenantId(tenantId?: string): Promise<string> {
     if (tenantId && tenantId.length > 10) {
@@ -151,6 +155,18 @@ export class MediaService {
     await this.prisma.mediaAsset.delete({
       where: { id: existing.id },
     });
+
+    if (existing.url?.includes('cloudinary.com') || existing.url?.includes('/upload/')) {
+      const resourceType =
+        this.storageService.inferResourceType(existing.url) || 'image';
+      this.storageService
+        .deleteFile(existing.url, resourceType)
+        .catch((err) => {
+          this.logger.warn(
+            `Media DB deleted but Cloudinary cleanup failed for ${existing.id}: ${err?.message || err}`,
+          );
+        });
+    }
 
     return ResponseHelper.success(null, 'Media asset deleted successfully');
   }

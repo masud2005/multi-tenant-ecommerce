@@ -19,6 +19,7 @@ import type { Review, ReviewStats, ProductReviewsQuery } from '@/types/review';
 import { reviewService } from '@/services/review-service';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/Modal';
+import { MediaLightbox } from '@/components/ui/MediaLightbox';
 import { Textarea } from '@/components/ui/Textarea';
 import { formatDateTime, formatNumber } from '@/utils/format';
 import { getDisplayReviewTitle } from '@/utils/review';
@@ -833,18 +834,12 @@ export function ProductReviews({ product }: ProductReviewsProps) {
         </form>
       </Modal>
 
-      {lightboxImage && (
-        <Modal open={!!lightboxImage} onClose={() => setLightboxImage(null)} size="lg" bare>
-          <div className="relative flex flex-col items-center justify-center bg-black/90 p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={lightboxImage}
-              alt="Review photo"
-              className="max-h-[80vh] w-auto rounded-lg object-contain"
-            />
-          </div>
-        </Modal>
-      )}
+      <MediaLightbox
+        src={lightboxImage}
+        kind="image"
+        alt="Review photo"
+        onClose={() => setLightboxImage(null)}
+      />
     </section>
   );
 }

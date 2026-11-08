@@ -24,12 +24,23 @@ import {
   ShoppingBag,
   Paperclip,
   X,
+  FileText,
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { getAuthToken, getAuthUser } from '@/services/auth';
-import { chatService, Conversation, ChatMessage } from '@/services/chat-service';
+import {
+  chatService,
+  Conversation,
+  ChatMessage,
+  CHAT_FILE_ACCEPT,
+  CHAT_MAX_ATTACHMENTS,
+  validateChatAttachment,
+  isChatImageUrl,
+} from '@/services/chat-service';
 import { ChatMessageAttachments } from '@/components/store/chat/ChatMessageAttachments';
+import { ChatMessageText } from '@/components/store/chat/ChatMessageText';
+import { usePendingCloudUploads } from '@/hooks/usePendingCloudUploads';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
@@ -51,7 +62,6 @@ export default function AdminMessagesPage() {
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [replyText, setReplyText] = useState('');
-  const [pendingAttachments, setPendingAttachments] = useState<string[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -62,8 +72,20 @@ export default function AdminMessagesPage() {
   const [isCustomerTyping, setIsCustomerTyping] = useState(false);
   const [onlineConvIds, setOnlineConvIds] = useState<Set<string>>(new Set());
 
+  const pendingUploads = usePendingCloudUploads({
+    max: CHAT_MAX_ATTACHMENTS,
+    discardRemote: async (item) => {
+      await chatService.discardAttachment(
+        item.publicId || item.url,
+        'owner',
+        item.resourceType,
+      );
+    },
+  });
+
   const socketRef = useRef<Socket | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedConvIdRef = useRef<string | null>(null);
@@ -72,14 +94,19 @@ export default function AdminMessagesPage() {
 
   const selectedConversation = conversations.find((c) => c.id === selectedConvId) || null;
 
-  // Auto-scroll messages
-  const scrollToBottom = useCallback((smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+  const handleMessagesScroll = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    stickToBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 96;
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isCustomerTyping, scrollToBottom]);
+    if (!stickToBottomRef.current) return;
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, isCustomerTyping]);
 
   // 1. Fetch Conversations List
   const fetchConversations = useCallback(
@@ -275,18 +302,43 @@ export default function AdminMessagesPage() {
     }
   }, [selectedConvId]);
 
+  // Discard unsent Cloudinary uploads when switching conversations
+  useEffect(() => {
+    return () => {
+      void pendingUploads.discardAll();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on conversation change
+  }, [selectedConvId]);
+
   const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (pendingAttachments.length >= 4) {
-      toast.error('Maximum 4 attachments per message');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    if (pendingUploads.atLimit) {
+      toast.error(`Maximum ${CHAT_MAX_ATTACHMENTS} attachments per message`);
       return;
     }
+    const invalid = validateChatAttachment(file);
+    if (invalid) {
+      toast.error(invalid);
+      return;
+    }
+
     setUploadingFile(true);
     try {
       const uploaded = await chatService.uploadAttachment(file, 'owner');
       if (uploaded?.url) {
-        setPendingAttachments((prev) => [...prev, uploaded.url]);
+        pendingUploads.add({
+          url: uploaded.url,
+          publicId: uploaded.publicId || uploaded.url,
+          mimeType: uploaded.mimeType || file.type,
+          name: uploaded.name || file.name,
+          resourceType:
+            uploaded.resourceType ||
+            (file.type === 'application/pdf' ? 'raw' : 'image'),
+          size: uploaded.size ?? file.size,
+        });
       } else {
         toast.error('Upload failed');
       }
@@ -294,21 +346,26 @@ export default function AdminMessagesPage() {
       toast.error(err?.message || 'Could not upload file');
     } finally {
       setUploadingFile(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   // 4. Send Reply Message
   const handleSendReply = async (customText?: string) => {
     const textToSend = customText || replyText;
-    const attachments = pendingAttachments;
-    if ((!textToSend.trim() && attachments.length === 0) || !selectedConvId || isSending) {
+    const snapshot = pendingUploads.items;
+    const attachmentUrls = snapshot.map((a) => a.url);
+    if (
+      (!textToSend.trim() && attachmentUrls.length === 0) ||
+      !selectedConvId ||
+      isSending
+    ) {
       return;
     }
 
+    stickToBottomRef.current = true;
     setIsSending(true);
     setReplyText('');
-    setPendingAttachments([]);
+    pendingUploads.commit();
 
     if (socketRef.current) {
       socketRef.current.emit('typing_stop', { conversationId: selectedConvId });
@@ -326,7 +383,7 @@ export default function AdminMessagesPage() {
             conversationId: selectedConvId,
             text: textToSend.trim() || undefined,
             senderName,
-            attachments: attachments.length ? attachments : undefined,
+            attachments: attachmentUrls.length ? attachmentUrls : undefined,
           },
           (res: any) => {
             if (res?.success && res?.data) {
@@ -342,7 +399,7 @@ export default function AdminMessagesPage() {
           text: textToSend.trim() || undefined,
           senderName,
           senderRole,
-          attachments: attachments.length ? attachments : undefined,
+          attachments: attachmentUrls.length ? attachmentUrls : undefined,
         });
         if (sent) {
           setMessages((prev) => [...prev, sent]);
@@ -351,7 +408,7 @@ export default function AdminMessagesPage() {
     } catch (err) {
       toast.error('Failed to send reply. Please try again.');
       setReplyText(textToSend);
-      setPendingAttachments(attachments);
+      pendingUploads.restore(snapshot);
     } finally {
       setIsSending(false);
     }
@@ -584,7 +641,11 @@ export default function AdminMessagesPage() {
               </div>
 
               {/* Chat Message Stream */}
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-canvas/20 p-5">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
+                className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-canvas/20 p-5"
+              >
                 {isLoadingMessages ? (
                   <div className="h-full flex flex-col items-center justify-center text-ink-muted text-xs">
                     <Loader2 className="h-6 w-6 animate-spin text-clay mb-2" />
@@ -630,9 +691,11 @@ export default function AdminMessagesPage() {
                                 </span>
                               </div>
                               {msg.text && msg.text !== '[Attachment]' ? (
-                                <p className="leading-relaxed whitespace-pre-wrap break-words">
-                                  {msg.text}
-                                </p>
+                                <ChatMessageText
+                                  text={msg.text}
+                                  role="admin"
+                                  tone={isOwner ? 'dark' : 'light'}
+                                />
                               ) : null}
                               <ChatMessageAttachments
                                 attachments={msg.attachments}
@@ -670,7 +733,6 @@ export default function AdminMessagesPage() {
                       </div>
                     )}
 
-                    <div ref={messagesEndRef} />
                   </>
                 )}
               </div>
@@ -694,21 +756,25 @@ export default function AdminMessagesPage() {
 
               {/* Chat Input Bar */}
               <div className="shrink-0 border-t border-line bg-surface p-3.5">
-                {pendingAttachments.length > 0 ? (
+                {pendingUploads.items.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-2">
-                    {pendingAttachments.map((url) => (
-                      <div key={url} className="relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={url}
-                          alt=""
-                          className="h-14 w-14 rounded-lg border border-line object-cover"
-                        />
+                    {pendingUploads.items.map((item) => (
+                      <div key={item.key} className="relative">
+                        {isChatImageUrl(item.url) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.url}
+                            alt=""
+                            className="h-14 w-14 rounded-lg border border-line object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-line bg-subtle text-ink">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                        )}
                         <button
                           type="button"
-                          onClick={() =>
-                            setPendingAttachments((prev) => prev.filter((u) => u !== url))
-                          }
+                          onClick={() => pendingUploads.remove(item.key)}
                           className="absolute -right-1.5 -top-1.5 rounded-full bg-ink p-0.5 text-canvas cursor-pointer"
                           aria-label="Remove attachment"
                         >
@@ -722,14 +788,14 @@ export default function AdminMessagesPage() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+                    accept={CHAT_FILE_ACCEPT}
                     className="hidden"
                     onChange={handleAttachFile}
                   />
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingFile || pendingAttachments.length >= 4}
+                    disabled={uploadingFile || pendingUploads.atLimit}
                     className="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-line text-ink hover:bg-subtle cursor-pointer disabled:opacity-50"
                     aria-label="Attach file"
                     title="Attach image or PDF"
@@ -753,7 +819,7 @@ export default function AdminMessagesPage() {
                     type="button"
                     onClick={() => handleSendReply()}
                     disabled={
-                      (!replyText.trim() && pendingAttachments.length === 0) ||
+                      (!replyText.trim() && pendingUploads.count === 0) ||
                       isSending
                     }
                     className="h-[42px] px-4 rounded-xl cursor-pointer bg-clay hover:bg-clay/90 text-white flex items-center gap-1.5 shrink-0 shadow-xs"

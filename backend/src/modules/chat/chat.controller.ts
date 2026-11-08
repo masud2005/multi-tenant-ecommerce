@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
@@ -26,6 +27,7 @@ import { ChatGateway } from './chat.gateway';
 import { SendMessageDto } from './dto/send-message.dto';
 import { StartConversationDto } from './dto/start-conversation.dto';
 import { ConversationQueryDto } from './dto/conversation-query.dto';
+import { DeleteChatAttachmentDto } from './dto/delete-attachment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -117,6 +119,20 @@ export class ChatController {
     return this.chatService.uploadAttachment(
       file,
       tenantHeader || user?.tenantId,
+    );
+  }
+
+  /**
+   * 🛍️ 3c. Customer: Discard pending chat attachment (Cloudinary rollback)
+   */
+  @Delete('customer/chat/upload')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'Delete a pending chat attachment from storage' })
+  async deleteCustomerChatFile(@Body() dto: DeleteChatAttachmentDto) {
+    return this.chatService.deleteAttachment(
+      dto.publicIdOrUrl,
+      dto.resourceType,
     );
   }
 
@@ -241,6 +257,22 @@ export class ChatController {
     return this.chatService.uploadAttachment(
       file,
       user?.tenantId || tenantHeader,
+    );
+  }
+
+  /**
+   * 🏢 8c. Owner/Staff: Discard pending chat attachment (Cloudinary rollback)
+   */
+  @Delete('owner/chat/upload')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER, UserRole.STAFF)
+  @ApiOperation({ summary: 'Delete a pending chat attachment from storage' })
+  async deleteOwnerChatFile(@Body() dto: DeleteChatAttachmentDto) {
+    return this.chatService.deleteAttachment(
+      dto.publicIdOrUrl,
+      dto.resourceType,
     );
   }
 

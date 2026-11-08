@@ -87,7 +87,7 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="bg-canvas text-ink">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-3 sm:mb-8">
           <div className="min-w-0">
             <h1 className="font-display text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
