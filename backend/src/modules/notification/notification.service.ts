@@ -15,50 +15,68 @@ export class NotificationService {
   ) {}
 
   /**
-   * 🚀 Send notification: creates In-App notification, emits Socket.IO event, and optionally sends Email
+   * Send notification: optional in-app + socket (when userId is a real User),
+   * and optional email. Guest / email-only flows must not pass a fake userId.
    */
   async send(options: SendNotificationOptions) {
     const { tenantId, userId, title, message, type = 'SYSTEM', link, email } = options;
 
     try {
-      // 1. Create In-App Notification in DB
-      const notification = await this.prisma.notification.create({
-        data: {
-          tenantId,
-          userId,
-          title,
-          message,
-          type,
-          link,
-          isRead: false,
-        },
-      });
+      let notification: any = null;
 
-      // 2. ⚡ Emit Real-Time Socket.IO Notification to the user
-      try {
-        this.notificationGateway.sendToUser(userId, notification);
-      } catch (wsErr) {
-        this.logger.error('Failed to emit real-time notification socket event', wsErr);
+      if (userId) {
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true },
+        });
+
+        if (user) {
+          notification = await this.prisma.notification.create({
+            data: {
+              tenantId,
+              userId,
+              title,
+              message,
+              type,
+              link,
+              isRead: false,
+            },
+          });
+
+          try {
+            this.notificationGateway.sendToUser(userId, notification);
+          } catch (wsErr) {
+            this.logger.error(
+              'Failed to emit real-time notification socket event',
+              wsErr,
+            );
+          }
+        } else {
+          this.logger.warn(
+            `Skipping in-app notification — userId "${userId}" is not a User row`,
+          );
+        }
       }
 
-      // 2. Send Email if provided
-      if (email && email.to) {
-        this.emailService
-          .sendEmail(email.to, email.subject, email.html)
-          .then(async (success) => {
-            await this.prisma.notificationLog.create({
-              data: {
-                tenantId,
-                channel: 'Email',
-                to: email.to,
-                event: title,
-                status: success ? 'delivered' : 'failed',
-              },
-            });
-          })
-          .catch((err) => {
-            this.logger.error(`Failed to send email notification to ${email.to}`, err);
+      if (email?.to) {
+        try {
+          const success = await this.emailService.sendEmail(
+            email.to,
+            email.subject,
+            email.html,
+          );
+          await this.prisma.notificationLog.create({
+            data: {
+              tenantId,
+              channel: 'Email',
+              to: email.to,
+              event: title,
+              status: success ? 'delivered' : 'failed',
+            },
           });
+        } catch (err) {
+          this.logger.error(`Failed to send email notification to ${email.to}`, err);
+        }
       }
 
       return notification;
@@ -68,9 +86,6 @@ export class NotificationService {
     }
   }
 
-  /**
-   * 📥 Get user notifications list and unread count
-   */
   async getUserNotifications(
     userId: string,
     tenantId: string,
@@ -114,9 +129,6 @@ export class NotificationService {
     };
   }
 
-  /**
-   * ✅ Mark a specific notification as read
-   */
   async markAsRead(id: string, userId: string, tenantId?: string) {
     const notification = await this.prisma.notification.findFirst({
       where: { id, userId },
@@ -132,9 +144,6 @@ export class NotificationService {
     });
   }
 
-  /**
-   * 🧹 Mark all unread notifications as read for current user
-   */
   async markAllAsRead(userId: string, tenantId?: string) {
     await this.prisma.notification.updateMany({
       where: { userId, isRead: false },
@@ -144,9 +153,6 @@ export class NotificationService {
     return { success: true, message: 'All notifications marked as read' };
   }
 
-  /**
-   * 🗑️ Delete a notification
-   */
   async deleteNotification(id: string, userId: string, tenantId: string) {
     const notification = await this.prisma.notification.findFirst({
       where: { id, userId, tenantId },

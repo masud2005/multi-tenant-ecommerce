@@ -42,17 +42,13 @@ export default function ContactPage() {
     phone: string;
   } | null>(null);
 
-  const phone = tenant.contact?.phone || '09612-826842';
-  const email = tenant.contact?.email || 'care@tanti.com.bd';
-  const whatsapp = tenant.contact?.whatsapp || '+880 1700-000000';
-  const address =
-    tenant.contact?.address ||
-    'House 14, Road 27 (old), Dhanmondi, Dhaka 1209';
-  const hours = tenant.contact?.workingHours || 'Sat–Thu, 10 AM – 9 PM';
-  const supportTeam =
-    tenant.contact?.supportTeam || `${tenant.name} Care team`;
-  const responseTime =
-    tenant.contact?.responseTime || 'replies within 2 to 4 working hours';
+  const phone = tenant.contact?.phone || '';
+  const email = tenant.contact?.email || '';
+  const whatsapp = tenant.contact?.whatsapp || '';
+  const address = tenant.contact?.address || '';
+  const hours = tenant.contact?.workingHours || '';
+  const supportTeam = tenant.contact?.supportTeam || '';
+  const responseTime = tenant.contact?.responseTime || '';
 
   const validate = () => {
     const errs: Record<string, string> = {};

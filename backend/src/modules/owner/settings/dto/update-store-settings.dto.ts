@@ -97,7 +97,7 @@ export class UpdateStoreSettingsDto {
       vatIncluded: true,
       maintenance: false,
       returnWindowDays: 7,
-      orderNumberFormat: 'TN-{number}',
+      orderNumberFormat: 'OR-{number}',
     },
   })
   @IsObject()

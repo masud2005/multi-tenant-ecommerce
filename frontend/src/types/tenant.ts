@@ -68,6 +68,5 @@ export interface Tenant {
     insideDhakaEst: string;
     outsideDhakaEst: string;
     pickup: boolean;
-    rto: boolean;
   };
 }

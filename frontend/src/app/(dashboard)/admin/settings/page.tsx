@@ -78,7 +78,7 @@ export default function AdminSettingsPage() {
     currencyPosition: 'prefix' as 'prefix' | 'suffix',
     timezone: '(GMT+06:00) Dhaka',
     language: 'English',
-    orderNumberFormat: 'TN-{number}',
+    orderNumberFormat: 'OR-{number}',
     announcement: '',
     announcementEnabled: false,
   });
@@ -586,7 +586,7 @@ export default function AdminSettingsPage() {
                           orderNumberFormat: e.target.value,
                         })
                       }
-                      placeholder="TN-{number}"
+                      placeholder="OR-{number}"
                       hint="Next order number will look like: TN-10498"
                     />
                   </div>

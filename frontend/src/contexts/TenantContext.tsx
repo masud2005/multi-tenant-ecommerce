@@ -56,12 +56,11 @@ export function TenantProvider({
         const mapped: Tenant = {
           id: raw.id || fallbackTenant.id,
           slug: raw.slug || slug,
-          name: typeof raw.name === 'string' ? raw.name : fallbackTenant.name,
-          tagline:
-            typeof raw.tagline === 'string' ? raw.tagline : undefined,
+          // Branding/contact: live API only — never inject mock Tanti defaults
+          name: typeof raw.name === 'string' ? raw.name : '',
+          tagline: typeof raw.tagline === 'string' ? raw.tagline : '',
           domain: raw.domain || fallbackTenant.domain,
           customDomain: raw.customDomain || fallbackTenant.customDomain,
-          // Branding is backend-only — never fall back to mock logo assets.
           logoUrl:
             typeof raw.logo === 'string' && raw.logo.trim()
               ? raw.logo.trim()
@@ -83,7 +82,6 @@ export function TenantProvider({
             position: raw.currencyPosition || fallbackTenant.currency.position,
           },
           theme: raw.theme || fallbackTenant.theme,
-          // Announcement is backend-only — never fall back to mock data.
           announcement:
             typeof raw.announcement === 'string' ? raw.announcement : undefined,
           announcementEnabled:
@@ -92,18 +90,15 @@ export function TenantProvider({
               : false,
           modules: raw.modules || fallbackTenant.modules,
           contact: {
-            email: raw.contact?.email || fallbackTenant.contact.email,
-            phone: raw.contact?.phone || fallbackTenant.contact.phone,
-            whatsapp: raw.contact?.whatsapp || fallbackTenant.contact.whatsapp,
-            address: raw.contact?.address || fallbackTenant.contact.address,
-            workingHours:
-              raw.contact?.workingHours || fallbackTenant.contact.workingHours,
-            responseTime:
-              raw.contact?.responseTime || fallbackTenant.contact.responseTime,
-            supportTeam:
-              raw.contact?.supportTeam || fallbackTenant.contact.supportTeam,
+            email: raw.contact?.email || '',
+            phone: raw.contact?.phone || '',
+            whatsapp: raw.contact?.whatsapp || '',
+            address: raw.contact?.address || '',
+            workingHours: raw.contact?.workingHours || '',
+            responseTime: raw.contact?.responseTime || '',
+            supportTeam: raw.contact?.supportTeam || '',
           },
-          socials: raw.socials || fallbackTenant.socials,
+          socials: raw.socials || {},
           shipping: parseStoreShipping(raw.settings?.shipping),
         };
         setLiveTenant(mapped);
@@ -122,16 +117,27 @@ export function TenantProvider({
     fetchTenantData(currentSlug);
   }, [currentSlug, fetchTenantData]);
 
-  // Fallback tenant never carries branding/announcement — only live API data may.
+  // Fallback tenant never carries branding/contact/announcement — only live API data may.
   const activeTenant = useMemo<Tenant>(() => {
     if (liveTenant) return liveTenant;
     return {
       ...fallbackTenant,
       name: '',
+      tagline: '',
       logoUrl: undefined,
       faviconUrl: undefined,
       announcement: undefined,
       announcementEnabled: false,
+      contact: {
+        email: '',
+        phone: '',
+        whatsapp: '',
+        address: '',
+        workingHours: '',
+        responseTime: '',
+        supportTeam: '',
+      },
+      socials: {},
     };
   }, [liveTenant, fallbackTenant]);
   const isSuspended = activeTenant.planState === 'suspended';

@@ -7,38 +7,38 @@ export type StoreShippingSettings = {
   insideDhakaEst: string;
   outsideDhakaEst: string;
   pickup: boolean;
-  rto: boolean;
 };
 
+/** Matches backend DEFAULT_STORE_SHIPPING (seeded for every store). */
 export const EMPTY_STORE_SHIPPING: StoreShippingSettings = {
-  insideDhaka: 0,
-  outsideDhaka: 0,
-  freeDeliveryThreshold: 0,
+  insideDhaka: 70,
+  outsideDhaka: 150,
+  freeDeliveryThreshold: 2500,
   insideDhakaEst: '1–2 business days',
   outsideDhakaEst: '2–4 business days',
   pickup: false,
-  rto: false,
 };
 
 export function parseStoreShipping(raw: unknown): StoreShippingSettings {
   const sh = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  const num = (v: unknown) => {
+  const num = (v: unknown, fallback: number) => {
+    if (v === undefined || v === null || v === '') return fallback;
     const n = Number(v);
-    return Number.isFinite(n) && n >= 0 ? n : 0;
+    return Number.isFinite(n) && n >= 0 ? n : fallback;
   };
   const str = (v: unknown, fallback: string) =>
     typeof v === 'string' && v.trim() ? v.trim() : fallback;
 
   return {
-    insideDhaka: num(sh.insideDhaka),
-    outsideDhaka: num(sh.outsideDhaka),
+    insideDhaka: num(sh.insideDhaka, EMPTY_STORE_SHIPPING.insideDhaka),
+    outsideDhaka: num(sh.outsideDhaka, EMPTY_STORE_SHIPPING.outsideDhaka),
     freeDeliveryThreshold: num(
-      sh.freeDeliveryThreshold ?? sh.freeShippingThreshold
+      sh.freeDeliveryThreshold ?? sh.freeShippingThreshold,
+      EMPTY_STORE_SHIPPING.freeDeliveryThreshold
     ),
     insideDhakaEst: str(sh.insideDhakaEst, EMPTY_STORE_SHIPPING.insideDhakaEst),
     outsideDhakaEst: str(sh.outsideDhakaEst, EMPTY_STORE_SHIPPING.outsideDhakaEst),
-    pickup: !!sh.pickup,
-    rto: !!sh.rto,
+    pickup: typeof sh.pickup === 'boolean' ? sh.pickup : EMPTY_STORE_SHIPPING.pickup,
   };
 }
 

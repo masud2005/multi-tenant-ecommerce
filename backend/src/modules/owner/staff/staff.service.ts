@@ -18,6 +18,7 @@ import {
   CreateRoleDto,
   UpdateRoleDto,
 } from './dto';
+import { DEFAULT_STORE_SHIPPING } from '../../../common/constants/shipping.constant';
 
 @Injectable()
 export class StaffService {
@@ -52,6 +53,9 @@ export class StaffService {
         slug: 'tanti',
         currency: 'BDT',
         currencySymbol: '৳',
+        settings: {
+          shipping: { ...DEFAULT_STORE_SHIPPING },
+        },
       },
     });
 

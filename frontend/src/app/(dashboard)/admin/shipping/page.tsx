@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Truck, Save, Loader2, RefreshCw, CheckCircle2, ShieldCheck, MapPin } from 'lucide-react';
-import { couriers } from '@/data/shipping';
+import { Truck, Save, Loader2, RefreshCw, MapPin } from 'lucide-react';
 import { storeService } from '@/services/store-service';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
@@ -19,18 +18,15 @@ export default function AdminShippingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Live Admin → Shipping config only (zeros until API load — no mock rates)
   const [shippingConfig, setShippingConfig] = useState({
-    insideDhaka: 0,
-    outsideDhaka: 0,
-    freeDeliveryThreshold: 0,
-    insideDhakaEst: '',
-    outsideDhakaEst: '',
+    insideDhaka: 70,
+    outsideDhaka: 150,
+    freeDeliveryThreshold: 2500,
+    insideDhakaEst: '1–2 business days',
+    outsideDhakaEst: '2–4 business days',
     pickup: false,
-    rto: false,
   });
 
-  // Fetch store shipping configuration
   const loadShippingSettings = async () => {
     try {
       setIsLoading(true);
@@ -50,7 +46,6 @@ export default function AdminShippingPage() {
           insideDhakaEst: sh.insideDhakaEst || prev.insideDhakaEst,
           outsideDhakaEst: sh.outsideDhakaEst || prev.outsideDhakaEst,
           pickup: sh.pickup !== undefined ? !!sh.pickup : prev.pickup,
-          rto: sh.rto !== undefined ? !!sh.rto : prev.rto,
         }));
       }
     } catch (err: any) {
@@ -64,7 +59,6 @@ export default function AdminShippingPage() {
     loadShippingSettings();
   }, []);
 
-  // Save changes to backend
   const handleSaveShipping = async () => {
     try {
       setIsSaving(true);
@@ -77,7 +71,6 @@ export default function AdminShippingPage() {
             insideDhakaEst: shippingConfig.insideDhakaEst,
             outsideDhakaEst: shippingConfig.outsideDhakaEst,
             pickup: shippingConfig.pickup,
-            rto: shippingConfig.rto,
           },
         },
       });
@@ -123,18 +116,16 @@ export default function AdminShippingPage() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-6">
-            {/* Delivery Charge Configuration (Dhaka vs Outside Dhaka) */}
             <Panel
               title="Regional Delivery Rates"
               description="Set flat delivery rates for Dhaka city and all other 63 districts."
             >
               <div className="grid gap-6 sm:grid-cols-2">
-                {/* Inside Dhaka */}
-                <div className="rounded-lg border border-line bg-canvas p-4 space-y-3">
+                <div className="space-y-3 rounded-lg border border-line bg-canvas p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-emerald-600" />
-                      <p className="font-semibold text-sm text-ink">Inside Dhaka (ঢাকার মধ্যে)</p>
+                      <p className="text-sm font-semibold text-ink">Inside Dhaka (ঢাকার মধ্যে)</p>
                     </div>
                     <Badge tone="success">Primary Zone</Badge>
                   </div>
@@ -150,7 +141,7 @@ export default function AdminShippingPage() {
                       onChange={(e) =>
                         setShippingConfig({ ...shippingConfig, insideDhaka: Number(e.target.value) })
                       }
-                      placeholder="60"
+                      placeholder="70"
                     />
                   </div>
                   <div className="space-y-2">
@@ -165,17 +156,17 @@ export default function AdminShippingPage() {
                   </div>
                 </div>
 
-                {/* Outside Dhaka */}
-                <div className="rounded-lg border border-line bg-canvas p-4 space-y-3">
+                <div className="space-y-3 rounded-lg border border-line bg-canvas p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Truck className="h-4 w-4 text-blue-600" />
-                      <p className="font-semibold text-sm text-ink">Outside Dhaka (ঢাকার বাইরে)</p>
+                      <p className="text-sm font-semibold text-ink">Outside Dhaka (ঢাকার বাইরে)</p>
                     </div>
                     <Badge tone="neutral">All 63 Districts</Badge>
                   </div>
                   <p className="text-xs text-ink-muted">
-                    Applies for Chittagong, Sylhet, Rajshahi, Khulna, Barisal, Rangpur, Mymensingh, etc.
+                    Applies for Chittagong, Sylhet, Rajshahi, Khulna, Barisal, Rangpur, Mymensingh,
+                    etc.
                   </p>
                   <div className="space-y-2 pt-1">
                     <label className="text-xs font-medium text-ink">Delivery Charge (৳)</label>
@@ -184,9 +175,12 @@ export default function AdminShippingPage() {
                       prefix="৳"
                       value={shippingConfig.outsideDhaka}
                       onChange={(e) =>
-                        setShippingConfig({ ...shippingConfig, outsideDhaka: Number(e.target.value) })
+                        setShippingConfig({
+                          ...shippingConfig,
+                          outsideDhaka: Number(e.target.value),
+                        })
                       }
-                      placeholder="120"
+                      placeholder="150"
                     />
                   </div>
                   <div className="space-y-2">
@@ -202,52 +196,27 @@ export default function AdminShippingPage() {
                 </div>
               </div>
             </Panel>
-
-            {/* Courier Partners */}
-            <Panel
-              title="Integrated Couriers"
-              description="Parcels are dispatched with integrated logistics partners across Bangladesh."
-              flush
-            >
-              <ul className="divide-y divide-line">
-                {couriers.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex flex-wrap items-center gap-4 px-5 py-3.5 hover:bg-subtle/30"
-                  >
-                    <span className="flex h-9 w-9 items-center justify-center rounded-md bg-subtle text-ink-soft">
-                      <Truck className="h-4 w-4" aria-hidden />
-                    </span>
-                    <div className="min-w-[160px] flex-1">
-                      <p className="text-sm font-medium text-ink">{c.name}</p>
-                      <p className="text-xs text-ink-muted">
-                        {c.coverage} · avg {c.avgDays} days · {c.successRate}% delivered
-                      </p>
-                    </div>
-                    <Badge tone="success" dot>
-                      Active
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
           </div>
 
           <div className="space-y-6">
-            {/* Free Delivery Threshold */}
             <Panel title="Free Delivery Waiver">
               <div className="space-y-3">
                 <p className="text-xs text-ink-muted">
                   Offer free delivery to customers when their order subtotal exceeds this amount.
                 </p>
                 <div>
-                  <label className="text-xs font-medium text-ink">Minimum Subtotal for Free Delivery</label>
+                  <label className="text-xs font-medium text-ink">
+                    Minimum Subtotal for Free Delivery
+                  </label>
                   <Input
                     type="number"
                     prefix="৳"
                     value={shippingConfig.freeDeliveryThreshold}
                     onChange={(e) =>
-                      setShippingConfig({ ...shippingConfig, freeDeliveryThreshold: Number(e.target.value) })
+                      setShippingConfig({
+                        ...shippingConfig,
+                        freeDeliveryThreshold: Number(e.target.value),
+                      })
                     }
                     placeholder="0 = disabled"
                     className="mt-1"
@@ -260,42 +229,16 @@ export default function AdminShippingPage() {
               </div>
             </Panel>
 
-            {/* Delivery Options */}
             <Panel title="Fulfillment Options">
-              <div className="space-y-4">
-                <Switch
-                  checked={shippingConfig.pickup}
-                  onChange={(v) => setShippingConfig({ ...shippingConfig, pickup: v })}
-                  label="Allow in-store customer pickup"
-                />
-                <Switch
-                  checked={shippingConfig.rto}
-                  onChange={(v) => setShippingConfig({ ...shippingConfig, rto: v })}
-                  label="Auto-restock returned shipments (RTO)"
-                />
-              </div>
-            </Panel>
-
-            {/* Performance Overview */}
-            <Panel title="Logistics Overview">
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <dt className="text-xs text-ink-muted">Delivered</dt>
-                  <dd className="font-semibold text-ink">95.4%</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-ink-muted">Failed attempts</dt>
-                  <dd className="font-semibold text-ink">3.1%</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-ink-muted">Return to origin</dt>
-                  <dd className="font-semibold text-ink">1.5%</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-ink-muted">Avg. time to ship</dt>
-                  <dd className="font-semibold text-ink">14 h</dd>
-                </div>
-              </dl>
+              <Switch
+                checked={shippingConfig.pickup}
+                onChange={(v) => setShippingConfig({ ...shippingConfig, pickup: v })}
+                label="Allow in-store customer pickup"
+              />
+              <p className="mt-2 text-xs text-ink-muted">
+                When enabled, checkout shows a free Store pickup option. Returned items are
+                restocked automatically when marked as received.
+              </p>
             </Panel>
           </div>
         </div>

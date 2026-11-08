@@ -213,7 +213,7 @@ export function useStoreOrders(
         const nextSeq = 10500 + orders.length;
         finalOrder = {
           id: `o${nextSeq}`,
-          number: `TN-${nextSeq}`,
+          number: `OR-${nextSeq}`,
           customerId: user?.id ?? 'guest',
           customerName: input.contact.name || input.address.name,
           email: input.contact.email,

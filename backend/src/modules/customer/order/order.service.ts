@@ -15,6 +15,7 @@ import {
   PaymentStatus,
 } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
+import { buildOrderInvoiceEmailHtml } from '../../../shared/mail/templates/order-invoice-email.template';
 
 @Injectable()
 export class OrderService {
@@ -112,7 +113,7 @@ export class OrderService {
       where: { tenantId },
     });
     const nextSeq = 10500 + totalOrders;
-    return `TN-${nextSeq}`;
+    return `OR-${nextSeq}`;
   }
 
   // Step-by-step order creation workflow
@@ -326,11 +327,50 @@ export class OrderService {
     // Trigger Notification Events asynchronously (does not block order response)
     (async () => {
       try {
+        const toNum = (v: unknown) => Number(v) || 0;
         const customerDisplayName =
           createdOrder.shippingAddress?.name ||
           createdOrder.customerName ||
           createdOrder.email ||
-          'Customer';
+          '';
+
+        const tenant = await this.prisma.tenant.findUnique({
+          where: { id: resolvedTenantId },
+          select: {
+            name: true,
+            tagline: true,
+            logo: true,
+            contact: true,
+          },
+        });
+        const contact = (tenant?.contact as Record<string, any>) || {};
+
+        const absoluteAssetUrl = (value?: string | null) => {
+          const raw = (value || '').trim();
+          if (!raw) return null;
+          if (/^https?:\/\//i.test(raw) || raw.startsWith('data:')) return raw;
+          const base = (
+            process.env.FRONTEND_URL ||
+            process.env.APP_URL ||
+            process.env.PUBLIC_APP_URL ||
+            ''
+          ).replace(/\/$/, '');
+          if (!base) return raw;
+          return `${base}/${raw.replace(/^\//, '')}`;
+        };
+
+        // Resolve User id for in-app notify (CustomerProfile.id ≠ User.id)
+        let customerUserId: string | undefined;
+        if (createdOrder.customerId) {
+          const profile = await this.prisma.customerProfile.findUnique({
+            where: { id: createdOrder.customerId },
+            select: { userId: true },
+          });
+          customerUserId = profile?.userId || undefined;
+        }
+        if (!customerUserId && userId) {
+          customerUserId = userId;
+        }
 
         // Event 1.A: Notify store owner & active staff members (In-App + Email)
         const staffMembers = await this.prisma.tenantMember.findMany({
@@ -348,33 +388,80 @@ export class OrderService {
               tenantId: resolvedTenantId,
               userId: member.userId,
               title: `New Order #${createdOrder.number}`,
-              message: `${customerDisplayName} placed an order for ৳${createdOrder.total}`,
+              message: `${customerDisplayName} placed an order for ৳${toNum(createdOrder.total)}`,
               type: 'ORDER',
               link: `/admin/orders`,
               email: member.user?.email
                 ? {
                     to: member.user.email,
-                    subject: `[New Order] #${createdOrder.number} received (৳${createdOrder.total})`,
-                    html: `<h2>New Order Received!</h2><p>Order <b>#${createdOrder.number}</b> has been placed by <b>${customerDisplayName}</b>.</p><p>Total Amount: <b>৳${createdOrder.total}</b></p><p>Payment Method: ${createdOrder.paymentMethod}</p>`,
+                    subject: `[New Order] #${createdOrder.number} received (৳${toNum(createdOrder.total)})`,
+                    html: `<h2>New Order Received!</h2><p>Order <b>#${createdOrder.number}</b> has been placed by <b>${customerDisplayName}</b>.</p><p>Total Amount: <b>৳${toNum(createdOrder.total)}</b></p><p>Payment Method: ${createdOrder.paymentMethod}</p>`,
                   }
                 : undefined,
             });
           }
         }
 
-        // Event 1.B: Send order confirmation to Customer if email is present
+        // Event 1.B: Email confirmation + dynamic invoice (no SMS; in-app only if real User)
         if (createdOrder.email) {
+          const invoiceHtml = buildOrderInvoiceEmailHtml({
+            storeName: tenant?.name || null,
+            storeLogoUrl: absoluteAssetUrl(tenant?.logo),
+            storeTagline: tenant?.tagline || null,
+            storePhone: contact.phone || null,
+            storeWhatsapp: contact.whatsapp || null,
+            storeEmail: contact.email || null,
+            storeAddress: contact.address || null,
+            customerName: customerDisplayName || null,
+            customerEmail: createdOrder.email || null,
+            orderNumber: createdOrder.number,
+            orderDate: new Date(createdOrder.createdAt).toLocaleString('en-GB', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+            }),
+            paymentMethod: String(createdOrder.paymentMethod || ''),
+            paymentStatus: String(createdOrder.paymentStatus || ''),
+            shippingMethod: createdOrder.shippingMethod || null,
+            courier: (createdOrder as any).courier || null,
+            tracking: (createdOrder as any).tracking || null,
+            fulfillmentStatus: createdOrder.fulfillmentStatus
+              ? String(createdOrder.fulfillmentStatus)
+              : null,
+            shippingAddress: {
+              name: createdOrder.shippingAddress?.name,
+              phone: createdOrder.shippingAddress?.phone,
+              line1: createdOrder.shippingAddress?.line1,
+              area: createdOrder.shippingAddress?.area,
+              district: createdOrder.shippingAddress?.district,
+            },
+            items: (createdOrder.items || []).map((item) => ({
+              title: item.title,
+              color: item.color,
+              size: item.size,
+              sku: item.sku,
+              qty: item.qty,
+              price: toNum(item.price),
+            })),
+            subtotal: toNum(createdOrder.subtotal),
+            discount: toNum(createdOrder.discount),
+            shipping: toNum(createdOrder.shipping),
+            total: toNum(createdOrder.total),
+          });
+
           await this.notificationService.send({
             tenantId: resolvedTenantId,
-            userId: createdOrder.customerId || '',
+            userId: customerUserId,
             title: `Order Confirmation #${createdOrder.number}`,
-            message: `Thank you for your order! Total: ৳${createdOrder.total}`,
+            message: `Thank you for your order! Total: ৳${toNum(createdOrder.total)}`,
             type: 'ORDER',
             link: `/account/orders`,
             email: {
               to: createdOrder.email,
-              subject: `Order Confirmation #${createdOrder.number}`,
-              html: `<h2>Thank you for your order!</h2><p>Hi ${customerDisplayName},</p><p>Your order <b>#${createdOrder.number}</b> has been received and is being processed.</p><p>Total Amount: <b>৳${createdOrder.total}</b></p>`,
+              subject: `Order Confirmation & Invoice #${createdOrder.number}`,
+              html: invoiceHtml,
             },
           });
         }
