@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/button';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import {
   pageService,
   AboutPageData,
@@ -40,44 +41,18 @@ export function AboutEditorDrawer({
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState<AboutPageData>({
-    title: 'Our story',
-    heading: 'Clothing that carries the hands that made it',
-    heroImage:
-      'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=1200&auto=format&fit=crop',
-    heroImageAlt: 'Two people in Tanti festive wear in a courtyard',
-    storyParagraphs: [
-      'Tanti means weaver. We started because the most beautiful textiles in the world were being made a few hours from Dhaka — and too few people could buy them without a middleman taking most of the value.',
-      'Today we work directly with weavers, block-printers, cobblers and silversmiths across Bangladesh, paying fair, transparent rates and investing in the next generation of makers.',
-    ],
-    milestones: [
-      {
-        year: '2019',
-        text: 'Started with 40 block-printed kurtas made with three families in Tangail.',
-      },
-      {
-        year: '2021',
-        text: 'Opened our flagship on Road 27, Dhanmondi, and launched Tanti Loom with Rupganj jamdani weavers.',
-      },
-      {
-        year: '2023',
-        text: 'Welcomed Pora — handmade leather from Bhairab — into the Tanti family.',
-      },
-      {
-        year: '2026',
-        text: '1,200+ artisans, delivery to all 64 districts and a new warehouse in Chattogram.',
-      },
-    ],
-    stats: [
-      { value: '1,200+', label: 'artisans we work with directly' },
-      { value: '64', label: 'districts we deliver to' },
-      { value: '38%', label: 'of every sale goes to makers' },
-    ],
-    ctaText: 'Read stories from our makers',
-    ctaLink: '/journal',
-    status: 'published',
-    seoTitle: 'Our Story | Tanti',
-    seoDescription:
-      'Clothing that carries the hands that made it. Fair rates and craft empowerment across Bangladesh.',
+    title: '',
+    heading: '',
+    heroImage: '',
+    heroImageAlt: '',
+    storyParagraphs: [],
+    milestones: [],
+    stats: [],
+    ctaText: '',
+    ctaLink: '',
+    status: 'draft',
+    seoTitle: '',
+    seoDescription: '',
   });
 
   // Load existing About page data when drawer opens
@@ -91,31 +66,19 @@ export function AboutEditorDrawer({
         const data = await pageService.getOwnerAboutPage();
         if (isMounted && data) {
           setForm({
-            title: data.title || 'Our story',
-            heading:
-              data.heading || 'Clothing that carries the hands that made it',
-            heroImage:
-              data.heroImage ||
-              'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=1200&auto=format&fit=crop',
+            title: data.title || '',
+            heading: data.heading || '',
+            heroImage: data.heroImage || '',
             heroImageAlt: data.heroImageAlt || '',
-            storyParagraphs:
-              data.storyParagraphs && data.storyParagraphs.length > 0
-                ? data.storyParagraphs
-                : [
-                    'Tanti means weaver. We started because the most beautiful textiles in the world were being made a few hours from Dhaka.',
-                  ],
-            milestones:
-              data.milestones && data.milestones.length > 0
-                ? data.milestones
-                : [{ year: '2026', text: 'New milestone achieved.' }],
-            stats:
-              data.stats && data.stats.length > 0
-                ? data.stats
-                : [{ value: '100+', label: 'Dedicated team members' }],
-            ctaText: data.ctaText || 'Read stories from our makers',
-            ctaLink: data.ctaLink || '/journal',
-            status: data.status || 'published',
-            seoTitle: data.seoTitle || 'Our Story | Tanti',
+            storyParagraphs: Array.isArray(data.storyParagraphs)
+              ? data.storyParagraphs
+              : [],
+            milestones: Array.isArray(data.milestones) ? data.milestones : [],
+            stats: Array.isArray(data.stats) ? data.stats : [],
+            ctaText: data.ctaText || '',
+            ctaLink: data.ctaLink || '',
+            status: data.status === 'published' ? 'published' : 'draft',
+            seoTitle: data.seoTitle || '',
             seoDescription: data.seoDescription || '',
           });
         }
@@ -313,26 +276,15 @@ export function AboutEditorDrawer({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-ink mb-1.5">
-              Hero Banner Image URL
-            </label>
-            <Input
-              value={form.heroImage}
-              onChange={(e) => setForm({ ...form, heroImage: e.target.value })}
-              placeholder="https://..."
-            />
-            {form.heroImage && (
-              <div className="mt-3 overflow-hidden rounded-lg border border-line aspect-[16/7] bg-subtle">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={form.heroImage}
-                  alt={form.heroImageAlt || 'Hero banner'}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            )}
-          </div>
+          <ImageUploadField
+            label="Hero banner image"
+            hint="Wide photo works best · PNG, JPG, WebP or AVIF · max 5MB"
+            value={form.heroImage}
+            onChange={(url) => setForm({ ...form, heroImage: url })}
+            alt={form.heroImageAlt || ''}
+            onAltChange={(heroImageAlt) => setForm({ ...form, heroImageAlt })}
+            disabled={loading || saving}
+          />
         </div>
 
         {/* Story Section */}
@@ -523,7 +475,7 @@ export function AboutEditorDrawer({
               <Input
                 value={form.ctaLink || ''}
                 onChange={(e) => setForm({ ...form, ctaLink: e.target.value })}
-                placeholder="/journal"
+                placeholder="/shop"
               />
             </div>
           </div>

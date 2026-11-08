@@ -13,10 +13,11 @@ import {
     TooManyAttemptsException,
 } from '../../../common/exceptions/business.exception';
 import { generateOtpCode } from '../utils/otp.util';
-import { generateTokens } from '../utils/token.util';
 import { EmailService } from '@/shared/mail/email-service';
 import { getOtpEmailContent } from '@/shared/mail/templates/otp-email.template';
 import { RedisService } from '../../../shared/redis/redis.service';
+import { SessionService } from './session.service';
+import type { AuthRequestMeta } from '../types/auth-meta';
 
 @Injectable()
 export class OtpService {
@@ -26,6 +27,7 @@ export class OtpService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
         private readonly redisService: RedisService,
+        private readonly sessionService: SessionService,
     ) { }
 
     async sendOtp(
@@ -76,7 +78,7 @@ export class OtpService {
         return this.sendOtp(dto, true);
     }
 
-    async verifyOtp(dto: VerifyOtpDto) {
+    async verifyOtp(dto: VerifyOtpDto, meta?: AuthRequestMeta) {
         const user = await this.prisma.user.findUnique({
             where: { email: dto.email },
         });
@@ -153,11 +155,8 @@ export class OtpService {
                 name: updatedUser.name || 'User',
                 role: updatedUser.role,
             };
-            const { accessToken, refreshToken } = generateTokens(
-                this.jwtService,
-                this.configService,
-                payload,
-            );
+            const { accessToken, refreshToken } =
+                await this.sessionService.issueTokens(payload, meta);
 
             return ResponseHelper.success(
                 {

@@ -154,7 +154,42 @@ class AuthService {
     }
     return res;
   }
+
+  async getSessions(): Promise<AuthDeviceSession[]> {
+    const res = await apiClient.get<ApiResponse<AuthDeviceSession[]>>(
+      '/auth/sessions',
+    );
+    return (res as any)?.data || [];
+  }
+
+  async revokeSession(
+    sessionId: string,
+  ): Promise<{ signedOutCurrent?: boolean } | null> {
+    const res = await apiClient.delete<
+      ApiResponse<{ signedOutCurrent?: boolean }>
+    >(`/auth/sessions/${encodeURIComponent(sessionId)}`);
+    return (res as any)?.data || null;
+  }
+
+  async revokeOtherSessions(): Promise<{ revokedCount?: number } | null> {
+    const res = await apiClient.delete<ApiResponse<{ revokedCount?: number }>>(
+      '/auth/sessions/others',
+    );
+    return (res as any)?.data || null;
+  }
 }
+
+export type AuthDeviceSession = {
+  id: string;
+  deviceLabel: string;
+  deviceType: string;
+  browser?: string | null;
+  os?: string | null;
+  ipAddress?: string | null;
+  lastActiveAt: string;
+  createdAt: string;
+  isCurrent: boolean;
+};
 
 export const authService = new AuthService();
 export {

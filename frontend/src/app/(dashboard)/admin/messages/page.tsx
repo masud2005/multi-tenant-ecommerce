@@ -22,11 +22,25 @@ import {
   ChevronRight,
   HelpCircle,
   ShoppingBag,
+  Paperclip,
+  X,
+  FileText,
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { getAuthToken, getAuthUser } from '@/services/auth';
-import { chatService, Conversation, ChatMessage } from '@/services/chat-service';
+import {
+  chatService,
+  Conversation,
+  ChatMessage,
+  CHAT_FILE_ACCEPT,
+  CHAT_MAX_ATTACHMENTS,
+  validateChatAttachment,
+  isChatImageUrl,
+} from '@/services/chat-service';
+import { ChatMessageAttachments } from '@/components/store/chat/ChatMessageAttachments';
+import { ChatMessageText } from '@/components/store/chat/ChatMessageText';
+import { usePendingCloudUploads } from '@/hooks/usePendingCloudUploads';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
@@ -48,6 +62,7 @@ export default function AdminMessagesPage() {
   const [selectedConvId, setSelectedConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [replyText, setReplyText] = useState('');
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isLoadingList, setIsLoadingList] = useState(true);
@@ -57,23 +72,41 @@ export default function AdminMessagesPage() {
   const [isCustomerTyping, setIsCustomerTyping] = useState(false);
   const [onlineConvIds, setOnlineConvIds] = useState<Set<string>>(new Set());
 
+  const pendingUploads = usePendingCloudUploads({
+    max: CHAT_MAX_ATTACHMENTS,
+    discardRemote: async (item) => {
+      await chatService.discardAttachment(
+        item.publicId || item.url,
+        'owner',
+        item.resourceType,
+      );
+    },
+  });
+
   const socketRef = useRef<Socket | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedConvIdRef = useRef<string | null>(null);
   selectedConvIdRef.current = selectedConvId;
   const prevConvIdRef = useRef<string | null>(null);
 
   const selectedConversation = conversations.find((c) => c.id === selectedConvId) || null;
 
-  // Auto-scroll messages
-  const scrollToBottom = useCallback((smooth = true) => {
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+  const handleMessagesScroll = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    stickToBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 96;
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isCustomerTyping, scrollToBottom]);
+    if (!stickToBottomRef.current) return;
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, isCustomerTyping]);
 
   // 1. Fetch Conversations List
   const fetchConversations = useCallback(
@@ -269,13 +302,70 @@ export default function AdminMessagesPage() {
     }
   }, [selectedConvId]);
 
+  // Discard unsent Cloudinary uploads when switching conversations
+  useEffect(() => {
+    return () => {
+      void pendingUploads.discardAll();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on conversation change
+  }, [selectedConvId]);
+
+  const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
+    if (pendingUploads.atLimit) {
+      toast.error(`Maximum ${CHAT_MAX_ATTACHMENTS} attachments per message`);
+      return;
+    }
+    const invalid = validateChatAttachment(file);
+    if (invalid) {
+      toast.error(invalid);
+      return;
+    }
+
+    setUploadingFile(true);
+    try {
+      const uploaded = await chatService.uploadAttachment(file, 'owner');
+      if (uploaded?.url) {
+        pendingUploads.add({
+          url: uploaded.url,
+          publicId: uploaded.publicId || uploaded.url,
+          mimeType: uploaded.mimeType || file.type,
+          name: uploaded.name || file.name,
+          resourceType:
+            uploaded.resourceType ||
+            (file.type === 'application/pdf' ? 'raw' : 'image'),
+          size: uploaded.size ?? file.size,
+        });
+      } else {
+        toast.error('Upload failed');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not upload file');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   // 4. Send Reply Message
   const handleSendReply = async (customText?: string) => {
     const textToSend = customText || replyText;
-    if (!textToSend.trim() || !selectedConvId || isSending) return;
+    const snapshot = pendingUploads.items;
+    const attachmentUrls = snapshot.map((a) => a.url);
+    if (
+      (!textToSend.trim() && attachmentUrls.length === 0) ||
+      !selectedConvId ||
+      isSending
+    ) {
+      return;
+    }
 
+    stickToBottomRef.current = true;
     setIsSending(true);
     setReplyText('');
+    pendingUploads.commit();
 
     if (socketRef.current) {
       socketRef.current.emit('typing_stop', { conversationId: selectedConvId });
@@ -291,8 +381,9 @@ export default function AdminMessagesPage() {
           'send_message',
           {
             conversationId: selectedConvId,
-            text: textToSend.trim(),
+            text: textToSend.trim() || undefined,
             senderName,
+            attachments: attachmentUrls.length ? attachmentUrls : undefined,
           },
           (res: any) => {
             if (res?.success && res?.data) {
@@ -305,9 +396,10 @@ export default function AdminMessagesPage() {
         );
       } else {
         const sent = await chatService.sendOwnerMessage(selectedConvId, {
-          text: textToSend.trim(),
+          text: textToSend.trim() || undefined,
           senderName,
           senderRole,
+          attachments: attachmentUrls.length ? attachmentUrls : undefined,
         });
         if (sent) {
           setMessages((prev) => [...prev, sent]);
@@ -316,6 +408,7 @@ export default function AdminMessagesPage() {
     } catch (err) {
       toast.error('Failed to send reply. Please try again.');
       setReplyText(textToSend);
+      pendingUploads.restore(snapshot);
     } finally {
       setIsSending(false);
     }
@@ -358,17 +451,19 @@ export default function AdminMessagesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-[calc(100dvh-7.5rem)] min-h-[32rem] flex-col gap-4 overflow-hidden">
       {/* Header */}
-      <PageHeader
-        title="Support"
-        description="Live customer messaging and support management"
-      />
+      <div className="shrink-0">
+        <PageHeader
+          title="Messages"
+          description="Live chat with customers — reply, resolve, and track conversations"
+        />
+      </div>
 
-      {/* 2-Column Split Chat Control Center */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 bg-surface border border-line rounded-2xl shadow-sm overflow-hidden h-[720px]">
-        {/* LEFT COLUMN: Conversation Inbox List (4 Cols) */}
-        <div className="lg:col-span-4 border-r border-line flex flex-col h-full bg-canvas/30">
+      {/* Split inbox + chat — fills remaining height; message pane scrolls independently */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm md:flex-row">
+        {/* LEFT: Conversation inbox */}
+        <div className="flex max-h-[34%] min-h-[9rem] w-full shrink-0 flex-col overflow-hidden border-b border-line bg-canvas/30 md:max-h-none md:h-full md:w-[16.5rem] md:border-b-0 md:border-r xl:w-[19rem]">
           {/* Search & Filter Bar */}
           <div className="p-3.5 border-b border-line space-y-2 bg-surface">
             <div className="relative">
@@ -406,7 +501,7 @@ export default function AdminMessagesPage() {
           </div>
 
           {/* Conversation List Items */}
-          <div className="flex-1 overflow-y-auto divide-y divide-line/60">
+          <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-line/60">
             {isLoadingList && conversations.length === 0 ? (
               <div className="p-8 text-center text-ink-muted text-xs flex flex-col items-center justify-center">
                 <Loader2 className="h-5 w-5 animate-spin text-clay mb-2" />
@@ -487,12 +582,12 @@ export default function AdminMessagesPage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Active Chat Conversation Workspace (8 Cols) */}
-        <div className="lg:col-span-8 flex flex-col h-full bg-surface">
+        {/* RIGHT: Active conversation */}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface">
           {selectedConversation ? (
             <>
               {/* Chat Workspace Header */}
-              <div className="p-4 border-b border-line bg-canvas/40 flex items-center justify-between">
+              <div className="flex shrink-0 items-center justify-between border-b border-line bg-canvas/40 p-4">
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <div className="w-10 h-10 rounded-full bg-clay/15 text-clay font-bold text-sm flex items-center justify-center ring-2 ring-surface">
@@ -546,7 +641,11 @@ export default function AdminMessagesPage() {
               </div>
 
               {/* Chat Message Stream */}
-              <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-canvas/20">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
+                className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-canvas/20 p-5"
+              >
                 {isLoadingMessages ? (
                   <div className="h-full flex flex-col items-center justify-center text-ink-muted text-xs">
                     <Loader2 className="h-6 w-6 animate-spin text-clay mb-2" />
@@ -591,7 +690,17 @@ export default function AdminMessagesPage() {
                                   {msg.senderName} {isOwner && `(${msg.senderRole})`}
                                 </span>
                               </div>
-                              <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                              {msg.text && msg.text !== '[Attachment]' ? (
+                                <ChatMessageText
+                                  text={msg.text}
+                                  role="admin"
+                                  tone={isOwner ? 'dark' : 'light'}
+                                />
+                              ) : null}
+                              <ChatMessageAttachments
+                                attachments={msg.attachments}
+                                tone={isOwner ? 'dark' : 'light'}
+                              />
                             </div>
                           </div>
 
@@ -624,13 +733,12 @@ export default function AdminMessagesPage() {
                       </div>
                     )}
 
-                    <div ref={messagesEndRef} />
                   </>
                 )}
               </div>
 
               {/* Quick Canned Replies Bar (Clean, no horizontal scrollbar track) */}
-              <div className="px-4 py-2 border-t border-line bg-canvas/30 flex items-center gap-1.5 overflow-x-auto scrollbar-none no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-t border-line bg-canvas/30 px-4 py-2 scrollbar-none no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 <span className="text-xs font-medium text-ink-muted shrink-0 flex items-center gap-1">
                   <Sparkles className="h-3 w-3 text-clay" /> Quick:
                 </span>
@@ -647,13 +755,62 @@ export default function AdminMessagesPage() {
               </div>
 
               {/* Chat Input Bar */}
-              <div className="p-3.5 border-t border-line bg-surface">
+              <div className="shrink-0 border-t border-line bg-surface p-3.5">
+                {pendingUploads.items.length > 0 ? (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {pendingUploads.items.map((item) => (
+                      <div key={item.key} className="relative">
+                        {isChatImageUrl(item.url) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.url}
+                            alt=""
+                            className="h-14 w-14 rounded-lg border border-line object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-line bg-subtle text-ink">
+                            <FileText className="h-5 w-5" />
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => pendingUploads.remove(item.key)}
+                          className="absolute -right-1.5 -top-1.5 rounded-full bg-ink p-0.5 text-canvas cursor-pointer"
+                          aria-label="Remove attachment"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="flex items-end gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept={CHAT_FILE_ACCEPT}
+                    className="hidden"
+                    onChange={handleAttachFile}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile || pendingUploads.atLimit}
+                    className="inline-flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-line text-ink hover:bg-subtle cursor-pointer disabled:opacity-50"
+                    aria-label="Attach file"
+                    title="Attach image or PDF"
+                  >
+                    {uploadingFile ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Paperclip className="h-4 w-4" />
+                    )}
+                  </button>
                   <textarea
                     value={replyText}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type your reply to customer... (Press Enter to send)"
+                    placeholder="Type your reply… (Enter to send)"
                     rows={1}
                     className="flex-1 min-h-[42px] max-h-32 resize-none rounded-xl border border-line bg-canvas px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted/60 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay transition-all leading-relaxed"
                   />
@@ -661,7 +818,10 @@ export default function AdminMessagesPage() {
                   <Button
                     type="button"
                     onClick={() => handleSendReply()}
-                    disabled={!replyText.trim() || isSending}
+                    disabled={
+                      (!replyText.trim() && pendingUploads.count === 0) ||
+                      isSending
+                    }
                     className="h-[42px] px-4 rounded-xl cursor-pointer bg-clay hover:bg-clay/90 text-white flex items-center gap-1.5 shrink-0 shadow-xs"
                   >
                     {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

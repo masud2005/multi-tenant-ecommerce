@@ -13,7 +13,6 @@ import {
   Star,
   ThumbsUp,
   User,
-  X,
   Package,
   Edit2,
   Trash2,
@@ -25,6 +24,7 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Button } from '@/components/ui/button';
 import { Rating } from '@/components/ui/Rating';
 import { Badge } from '@/components/ui/Badge';
+import { MediaLightbox } from '@/components/ui/MediaLightbox';
 import { formatDate } from '@/utils/format';
 import { getDisplayReviewTitle } from '@/utils/review';
 import { reviewService } from '@/services/review-service';
@@ -546,27 +546,12 @@ export function ReviewDetailDrawer({
         </div>
       </Drawer>
 
-      {/* Lightbox for photos */}
-      {lightboxImg && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4 animate-in fade-in"
-          onClick={() => setLightboxImg(null)}
-        >
-          <button
-            type="button"
-            onClick={() => setLightboxImg(null)}
-            className="absolute top-4 right-4 rounded-full bg-white/20 p-2 text-white hover:bg-white/40 cursor-pointer"
-          >
-            <X className="h-6 w-6" />
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightboxImg}
-            alt="Customer upload high-res"
-            className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
-          />
-        </div>
-      )}
+      <MediaLightbox
+        src={lightboxImg}
+        kind="image"
+        alt="Customer upload"
+        onClose={() => setLightboxImg(null)}
+      />
     </>
   );
 }

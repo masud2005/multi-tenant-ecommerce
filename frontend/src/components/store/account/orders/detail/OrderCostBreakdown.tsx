@@ -12,7 +12,7 @@ export function OrderCostBreakdown({ order }: OrderCostBreakdownProps) {
   return (
     <dl className="space-y-1.5 border-t border-line px-6 py-4 text-sm">
       <div className="flex justify-between">
-        <dt className="text-ink-muted">Subtotal</dt>
+        <dt className="text-ink-soft">Subtotal</dt>
         <dd className="text-ink">{formatBDT(order.subtotal)}</dd>
       </div>
 
@@ -24,7 +24,7 @@ export function OrderCostBreakdown({ order }: OrderCostBreakdownProps) {
       )}
 
       <div className="flex justify-between">
-        <dt className="text-ink-muted">Delivery & fees</dt>
+        <dt className="text-ink-soft">Delivery & fees</dt>
         <dd className="text-ink">{order.shipping ? formatBDT(order.shipping) : 'Free'}</dd>
       </div>
 
@@ -34,7 +34,7 @@ export function OrderCostBreakdown({ order }: OrderCostBreakdownProps) {
       </div>
 
       {order.refunded > 0 && (
-        <div className="flex justify-between text-ink-muted">
+        <div className="flex justify-between text-ink-soft">
           <dt>Refunded</dt>
           <dd>−{formatBDT(order.refunded)}</dd>
         </div>

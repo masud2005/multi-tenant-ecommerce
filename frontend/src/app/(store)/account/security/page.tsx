@@ -1,51 +1,70 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { MonitorIcon, SmartphoneIcon } from 'lucide-react';
+import {
+  Laptop,
+  Smartphone,
+  Tablet,
+  Monitor,
+  Shield,
+  LogOut,
+  Loader2,
+  MapPin,
+} from 'lucide-react';
 import { AccountHeader } from '@/components/account/AccountHeader';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/Switch';
 import { Badge } from '@/components/ui/Badge';
-import { authService } from '@/services/auth';
+import { Modal } from '@/components/ui/Modal';
+import { authService, type AuthDeviceSession } from '@/services/auth';
+import { formatDateTime } from '@/utils/format';
 import { useStore } from '@/contexts/StoreContext';
+import { useRouter } from 'next/navigation';
 
-const initialSessions = [
-  {
-    id: 's1',
-    device: 'Chrome on macOS',
-    location: 'Dhaka, BD',
-    last: 'Active now',
-    current: true,
-    mobile: false,
-  },
-  {
-    id: 's2',
-    device: 'Tanti app on iPhone 15',
-    location: 'Dhaka, BD',
-    last: '2 hours ago',
-    current: false,
-    mobile: true,
-  },
-  {
-    id: 's3',
-    device: 'Safari on iPad',
-    location: 'Sylhet, BD',
-    last: '12 Sep 2026',
-    current: false,
-    mobile: true,
-  },
-];
+function DeviceIcon({ type }: { type?: string }) {
+  const cls = 'h-5 w-5 shrink-0 text-ink';
+  switch (type) {
+    case 'mobile':
+      return <Smartphone className={cls} aria-hidden />;
+    case 'tablet':
+      return <Tablet className={cls} aria-hidden />;
+    case 'desktop':
+      return <Laptop className={cls} aria-hidden />;
+    default:
+      return <Monitor className={cls} aria-hidden />;
+  }
+}
 
 export default function AccountSecurityPage() {
-  const { user } = useStore();
+  const router = useRouter();
+  const { logout } = useStore();
+
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [mfa, setMfa] = useState(false);
-  const [sessions, setSessions] = useState(initialSessions);
-  const [google, setGoogle] = useState(false);
+
+  const [sessions, setSessions] = useState<AuthDeviceSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revokingOthers, setRevokingOthers] = useState(false);
+  const [confirmOthers, setConfirmOthers] = useState(false);
+
+  const loadSessions = useCallback(async () => {
+    setSessionsLoading(true);
+    try {
+      const list = await authService.getSessions();
+      setSessions(list);
+    } catch {
+      toast.error('Could not load signed-in devices');
+    } finally {
+      setSessionsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
 
   const change = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,24 +82,71 @@ export default function AccountSecurityPage() {
         newPassword: pw.next,
       });
       setPw({ current: '', next: '', confirm: '' });
-      toast.success('Password changed successfully');
-      setSessions((s) => s.filter((x) => x.current));
+      toast.success('Password updated');
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to change password. Please check your current password.');
+      toast.error(
+        err?.message ||
+          'Could not change password. Check your current password and try again.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
+  const handleRevoke = async (session: AuthDeviceSession) => {
+    setRevokingId(session.id);
+    try {
+      const res = await authService.revokeSession(session.id);
+      if (res?.signedOutCurrent || session.isCurrent) {
+        toast.success('Signed out of this device');
+        await authService.logout();
+        logout();
+        router.push('/login');
+        return;
+      }
+      toast.success('Device signed out');
+      await loadSessions();
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not sign out that device');
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
+  const handleRevokeOthers = async () => {
+    setRevokingOthers(true);
+    try {
+      const res = await authService.revokeOtherSessions();
+      toast.success(
+        res?.revokedCount
+          ? `Signed out of ${res.revokedCount} other device${res.revokedCount === 1 ? '' : 's'}`
+          : 'No other devices were signed in',
+      );
+      setConfirmOthers(false);
+      await loadSessions();
+    } catch (err: any) {
+      toast.error(err?.message || 'Could not sign out other devices');
+    } finally {
+      setRevokingOthers(false);
+    }
+  };
+
+  const otherCount = sessions.filter((s) => !s.isCurrent).length;
+
   return (
-    <div className="max-w-2xl space-y-8">
-      <AccountHeader title="Login & security" />
-      <section className="rounded-lg border border-line bg-surface p-6">
-        <h2 className="text-sm font-semibold">Change password</h2>
+    <div className="max-w-xl space-y-6">
+      <AccountHeader
+        title="Login & security"
+        description="Manage your password and the devices signed into your account."
+      />
+
+      <section className="rounded-xl border border-line bg-surface p-5 sm:p-6">
+        <h2 className="text-sm font-semibold text-ink">Change password</h2>
         <form onSubmit={change} noValidate className="mt-4 grid gap-4">
           <Input
             label="Current password"
             type="password"
+            placeholder="Enter your current password"
             value={pw.current}
             onChange={(e) => setPw({ ...pw, current: e.target.value })}
             error={errors.current}
@@ -90,6 +156,7 @@ export default function AccountSecurityPage() {
             <Input
               label="New password"
               type="password"
+              placeholder="At least 6 characters"
               value={pw.next}
               onChange={(e) => setPw({ ...pw, next: e.target.value })}
               error={errors.next}
@@ -98,6 +165,7 @@ export default function AccountSecurityPage() {
             <Input
               label="Confirm new password"
               type="password"
+              placeholder="Re-enter new password"
               value={pw.confirm}
               onChange={(e) => setPw({ ...pw, confirm: e.target.value })}
               error={errors.confirm}
@@ -112,88 +180,109 @@ export default function AccountSecurityPage() {
         </form>
       </section>
 
-      <section className="rounded-lg border border-line bg-surface p-6">
-        <div className="flex items-start justify-between gap-4">
+      <section className="rounded-xl border border-line bg-surface p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold">Two-step verification</h2>
-            <p className="mt-1 text-sm text-ink-muted">
-              Require a code from an authenticator app or SMS when signing in on a new device.
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Shield className="h-4 w-4" aria-hidden />
+              Signed-in devices
+            </h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              Devices currently using your account. Sign out any you don’t
+              recognize.
             </p>
           </div>
-          <Switch
-            checked={mfa}
-            onChange={(v) => {
-              setMfa(v);
-              toast.success(
-                v ? 'Two-step verification enabled' : 'Two-step verification disabled'
-              );
-            }}
-            label="Two-step verification"
-            hideLabel
-          />
+          {otherCount > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setConfirmOthers(true)}
+            >
+              Sign out others
+            </Button>
+          ) : null}
         </div>
-        <div className="mt-5 flex items-center justify-between border-t border-line pt-5">
-          <div>
-            <p className="text-sm font-medium">Google</p>
-            <p className="text-xs text-ink-muted">
-              {user?.email ? `Linked with ${user.email}` : 'Not connected'}
+
+        <div className="mt-4 divide-y divide-line border-t border-line">
+          {sessionsLoading ? (
+            <div className="flex items-center gap-2 py-8 text-sm text-ink-soft">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading devices…
+            </div>
+          ) : sessions.length === 0 ? (
+            <p className="py-8 text-sm text-ink-soft">
+              No active sessions found. Sign in again to see this device here.
             </p>
-          </div>
-          <Button size="sm" variant="secondary" onClick={() => setGoogle(!google)}>
-            {google ? 'Disconnect' : 'Connect'}
-          </Button>
+          ) : (
+            sessions.map((session) => (
+              <div
+                key={session.id}
+                className="flex items-start gap-3 py-4 first:pt-4"
+              >
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-lg bg-subtle">
+                  <DeviceIcon type={session.deviceType} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium text-ink">
+                      {session.deviceLabel}
+                    </p>
+                    {session.isCurrent ? (
+                      <Badge tone="success">This device</Badge>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 text-xs text-ink-soft">
+                    Last active {formatDateTime(session.lastActiveAt)}
+                    {session.createdAt
+                      ? ` · Signed in ${formatDateTime(session.createdAt)}`
+                      : ''}
+                  </p>
+                  {session.ipAddress ? (
+                    <p className="mt-1 inline-flex items-center gap-1 text-xs text-ink-muted">
+                      <MapPin className="h-3 w-3" aria-hidden />
+                      {session.ipAddress}
+                    </p>
+                  ) : null}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-ink-soft hover:text-danger"
+                  loading={revokingId === session.id}
+                  onClick={() => handleRevoke(session)}
+                >
+                  <LogOut className="mr-1 h-3.5 w-3.5" />
+                  {session.isCurrent ? 'Sign out' : 'Remove'}
+                </Button>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
-      <section className="rounded-lg border border-line bg-surface p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Active sessions</h2>
-          {sessions.length > 1 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setSessions((s) => s.filter((x) => x.current));
-                toast.success('Signed out of all other devices');
-              }}
-            >
-              Sign out all others
+      <Modal
+        open={confirmOthers}
+        onClose={() => setConfirmOthers(false)}
+        title="Sign out other devices?"
+        description="You’ll stay signed in here. All other devices will need to sign in again."
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setConfirmOthers(false)}>
+              Cancel
             </Button>
-          )}
-        </div>
-        <ul className="mt-3 divide-y divide-line">
-          {sessions.map((s) => {
-            const Icon = s.mobile ? SmartphoneIcon : MonitorIcon;
-            return (
-              <li key={s.id} className="flex items-center gap-4 py-3">
-                <Icon className="h-5 w-5 text-ink-muted" aria-hidden />
-                <div className="flex-1 text-sm">
-                  <p className="font-medium">
-                    {s.device}{' '}
-                    {s.current && (
-                      <Badge tone="success" className="ml-1">
-                        This device
-                      </Badge>
-                    )}
-                  </p>
-                  <p className="text-xs text-ink-muted">
-                    {s.location} · {s.last}
-                  </p>
-                </div>
-                {!s.current && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setSessions((x) => x.filter((y) => y.id !== s.id))}
-                  >
-                    Sign out
-                  </Button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+            <Button
+              variant="danger"
+              loading={revokingOthers}
+              onClick={handleRevokeOthers}
+            >
+              Sign out others
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

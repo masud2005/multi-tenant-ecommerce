@@ -667,6 +667,7 @@ export default function AdminSettingsPage() {
                   <Input
                     label="Unpaid order hold time (minutes)"
                     defaultValue="30"
+                    placeholder="e.g. 30"
                     hint="Reserved inventory is automatically released back to stock after this time"
                   />
                 </div>
@@ -816,11 +817,13 @@ export default function AdminSettingsPage() {
                     label="Standard VAT rate (%)"
                     value={flags.vatRate}
                     onChange={(e) => setFlags({ ...flags, vatRate: e.target.value })}
+                    placeholder="e.g. 7.5"
                   />
                   <Input
                     label="Business Identification Number (BIN)"
                     value={flags.binNumber}
                     onChange={(e) => setFlags({ ...flags, binNumber: e.target.value })}
+                    placeholder="e.g. 001234567-0401"
                   />
                 </div>
                 <div className="mt-5 space-y-3">
@@ -846,6 +849,7 @@ export default function AdminSettingsPage() {
                     label="Return window (days after delivery)"
                     value={flags.returnWindow}
                     onChange={(e) => setFlags({ ...flags, returnWindow: e.target.value })}
+                    placeholder="e.g. 7"
                   />
                   <Select
                     label="Refund payout methods"

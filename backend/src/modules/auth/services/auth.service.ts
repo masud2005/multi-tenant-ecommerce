@@ -22,9 +22,9 @@ import {
 } from '../../../common/exceptions/business.exception';
 
 import { ConfigService } from '@nestjs/config';
-import { generateTokens } from '../utils/token.util';
-import { RedisService } from '../../../shared/redis/redis.service';
 import { NotificationService } from '../../notification/notification.service';
+import { SessionService } from './session.service';
+import type { AuthRequestMeta } from '../types/auth-meta';
 
 @Injectable()
 export class AuthService {
@@ -34,8 +34,8 @@ export class AuthService {
         private readonly configService: ConfigService,
         private readonly otpService: OtpService,
         private readonly eventEmitter: EventEmitter2,
-        private readonly redisService: RedisService,
         private readonly notificationService: NotificationService,
+        private readonly sessionService: SessionService,
     ) { }
 
     async register(dto: RegisterDto) {
@@ -86,7 +86,7 @@ export class AuthService {
         );
     }
 
-    async login(dto: LoginDto) {
+    async login(dto: LoginDto, meta?: AuthRequestMeta) {
         const user = await this.prisma.user.findUnique({
             where: { email: dto.email },
             include: {
@@ -190,16 +190,10 @@ export class AuthService {
             staffRole,
             permissions,
         };
-        const { accessToken, refreshToken } = generateTokens(
-            this.jwtService,
-            this.configService,
+        const { accessToken, refreshToken } = await this.sessionService.issueTokens(
             payload,
+            meta,
         );
-
-        // Store refresh token in Redis (e.g., valid for 30 days => 30 * 24 * 60 * 60)
-        const refreshExpiresInStr = this.configService.get<string>('REFRESH_TOKEN_EXPIRES_IN') as string;
-        const ttlSeconds = refreshExpiresInStr.includes('d') ? parseInt(refreshExpiresInStr) * 24 * 60 * 60 : 30 * 24 * 60 * 60;
-        await this.redisService.set(`refresh_token:${user.id}`, refreshToken, ttlSeconds);
 
         return ResponseHelper.success(
             {
@@ -227,14 +221,6 @@ export class AuthService {
             const refreshSecret = this.configService.get<string>('jwt.refreshSecret') as string;
             const decoded = this.jwtService.verify(dto.refreshToken, { secret: refreshSecret });
 
-            // Check if token matches the current or grace-window previous token in Redis
-            const storedToken = await this.redisService.get(`refresh_token:${decoded.sub}`);
-            const prevToken = await this.redisService.get(`refresh_token_prev:${decoded.sub}`);
-            if (!storedToken || (storedToken !== dto.refreshToken && prevToken !== dto.refreshToken)) {
-                throw new UnauthorizedException('Invalid or expired refresh token');
-            }
-
-            // Verify user exists and is active, including tenant memberships
             const user = await this.prisma.user.findUnique({
                 where: { id: decoded.sub },
                 include: {
@@ -245,32 +231,39 @@ export class AuthService {
                 throw new UnauthorizedException('Invalid or expired refresh token');
             }
 
-            const tenantId = user.tenantMemberships?.[0]?.tenantId;
-
-            // Generate a new token pair preserving all claims
+            const membership = user.tenantMemberships?.[0];
+            const tenantId = membership?.tenantId;
+            const isOwner = Boolean(
+                membership?.isOwner ||
+                    user.role === UserRole.OWNER ||
+                    (user.role as any) === 'SUPER_ADMIN',
+            );
             const payload = {
                 sub: user.id,
                 email: user.email,
                 name: user.name || 'User',
                 role: user.role,
                 tenantId,
+                isOwner,
             };
-            const { accessToken, refreshToken } = generateTokens(
-                this.jwtService,
-                this.configService,
-                payload,
-            );
 
-            // Update refresh token in Redis with rotation & 15s grace window for previous token
-            const refreshExpiresInStr = this.configService.get<string>('REFRESH_TOKEN_EXPIRES_IN') as string;
-            const ttlSeconds = refreshExpiresInStr?.includes('d') ? parseInt(refreshExpiresInStr) * 24 * 60 * 60 : 30 * 24 * 60 * 60;
-            await this.redisService.set(`refresh_token_prev:${user.id}`, dto.refreshToken, 15);
-            await this.redisService.set(`refresh_token:${user.id}`, refreshToken, ttlSeconds);
+            const tokens = decoded.sid
+                ? await this.sessionService.rotateRefreshToken(
+                      decoded.sid,
+                      user.id,
+                      dto.refreshToken,
+                      payload,
+                  )
+                : await this.sessionService.rotateLegacyRefreshToken(
+                      user.id,
+                      dto.refreshToken,
+                      payload,
+                  );
 
             return ResponseHelper.success(
                 {
-                    accessToken,
-                    refreshToken,
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken,
                     user: {
                         id: user.id,
                         name: user.name,
@@ -287,20 +280,32 @@ export class AuthService {
         }
     }
 
-    async logout(userId: string) {
-        await this.redisService.del(`refresh_token:${userId}`);
-        await this.redisService.del(`refresh_token_prev:${userId}`);
-
-        // Invalidate current access tokens by storing a logout timestamp (TTL: 15 mins)
-        await this.redisService.set(`user_logout:${userId}`, Date.now().toString(), 15 * 60);
+    async logout(userId: string, sessionId?: string | null) {
+        await this.sessionService.logoutCurrent(userId, sessionId);
 
         this.eventEmitter.emit('activity.log', {
             type: 'USER_LOGOUT',
             message: `User logged out`,
-            metadata: { userId },
+            metadata: { userId, sessionId },
         });
 
         return ResponseHelper.success(null, 'Logged out successfully');
+    }
+
+    listSessions(userId: string, currentSessionId?: string | null) {
+        return this.sessionService.listSessions(userId, currentSessionId);
+    }
+
+    revokeSession(
+        userId: string,
+        sessionId: string,
+        currentSessionId?: string | null,
+    ) {
+        return this.sessionService.revokeOne(userId, sessionId, currentSessionId);
+    }
+
+    revokeOtherSessions(userId: string, currentSessionId?: string | null) {
+        return this.sessionService.revokeOthers(userId, currentSessionId);
     }
 
     // Validate incoming staff invitation token
@@ -363,7 +368,10 @@ export class AuthService {
     }
 
     // Accept staff invite, set password, and auto-login
-    async acceptStaffInvite(dto: { token: string; password: string; name?: string }) {
+    async acceptStaffInvite(
+        dto: { token: string; password: string; name?: string },
+        meta?: AuthRequestMeta,
+    ) {
         const { token, password, name } = dto;
         if (!token) {
             throw new UnauthorizedException('Invitation token is required');
@@ -449,10 +457,9 @@ export class AuthService {
             permissions,
         };
 
-        const { accessToken, refreshToken } = generateTokens(
-            this.jwtService,
-            this.configService,
+        const { accessToken, refreshToken } = await this.sessionService.issueTokens(
             payload,
+            meta,
         );
 
         return ResponseHelper.success(

@@ -32,8 +32,8 @@ const columns = [
     title: 'About',
     links: [
       ['/about', 'Our story'],
-      ['/journal', 'Journal'],
-      ['/brands/tanti-loom', 'Featured Brands'],
+      ['/policies/privacy', 'Privacy'],
+      ['/policies/terms', 'Terms'],
       ['/admin', 'Merchant login'],
     ],
   },

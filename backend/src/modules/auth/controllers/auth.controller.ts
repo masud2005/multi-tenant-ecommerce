@@ -1,12 +1,16 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
+  Param,
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -29,6 +33,19 @@ import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 
+function requestMeta(req: any, userAgentHeader?: string) {
+  const forwarded = req?.headers?.['x-forwarded-for'];
+  const ip =
+    (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : null) ||
+    req?.ip ||
+    req?.socket?.remoteAddress ||
+    null;
+  return {
+    userAgent: userAgentHeader || req?.headers?.['user-agent'] || null,
+    ipAddress: ip,
+  };
+}
+
 @ApiTags('(Auth) Account')
 @Controller('auth')
 export class AuthController {
@@ -47,12 +64,16 @@ export class AuthController {
   // @ThrottleLogin()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Verify login credentials and send login OTP or direct login',
+    summary: 'Verify login credentials and create a device session',
   })
   @ApiResponse({ status: 200, description: 'User successfully logged in' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: any,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    return this.authService.login(dto, requestMeta(req, userAgent));
   }
 
   @Post('refresh-token')
@@ -69,11 +90,37 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Logout user and invalidate refresh token' })
+  @ApiOperation({ summary: 'Logout current device session' })
   @ApiResponse({ status: 200, description: 'User successfully logged out' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async logout(@CurrentUser() user: any) {
-    return this.authService.logout(user.id);
+    return this.authService.logout(user.id, user.sid);
+  }
+
+  @Get('sessions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List active login sessions for the current user' })
+  async listSessions(@CurrentUser() user: any) {
+    return this.authService.listSessions(user.id, user.sid);
+  }
+
+  @Delete('sessions/others')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Sign out of all devices except the current one' })
+  async revokeOtherSessions(@CurrentUser() user: any) {
+    return this.authService.revokeOtherSessions(user.id, user.sid);
+  }
+
+  @Delete('sessions/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Sign out a specific device session' })
+  async revokeSession(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.authService.revokeSession(user.id, id, user.sid);
   }
 
   // Validate staff invite link token
@@ -92,8 +139,12 @@ export class AuthController {
   @ApiOperation({ summary: 'Accept staff invitation and set initial password' })
   @ApiResponse({ status: 200, description: 'Staff account activated successfully' })
   @ApiResponse({ status: 401, description: 'Invalid or expired token' })
-  async acceptStaffInvite(@Body() dto: AcceptStaffInviteDto) {
-    return this.authService.acceptStaffInvite(dto);
+  async acceptStaffInvite(
+    @Body() dto: AcceptStaffInviteDto,
+    @Req() req: any,
+    @Headers('user-agent') userAgent?: string,
+  ) {
+    return this.authService.acceptStaffInvite(dto, requestMeta(req, userAgent));
   }
 
   @Get('me')

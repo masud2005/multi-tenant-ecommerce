@@ -123,13 +123,6 @@ export const adminNavItems: NavItem[] = [
     module: 'discounts',
   },
   {
-    title: 'Marketing',
-    href: '/admin/marketing',
-    icon: 'Megaphone',
-    category: 'Growth',
-    module: 'marketing',
-  },
-  {
     title: 'Shipping',
     href: '/admin/shipping',
     icon: 'Truck',
@@ -145,7 +138,7 @@ export const adminNavItems: NavItem[] = [
     module: 'theme',
   },
   {
-    title: 'Pages, blog & menus',
+    title: 'Content',
     href: '/admin/content',
     icon: 'FileText',
     category: 'Online store',
@@ -157,13 +150,6 @@ export const adminNavItems: NavItem[] = [
     icon: 'Image',
     category: 'Online store',
     module: 'media',
-  },
-  {
-    title: 'SEO',
-    href: '/admin/seo',
-    icon: 'Search',
-    category: 'Online store',
-    module: 'content',
   },
   // Insights
   {
@@ -208,13 +194,6 @@ export const adminNavItems: NavItem[] = [
     icon: 'ScrollText',
     category: 'Administration',
     module: 'audit',
-  },
-  {
-    title: 'Plan & billing',
-    href: '/admin/billing',
-    icon: 'Gem',
-    category: 'Administration',
-    module: 'billing',
   },
 ];
 

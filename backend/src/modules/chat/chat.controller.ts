@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
@@ -9,10 +10,15 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -21,6 +27,7 @@ import { ChatGateway } from './chat.gateway';
 import { SendMessageDto } from './dto/send-message.dto';
 import { StartConversationDto } from './dto/start-conversation.dto';
 import { ConversationQueryDto } from './dto/conversation-query.dto';
+import { DeleteChatAttachmentDto } from './dto/delete-attachment.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -86,6 +93,47 @@ export class ChatController {
     );
     this.chatGateway.broadcastMessage(conversationId, result.data);
     return result;
+  }
+
+  /**
+   * 🛍️ 3b. Customer: Upload chat attachment
+   */
+  @Post('customer/chat/upload')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(OptionalJwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload an image or PDF for live chat' })
+  async uploadCustomerChatFile(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    return this.chatService.uploadAttachment(
+      file,
+      tenantHeader || user?.tenantId,
+    );
+  }
+
+  /**
+   * 🛍️ 3c. Customer: Discard pending chat attachment (Cloudinary rollback)
+   */
+  @Delete('customer/chat/upload')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'Delete a pending chat attachment from storage' })
+  async deleteCustomerChatFile(@Body() dto: DeleteChatAttachmentDto) {
+    return this.chatService.deleteAttachment(
+      dto.publicIdOrUrl,
+      dto.resourceType,
+    );
   }
 
   /**
@@ -181,6 +229,51 @@ export class ChatController {
   ) {
     const tenantId = user?.tenantId || tenantHeader;
     return this.chatService.markAsRead(conversationId, 'OWNER', tenantId);
+  }
+
+  /**
+   * 🏢 8b. Owner/Staff: Upload chat attachment
+   */
+  @Post('owner/chat/upload')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER, UserRole.STAFF)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { file: { type: 'string', format: 'binary' } },
+      required: ['file'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload an image or PDF for live chat (owner/staff)' })
+  async uploadOwnerChatFile(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    return this.chatService.uploadAttachment(
+      file,
+      user?.tenantId || tenantHeader,
+    );
+  }
+
+  /**
+   * 🏢 8c. Owner/Staff: Discard pending chat attachment (Cloudinary rollback)
+   */
+  @Delete('owner/chat/upload')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.OWNER, UserRole.STAFF)
+  @ApiOperation({ summary: 'Delete a pending chat attachment from storage' })
+  async deleteOwnerChatFile(@Body() dto: DeleteChatAttachmentDto) {
+    return this.chatService.deleteAttachment(
+      dto.publicIdOrUrl,
+      dto.resourceType,
+    );
   }
 
   /**

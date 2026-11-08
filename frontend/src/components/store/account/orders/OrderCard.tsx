@@ -24,15 +24,15 @@ export function OrderCard({ order, onReorder }: OrderCardProps) {
       {/* Header bar: Order number, placement date, total price, and status badge */}
       <div className="flex flex-wrap items-center gap-x-8 gap-y-2 border-b border-line px-5 py-3 text-sm">
         <div>
-          <p className="text-xs text-ink-muted">Order</p>
+          <p className="text-xs font-medium text-ink-soft">Order</p>
           <p className="font-medium text-ink">{order.number}</p>
         </div>
         <div>
-          <p className="text-xs text-ink-muted">Placed</p>
+          <p className="text-xs font-medium text-ink-soft">Placed</p>
           <p className="text-ink">{formatDate(order.createdAt)}</p>
         </div>
         <div>
-          <p className="text-xs text-ink-muted">Total</p>
+          <p className="text-xs font-medium text-ink-soft">Total</p>
           <p className="tabular-nums font-medium text-ink">{formatBDT(order.total)}</p>
         </div>
         <div className="ml-auto">
@@ -55,7 +55,7 @@ export function OrderCard({ order, onReorder }: OrderCardProps) {
           ))}
         </div>
 
-        <p className="min-w-0 flex-1 text-sm text-ink-soft line-clamp-2">
+        <p className="min-w-0 flex-1 text-sm text-ink line-clamp-2">
           {order.items.map((item) => item.title).join(', ')}
         </p>
 

@@ -4,17 +4,23 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Put,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { OwnerPageService } from './page.service';
-import { UpdateAboutPageDto, UpdateReturnsPageDto } from './dto';
+import { OwnerPageService, POLICY_SLUGS } from './page.service';
+import {
+  UpdateAboutPageDto,
+  UpdatePolicyPageDto,
+  UpdateReturnsPageDto,
+} from './dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
@@ -32,9 +38,6 @@ export class OwnerPageController {
   @Get('about')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get About Us page content for editing' })
-  @ApiResponse({ status: 200, description: 'About Us page retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async getAboutPage(@CurrentUser() user?: any) {
     return this.pageService.getAboutPage(user?.tenantId);
   }
@@ -42,13 +45,9 @@ export class OwnerPageController {
   @Put('about')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update or save About Us page content' })
-  @ApiResponse({ status: 200, description: 'About Us page saved successfully' })
-  @ApiResponse({ status: 400, description: 'Validation failed' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async updateAboutPage(
     @Body() dto: UpdateAboutPageDto,
-    @CurrentUser() user?: any
+    @CurrentUser() user?: any,
   ) {
     const authorName = user?.name || user?.email || 'Store Admin';
     return this.pageService.updateAboutPage(dto, user?.tenantId, authorName);
@@ -57,36 +56,64 @@ export class OwnerPageController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all CMS pages for owner dashboard' })
-  @ApiResponse({ status: 200, description: 'Pages retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async getAllPages(@CurrentUser() user?: any) {
     return this.pageService.getAllPages(user?.tenantId);
   }
 
+  @Get('policies/:slug')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: `Get policy page (${POLICY_SLUGS.join(', ')}) for editing`,
+  })
+  @ApiParam({ name: 'slug', example: 'shipping' })
+  async getPolicyPage(
+    @Param('slug') slug: string,
+    @CurrentUser() user?: any,
+  ) {
+    return this.pageService.getPolicyPage(slug, user?.tenantId);
+  }
+
+  @Put('policies/:slug')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: `Update policy page (${POLICY_SLUGS.join(', ')})`,
+  })
+  @ApiParam({ name: 'slug', example: 'shipping' })
+  async updatePolicyPage(
+    @Param('slug') slug: string,
+    @Body() dto: UpdatePolicyPageDto,
+    @CurrentUser() user?: any,
+  ) {
+    const authorName = user?.name || user?.email || 'Store Admin';
+    return this.pageService.updatePolicyPage(
+      slug,
+      dto,
+      user?.tenantId,
+      authorName,
+    );
+  }
+
+  /** Back-compat aliases for returns */
   @Get('returns')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get Return page content for editing' })
-  @ApiResponse({ status: 200, description: 'Return page retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
+  @ApiOperation({ summary: 'Get Return page (alias of policies/returns)' })
   async getReturnsPage(@CurrentUser() user?: any) {
-    return this.pageService.getReturnsPage(user?.tenantId);
+    return this.pageService.getPolicyPage('returns', user?.tenantId);
   }
 
   @Put('returns')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update or save Return page content' })
-  @ApiResponse({ status: 200, description: 'Return page saved successfully' })
-  @ApiResponse({ status: 400, description: 'Validation failed' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
+  @ApiOperation({ summary: 'Update Return page (alias of policies/returns)' })
   async updateReturnsPage(
     @Body() dto: UpdateReturnsPageDto,
-    @CurrentUser() user?: any
+    @CurrentUser() user?: any,
   ) {
     const authorName = user?.name || user?.email || 'Store Admin';
-    return this.pageService.updateReturnsPage(dto, user?.tenantId, authorName);
+    return this.pageService.updatePolicyPage(
+      'returns',
+      dto,
+      user?.tenantId,
+      authorName,
+    );
   }
 }
-

@@ -84,15 +84,15 @@ export default function AccountReviewsPage() {
       ) : (
         <>
           {toReview.length > 0 && (
-            <section className="rounded-2xl border border-amber-200 dark:border-amber-900/60 bg-gradient-to-br from-amber-50/50 via-surface to-surface p-6 shadow-xs">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-5 w-5 text-amber-600" />
-                <h2 className="font-display text-lg font-semibold text-ink">
-                  Waiting for Your Review ({toReview.length})
+            <section className="rounded-xl border border-line bg-surface p-5 sm:p-6">
+              <div className="flex items-center gap-2 mb-1">
+                <Sparkles className="h-4 w-4 text-ink-muted" />
+                <h2 className="text-base font-semibold text-ink">
+                  Waiting for your review ({toReview.length})
                 </h2>
               </div>
-              <p className="text-xs text-ink-muted -mt-2 mb-4">
-                These delivered purchases do not have a review yet. Share honest feedback with other shoppers.
+              <p className="mb-4 text-sm text-ink-muted">
+                Delivered purchases you haven’t reviewed yet.
               </p>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -101,15 +101,18 @@ export default function AccountReviewsPage() {
                     key={p.id}
                     className="flex items-center gap-4 rounded-xl border border-line bg-surface p-3.5 transition-all hover:border-ink hover:shadow-xs"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={
-                        p.images[0] ||
-                        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200'
-                      }
-                      alt={p.title}
-                      className="h-16 w-14 rounded-lg object-cover border border-line shrink-0"
-                    />
+                    {p.images?.[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.images[0]}
+                        alt={p.title}
+                        className="h-16 w-14 rounded-lg object-cover border border-line shrink-0"
+                      />
+                    ) : (
+                      <span className="flex h-16 w-14 shrink-0 items-center justify-center rounded-lg border border-line bg-subtle text-ink-muted">
+                        <Star className="h-4 w-4" />
+                      </span>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-ink truncate">{p.title}</p>
                       <p className="text-xs text-ink-muted">
@@ -216,11 +219,11 @@ export default function AccountReviewsPage() {
 
                       <div className="pt-2 border-t border-line/60 flex items-center justify-between text-xs text-ink-muted">
                         <span>
-                          {formatDate(
-                            r.date || r.createdAt || new Date().toISOString(),
-                          )}
+                          {r.date || r.createdAt
+                            ? formatDate(r.date || r.createdAt!)
+                            : null}
                         </span>
-                        {r.verified && <span>Verified purchase</span>}
+                        {r.verified ? <span>Verified purchase</span> : null}
                       </div>
                     </article>
                   );

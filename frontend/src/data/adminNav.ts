@@ -12,21 +12,16 @@ import {
   Star,
   MessageSquare,
   Percent,
-  Megaphone,
   Truck,
   Palette,
   FileText,
   Image as ImageIcon,
-  Search,
-  Globe,
   BarChart3,
   FileSpreadsheet,
   Shield,
   Bell,
-  Plug,
   Settings,
   ScrollText,
-  Gem,
   type LucideIcon
 } from 'lucide-react';
 import type { AdminModule, PermissionAction } from '../types/commerce';
@@ -84,7 +79,6 @@ export const adminNav: { group: string; items: AdminNavItem[] }[] = [
     group: 'Growth',
     items: [
       { to: '/admin/discounts', label: 'Discounts', icon: Percent, module: 'discounts' },
-      { to: '/admin/marketing', label: 'Marketing', icon: Megaphone, module: 'marketing' },
       { to: '/admin/shipping', label: 'Shipping', icon: Truck, module: 'shipping' }
     ]
   },
@@ -92,9 +86,8 @@ export const adminNav: { group: string; items: AdminNavItem[] }[] = [
     group: 'Online store',
     items: [
       { to: '/admin/theme', label: 'Theme', icon: Palette, module: 'theme' },
-      { to: '/admin/content', label: 'Pages, blog & menus', icon: FileText, module: 'content' },
-      { to: '/admin/media', label: 'Media', icon: ImageIcon, module: 'media' },
-      { to: '/admin/seo', label: 'SEO', icon: Search, module: 'content' }
+      { to: '/admin/content', label: 'Content', icon: FileText, module: 'content' },
+      { to: '/admin/media', label: 'Media', icon: ImageIcon, module: 'media' }
     ]
   },
   {
@@ -110,8 +103,7 @@ export const adminNav: { group: string; items: AdminNavItem[] }[] = [
       { to: '/admin/staff', label: 'Staff & roles', icon: Shield, module: 'staff' },
       { to: '/admin/notifications', label: 'Notifications', icon: Bell, module: 'notifications' },
       { to: '/admin/settings', label: 'Settings', icon: Settings, module: 'settings' },
-      { to: '/admin/audit', label: 'Audit logs', icon: ScrollText, module: 'audit' },
-      { to: '/admin/billing', label: 'Plan & billing', icon: Gem, module: 'billing' }
+      { to: '/admin/audit', label: 'Audit logs', icon: ScrollText, module: 'audit' }
     ]
   }
 ];

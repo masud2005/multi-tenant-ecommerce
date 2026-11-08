@@ -742,7 +742,7 @@ export function ProductDetailView({ slug }: { slug: string }) {
           label="Email or mobile number"
           value={alertContact}
           onChange={(e) => setAlertContact(e.target.value)}
-          placeholder="01XXX-XXXXXX or you@example.com"
+          placeholder="01XXXXXXXXX or you@example.com"
         />
       </Modal>
     </div>

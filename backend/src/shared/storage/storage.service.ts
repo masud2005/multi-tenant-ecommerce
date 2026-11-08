@@ -162,6 +162,17 @@ export class StorageService implements OnModuleInit {
     });
   }
 
+  inferResourceType(
+    publicIdOrUrl: string,
+  ): 'image' | 'video' | 'raw' | undefined {
+    if (!publicIdOrUrl) return undefined;
+    if (publicIdOrUrl.includes('/raw/upload/')) return 'raw';
+    if (publicIdOrUrl.includes('/video/upload/')) return 'video';
+    if (publicIdOrUrl.includes('/image/upload/')) return 'image';
+    if (/\.pdf(\?|$)/i.test(publicIdOrUrl)) return 'raw';
+    return undefined;
+  }
+
   extractPublicId(publicIdOrUrl: string): string {
     if (!publicIdOrUrl) return '';
 
