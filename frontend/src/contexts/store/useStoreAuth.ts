@@ -38,7 +38,6 @@ export function useStoreAuth() {
   });
 
   const [isAddressesLoading, setIsAddressesLoading] = useState<boolean>(false);
-  const [storeCredit] = useState(0);
   const [customers, setCustomers] = useState<Customer[]>([]);
 
   // Helper to load addresses from backend database for authenticated users
@@ -331,7 +330,6 @@ export function useStoreAuth() {
     setUser,
     addresses,
     isAddressesLoading,
-    storeCredit,
     customers,
     login,
     register,

@@ -78,7 +78,7 @@ export default function AdminSettingsPage() {
     currencyPosition: 'prefix' as 'prefix' | 'suffix',
     timezone: '(GMT+06:00) Dhaka',
     language: 'English',
-    orderNumberFormat: 'TN-{number}',
+    orderNumberFormat: 'OR-{number}',
     announcement: '',
     announcementEnabled: false,
   });
@@ -100,20 +100,20 @@ export default function AdminSettingsPage() {
     instagram: 'https://instagram.com/tanti',
   });
 
-  // 4. Payment Methods State
+  // 4. Payment Methods State — start OFF until owner settings load (avoid fake “enabled” UI)
   const [pm, setPm] = useState<Record<string, boolean>>({
-    bkash: true,
-    nagad: true,
+    bkash: false,
+    nagad: false,
     cod: true,
   });
 
   const [paymentConfig, setPaymentConfig] = useState({
-    bkashNumber: '01700-000000',
+    bkashNumber: '',
     bkashType: 'Personal',
-    bkashEnabled: true,
-    nagadNumber: '01800-000000',
+    bkashEnabled: false,
+    nagadNumber: '',
     nagadType: 'Personal',
-    nagadEnabled: true,
+    nagadEnabled: false,
     codEnabled: true,
   });
 
@@ -186,9 +186,60 @@ export default function AdminSettingsPage() {
           }
 
           if (d.settings?.payment) {
+            const pay = d.settings.payment;
             setPaymentConfig((prev) => ({
               ...prev,
-              ...d.settings.payment,
+              ...pay,
+              bkashEnabled:
+                typeof pay.bkashEnabled === 'boolean'
+                  ? pay.bkashEnabled
+                  : typeof d.settings?.pm?.bkash === 'boolean'
+                    ? d.settings.pm.bkash
+                    : prev.bkashEnabled,
+              nagadEnabled:
+                typeof pay.nagadEnabled === 'boolean'
+                  ? pay.nagadEnabled
+                  : typeof d.settings?.pm?.nagad === 'boolean'
+                    ? d.settings.pm.nagad
+                    : prev.nagadEnabled,
+              codEnabled:
+                typeof pay.codEnabled === 'boolean'
+                  ? pay.codEnabled
+                  : typeof d.settings?.pm?.cod === 'boolean'
+                    ? d.settings.pm.cod
+                    : prev.codEnabled,
+            }));
+            setPm((prev) => ({
+              ...prev,
+              bkash:
+                typeof pay.bkashEnabled === 'boolean'
+                  ? pay.bkashEnabled
+                  : typeof d.settings?.pm?.bkash === 'boolean'
+                    ? d.settings.pm.bkash
+                    : prev.bkash,
+              nagad:
+                typeof pay.nagadEnabled === 'boolean'
+                  ? pay.nagadEnabled
+                  : typeof d.settings?.pm?.nagad === 'boolean'
+                    ? d.settings.pm.nagad
+                    : prev.nagad,
+              cod:
+                typeof pay.codEnabled === 'boolean'
+                  ? pay.codEnabled
+                  : typeof d.settings?.pm?.cod === 'boolean'
+                    ? d.settings.pm.cod
+                    : prev.cod,
+            }));
+          } else if (d.settings?.pm) {
+            setPm((prev) => ({ ...prev, ...d.settings.pm }));
+            setPaymentConfig((prev) => ({
+              ...prev,
+              bkashEnabled:
+                typeof d.settings.pm.bkash === 'boolean' ? d.settings.pm.bkash : prev.bkashEnabled,
+              nagadEnabled:
+                typeof d.settings.pm.nagad === 'boolean' ? d.settings.pm.nagad : prev.nagadEnabled,
+              codEnabled:
+                typeof d.settings.pm.cod === 'boolean' ? d.settings.pm.cod : prev.codEnabled,
             }));
           }
         }
@@ -206,38 +257,56 @@ export default function AdminSettingsPage() {
     try {
       setIsSaving(true);
 
+      const contactEmail = contactForm.email.trim();
       const payload: any = {
-        name: storeForm.name,
-        tagline: storeForm.tagline,
-        logo: storeForm.logo,
-        favicon: storeForm.favicon,
-        currency: storeForm.currency,
-        currencySymbol: storeForm.currencySymbol,
-        currencyPosition: storeForm.currencyPosition,
-        announcement: storeForm.announcement,
+        name: storeForm.name || undefined,
+        tagline: storeForm.tagline || undefined,
+        logo: storeForm.logo || undefined,
+        favicon: storeForm.favicon || undefined,
+        currency: storeForm.currency || undefined,
+        currencySymbol: storeForm.currencySymbol || undefined,
+        currencyPosition: storeForm.currencyPosition || undefined,
+        announcement: storeForm.announcement ?? '',
         announcementEnabled: storeForm.announcementEnabled,
         contact: {
-          email: contactForm.email,
-          phone: contactForm.phone,
-          whatsapp: contactForm.whatsapp,
-          address: contactForm.address,
-          workingHours: contactForm.workingHours,
-          responseTime: contactForm.responseTime,
-          supportTeam: contactForm.supportTeam,
+          ...(contactEmail ? { email: contactEmail } : {}),
+          phone: contactForm.phone || undefined,
+          whatsapp: contactForm.whatsapp || undefined,
+          address: contactForm.address || undefined,
+          workingHours: contactForm.workingHours || undefined,
+          responseTime: contactForm.responseTime || undefined,
+          supportTeam: contactForm.supportTeam || undefined,
         },
         socials: socialsForm,
         settings: {
           orderNumberFormat: storeForm.orderNumberFormat,
           flags,
-          pm,
-          payment: paymentConfig,
+          pm: {
+            bkash: !!paymentConfig.bkashEnabled,
+            nagad: !!paymentConfig.nagadEnabled,
+            cod: !!paymentConfig.codEnabled,
+          },
+          payment: {
+            bkashNumber: paymentConfig.bkashNumber || '',
+            bkashType: paymentConfig.bkashType || 'Personal',
+            bkashEnabled: !!paymentConfig.bkashEnabled,
+            nagadNumber: paymentConfig.nagadNumber || '',
+            nagadType: paymentConfig.nagadType || 'Personal',
+            nagadEnabled: !!paymentConfig.nagadEnabled,
+            codEnabled: !!paymentConfig.codEnabled,
+          },
         },
       };
 
-      await storeService.updateOwnerSettings(payload);
+      const res = await storeService.updateOwnerSettings(payload);
+      const savedPayment = (res as any)?.data?.settings?.payment;
+      if (section === 'Payments' && !savedPayment) {
+        throw new Error('Payment settings were not saved. Please try again.');
+      }
       await refetchTenant();
       toast.success(`${section} settings saved & published successfully!`);
     } catch (err: any) {
+      console.error('Settings save failed:', err);
       toast.error(err?.message || 'Failed to save settings');
     } finally {
       setIsSaving(false);
@@ -310,7 +379,7 @@ export default function AdminSettingsPage() {
               </Button>
               <GuardedButton
                 module="settings"
-                action="settings"
+                action="update"
                 size="sm"
                 loading={isSaving}
                 onClick={handleSave}
@@ -517,7 +586,7 @@ export default function AdminSettingsPage() {
                           orderNumberFormat: e.target.value,
                         })
                       }
-                      placeholder="TN-{number}"
+                      placeholder="OR-{number}"
                       hint="Next order number will look like: TN-10498"
                     />
                   </div>
@@ -624,9 +693,10 @@ export default function AdminSettingsPage() {
                         </div>
                         <Switch
                           checked={paymentConfig.bkashEnabled}
-                          onChange={(v) =>
-                            setPaymentConfig({ ...paymentConfig, bkashEnabled: v })
-                          }
+                          onChange={(v) => {
+                            setPaymentConfig({ ...paymentConfig, bkashEnabled: v });
+                            setPm((prev) => ({ ...prev, bkash: v }));
+                          }}
                           label="Enable bKash"
                           hideLabel
                         />
@@ -671,9 +741,10 @@ export default function AdminSettingsPage() {
                         </div>
                         <Switch
                           checked={paymentConfig.nagadEnabled}
-                          onChange={(v) =>
-                            setPaymentConfig({ ...paymentConfig, nagadEnabled: v })
-                          }
+                          onChange={(v) => {
+                            setPaymentConfig({ ...paymentConfig, nagadEnabled: v });
+                            setPm((prev) => ({ ...prev, nagad: v }));
+                          }}
                           label="Enable Nagad"
                           hideLabel
                         />
@@ -725,9 +796,10 @@ export default function AdminSettingsPage() {
                     </div>
                     <Switch
                       checked={paymentConfig.codEnabled}
-                      onChange={(v) =>
-                        setPaymentConfig({ ...paymentConfig, codEnabled: v })
-                      }
+                      onChange={(v) => {
+                        setPaymentConfig({ ...paymentConfig, codEnabled: v });
+                        setPm((prev) => ({ ...prev, cod: v }));
+                      }}
                       label="Enable COD"
                       hideLabel
                     />
@@ -778,8 +850,8 @@ export default function AdminSettingsPage() {
                   <Select
                     label="Refund payout methods"
                     options={[
-                      'Original payment or store credit',
-                      'Store credit only',
+                      'Original payment method',
+                      'Manual refund review',
                     ]}
                   />
                 </div>
@@ -870,7 +942,7 @@ export default function AdminSettingsPage() {
                 </Button>
                 <GuardedButton
                   module="settings"
-                  action="settings"
+                  action="update"
                   size="sm"
                   loading={isSaving}
                   onClick={handleSave}

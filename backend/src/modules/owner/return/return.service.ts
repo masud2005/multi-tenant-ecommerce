@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import { QueryReturnDto, UpdateReturnStatusDto } from './dto';
-import { ReturnStatus } from '../../../../prisma/generated/client';
+import {
+  ReturnStatus,
+  StockMovementReason,
+} from '../../../../prisma/generated/client';
 
 @Injectable()
 export class ReturnService {
@@ -289,15 +292,117 @@ export class ReturnService {
       statusLabel = 'Exchange / Replacement dispatched';
     }
 
+    const shouldAutoRestock =
+      dto.status === ReturnStatus.RECEIVED &&
+      existing.status !== ReturnStatus.RECEIVED &&
+      existing.status !== ReturnStatus.REFUNDED &&
+      existing.status !== ReturnStatus.EXCHANGED;
+
     const updatedReturn = await this.prisma.$transaction(async (tx) => {
+      // Auto-restock sellable inventory when returned goods are received (no admin toggle)
+      if (shouldAutoRestock) {
+        const alreadyRestocked = await tx.stockMovement.findFirst({
+          where: {
+            tenantId: targetTenantId,
+            reason: StockMovementReason.RETURN,
+            ref: existing.id,
+          },
+          select: { id: true },
+        });
+
+        if (!alreadyRestocked) {
+          const orderItems = await tx.orderItem.findMany({
+            where: { orderId: existing.orderId },
+            select: {
+              id: true,
+              variantId: true,
+              title: true,
+              size: true,
+              color: true,
+              qty: true,
+            },
+          });
+          const returnItems = await tx.returnItem.findMany({
+            where: { returnRequestId: existing.id },
+          });
+
+          const norm = (v?: string | null) => (v || '').trim().toLowerCase();
+          const remainingByOrderItem = new Map(
+            orderItems.map((oi) => [oi.id, oi.qty]),
+          );
+
+          for (const retItem of returnItems) {
+            if (retItem.qty <= 0) continue;
+
+            const candidates = orderItems.filter(
+              (oi) =>
+                !!oi.variantId &&
+                (remainingByOrderItem.get(oi.id) || 0) > 0 &&
+                norm(oi.title) === norm(retItem.title),
+            );
+            const match =
+              candidates.find(
+                (oi) =>
+                  norm(oi.size) === norm(retItem.size) &&
+                  norm(oi.color) === norm(retItem.color),
+              ) || candidates[0];
+
+            if (!match?.variantId) continue;
+
+            const available = remainingByOrderItem.get(match.id) || 0;
+            const qtyToRestock = Math.min(retItem.qty, available);
+            if (qtyToRestock <= 0) continue;
+            remainingByOrderItem.set(match.id, available - qtyToRestock);
+
+            const variant = await tx.productVariant.findFirst({
+              where: {
+                id: match.variantId,
+                deletedAt: null,
+                product: { tenantId: targetTenantId, deletedAt: null },
+              },
+            });
+            if (!variant) continue;
+
+            const stockBefore = variant.stock;
+            const stockAfter = stockBefore + qtyToRestock;
+
+            await tx.productVariant.update({
+              where: { id: variant.id },
+              data: {
+                stock: { increment: qtyToRestock },
+                version: { increment: 1 },
+              },
+            });
+
+            await tx.stockMovement.create({
+              data: {
+                tenantId: targetTenantId,
+                variantId: variant.id,
+                change: qtyToRestock,
+                stockBefore,
+                stockAfter,
+                reason: StockMovementReason.RETURN,
+                ref: existing.id,
+                note: `Auto-restock from return ${existing.id.slice(0, 8)} (${retItem.title})`,
+                by: adminName,
+              },
+            });
+          }
+        }
+      }
+
       const returnRequest = await tx.returnRequest.update({
         where: { id: existing.id },
         data: {
           status: dto.status,
-          ...(dto.inspectionNote !== undefined ? { inspectionNote: dto.inspectionNote } : {}),
+          ...(dto.inspectionNote !== undefined
+            ? { inspectionNote: dto.inspectionNote }
+            : {}),
           timeline: {
             create: {
-              label: statusLabel,
+              label: shouldAutoRestock
+                ? `${statusLabel} · inventory restocked automatically`
+                : statusLabel,
               by: adminName,
               note: dto.note || dto.inspectionNote || undefined,
             },

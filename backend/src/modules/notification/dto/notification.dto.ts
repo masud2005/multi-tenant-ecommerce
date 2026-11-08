@@ -33,7 +33,8 @@ export class QueryNotificationDto {
 
 export interface SendNotificationOptions {
   tenantId: string;
-  userId: string;
+  /** Required for in-app + socket notifications. Omit for email-only (e.g. guest checkout). */
+  userId?: string;
   title: string;
   message: string;
   type?: NotificationType | string;

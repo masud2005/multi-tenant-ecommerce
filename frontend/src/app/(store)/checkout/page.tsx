@@ -4,15 +4,19 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { LockIcon, ChevronLeftIcon } from 'lucide-react';
+import { ChevronLeftIcon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { useCartLines } from '@/hooks/useCartLines';
 import { storeService } from '@/services/store-service';
 import { discountService, type ApplyDiscountResult } from '@/services/discount-service';
-import { findCoupon, orderTotals } from '@/utils/pricing';
-import type { Coupon } from '@/data/shipping';
-import { formatBDT } from '@/utils/format';
+import { orderTotals } from '@/utils/pricing';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { Address, PaymentMethod } from '@/types/commerce';
+import {
+  parseStoreShipping,
+  type StoreShippingSettings,
+} from '@/utils/store-shipping';
 import {
   AddressSection,
   DeliveryMethodSection,
@@ -23,9 +27,76 @@ import {
 
 type Errors = Partial<Record<string, string>>;
 
+type PaymentConfig = {
+  bkashNumber: string;
+  bkashType: string;
+  nagadNumber: string;
+  nagadType: string;
+  bkashEnabled: boolean;
+  nagadEnabled: boolean;
+  codEnabled: boolean;
+};
+
+const EMPTY_PAYMENT: PaymentConfig = {
+  bkashNumber: '',
+  bkashType: '',
+  nagadNumber: '',
+  nagadType: '',
+  bkashEnabled: false,
+  nagadEnabled: false,
+  codEnabled: true,
+};
+
+function readPaymentFlag(value: unknown, fallback: boolean) {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true' || value === 1 || value === '1') return true;
+  if (value === 'false' || value === 0 || value === '0') return false;
+  return fallback;
+}
+
+function CheckoutSkeleton() {
+  return (
+    <div className="min-h-screen w-full bg-canvas" aria-busy="true" aria-label="Loading checkout">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_400px]">
+        <div className="space-y-8">
+          <Skeleton className="h-4 w-28" />
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-40" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-28 w-full rounded-lg" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+            <Skeleton className="h-20 w-full rounded-lg" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-[28rem] w-full rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user, addresses, storeCredit, placeOrder, saveAddress } = useStore();
+  const {
+    user,
+    addresses,
+    placeOrder,
+    saveAddress,
+    cart,
+    isCartLoading,
+    isProductsLoading,
+  } = useStore();
+  const { shipping: tenantShipping, isLoading: tenantLoading } = useTenant();
   const { active, subtotal, hasIssues } = useCartLines();
   const defaultAddr = addresses.find((a) => a.isDefaultShipping) ?? addresses[0];
 
@@ -48,33 +119,19 @@ export default function CheckoutPage() {
   const [senderPhone, setSenderPhone] = useState(user?.phone || '');
   const [transactionId, setTransactionId] = useState('');
 
-  // Shipping & Payment configuration from store settings
-  const [shippingConfig, setShippingConfig] = useState({
-    insideDhaka: 60,
-    outsideDhaka: 120,
-    freeShippingThreshold: 2500,
-  });
-  const [paymentConfig, setPaymentConfig] = useState({
-    bkashNumber: '01712-345678',
-    bkashType: 'Personal (Send Money)',
-    nagadNumber: '01812-345678',
-    nagadType: 'Personal (Send Money)',
-  });
+  const [shippingConfig, setShippingConfig] =
+    useState<StoreShippingSettings>(tenantShipping);
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>(EMPTY_PAYMENT);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const isCheckoutBootstrapping =
+    !user ||
+    !!isCartLoading ||
+    !!isProductsLoading ||
+    !settingsLoaded ||
+    tenantLoading;
 
-  const [useCredit, setUseCredit] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [code, setCode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('tanti.coupon') ?? '';
-    }
-    return '';
-  });
-  const [applied, setApplied] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('tanti.coupon') ?? '';
-    }
-    return '';
-  });
+  const [code, setCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<ApplyDiscountResult | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [codeError, setCodeError] = useState('');
@@ -83,7 +140,6 @@ export default function CheckoutPage() {
   const [savingAddress, setSavingAddress] = useState(false);
   const submitting = useRef(false);
 
-  // Require authentication for checkout
   useEffect(() => {
     if (!user && typeof window !== 'undefined') {
       toast.error('Please log in to proceed to checkout and place your order.');
@@ -91,48 +147,113 @@ export default function CheckoutPage() {
     }
   }, [user, router]);
 
-  // Load live store shipping & payment configurations
+  // Keep shipping in sync with Admin → Shipping (TenantContext)
   useEffect(() => {
+    setShippingConfig(tenantShipping);
+  }, [tenantShipping]);
+
+  // Live payment settings from public store-info — no mock fallbacks
+  useEffect(() => {
+    let mounted = true;
+    const slug =
+      (typeof window !== 'undefined' &&
+        (localStorage.getItem('tenant_slug') || '').trim()) ||
+      'tanti';
+
     storeService
-      .getPublicStoreInfo()
+      .getPublicStoreInfo(slug)
       .then((res) => {
-        const s = (res?.data as any)?.settings;
-        if (s?.shipping) {
-          setShippingConfig({
-            insideDhaka: Number(s.shipping.insideDhaka) || 60,
-            outsideDhaka: Number(s.shipping.outsideDhaka) || 120,
-            freeShippingThreshold: Number(s.shipping.freeShippingThreshold) || 2500,
-          });
+        if (!mounted) return;
+        const s = (res?.data as any)?.settings || {};
+        const pay = s.payment || {};
+        const pm = s.pm || {};
+
+        if (s.shipping) {
+          setShippingConfig(parseStoreShipping(s.shipping));
         }
-        if (s?.payment) {
-          setPaymentConfig({
-            bkashNumber: s.payment.bkashNumber || '01712-345678',
-            bkashType: s.payment.bkashType || 'Personal (Send Money)',
-            nagadNumber: s.payment.nagadNumber || '01812-345678',
-            nagadType: s.payment.nagadType || 'Personal (Send Money)',
-          });
-        }
+
+        setPaymentConfig({
+          bkashNumber: String(pay.bkashNumber || '').trim(),
+          bkashType: String(pay.bkashType || '').trim(),
+          nagadNumber: String(pay.nagadNumber || '').trim(),
+          nagadType: String(pay.nagadType || '').trim(),
+          bkashEnabled: readPaymentFlag(pay.bkashEnabled ?? pm.bkash, false),
+          nagadEnabled: readPaymentFlag(pay.nagadEnabled ?? pm.nagad, false),
+          codEnabled: readPaymentFlag(pay.codEnabled ?? pm.cod, true),
+        });
       })
-      .catch(() => {});
+      .catch(() => {
+        if (mounted) setPaymentConfig(EMPTY_PAYMENT);
+      })
+      .finally(() => {
+        if (mounted) setSettingsLoaded(true);
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  // Auto-select saved/previous address if available when addresses hydrate
+  // Prefer an enabled payment method once settings load (admin Payments tab)
   useEffect(() => {
-    if (addresses.length > 0) {
-      if (addressId === 'new' && !newAddr.line1) {
-        const def = addresses.find((a) => a.isDefaultShipping) ?? addresses[0];
-        if (def) {
-          setAddressId(def.id);
-        }
-      }
+    if (!settingsLoaded) return;
+    const enabled: PaymentMethod[] = [];
+    if (paymentConfig.codEnabled) enabled.push('cod');
+    if (paymentConfig.bkashEnabled) enabled.push('bkash');
+    if (paymentConfig.nagadEnabled) enabled.push('nagad');
+    if (enabled.length && !enabled.includes(payment)) {
+      setPayment(enabled[0]);
     }
-  }, [addresses]);
+  }, [settingsLoaded, paymentConfig, payment]);
 
+  // Only redirect after cart + products have finished loading — never during bootstrap
+  // or while an order is being placed (cart clears before confirmation navigation)
   useEffect(() => {
-    if (user && active.length === 0 && !placing) {
+    if (!user || placing || submitting.current || isCartLoading || isProductsLoading) return;
+    const pendingQty = cart.filter((item) => !item.savedForLater).length;
+    if (pendingQty > 0 && active.length === 0) return;
+    if (active.length === 0) {
+      toast.message('Your bag is empty');
       router.replace('/cart');
     }
-  }, [user, active.length, placing, router]);
+  }, [
+    user,
+    placing,
+    isCartLoading,
+    isProductsLoading,
+    cart,
+    active.length,
+    router,
+  ]);
+
+  // Re-validate coupon from session via backend only
+  useEffect(() => {
+    if (!user || subtotal <= 0) return;
+    const saved =
+      typeof window !== 'undefined' ? sessionStorage.getItem('tanti.coupon') : null;
+    if (!saved) return;
+
+    let mounted = true;
+    discountService
+      .applyDiscount({
+        code: saved,
+        subtotal,
+        customerEmail: user.email,
+      })
+      .then((res) => {
+        if (!mounted || !res?.data) return;
+        setAppliedDiscount(res.data);
+        setCode(res.data.code);
+      })
+      .catch(() => {
+        if (typeof window !== 'undefined') sessionStorage.removeItem('tanti.coupon');
+      });
+
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- validate once when cart/user ready
+  }, [user?.email, subtotal > 0]);
 
   const address: Address = useMemo(() => {
     const saved = addresses.find((a) => a.id === addressId);
@@ -142,64 +263,82 @@ export default function CheckoutPage() {
         ...newAddr,
         label: newAddr.label || 'Home',
         district: newAddr.district || 'Dhaka',
-        area: newAddr.area || 'Dhanmondi',
+        area: newAddr.area || '',
         name: newAddr.name,
         phone: newAddr.phone,
       }
     );
   }, [addresses, addressId, newAddr]);
 
-  // Dynamic Shipping Calculation (Dhaka vs Outside Dhaka)
   const isDhaka = (address.district || '').toLowerCase().trim() === 'dhaka';
-  const coupon = applied ? findCoupon(applied) : undefined;
   const isFreeThreshold =
-    shippingConfig.freeShippingThreshold > 0 &&
-    subtotal >= shippingConfig.freeShippingThreshold;
-  const isFreeShipping =
-    appliedDiscount?.isFreeShipping || coupon?.type === 'free_shipping' || isFreeThreshold;
-  const calculatedShippingCost = isFreeShipping
-    ? 0
-    : isDhaka
+    shippingConfig.freeDeliveryThreshold > 0 &&
+    subtotal >= shippingConfig.freeDeliveryThreshold;
+  const isFreeShipping = Boolean(appliedDiscount?.isFreeShipping || isFreeThreshold);
+
+  const baseShippingCost = isDhaka
     ? shippingConfig.insideDhaka
     : shippingConfig.outsideDhaka;
+  const calculatedShippingCost =
+    shippingId === 'pickup' || isFreeShipping ? 0 : baseShippingCost;
 
-  const effectiveCoupon: Coupon | undefined = appliedDiscount
+  const shippingMethodName =
+    shippingId === 'pickup'
+      ? 'Store pickup'
+      : isDhaka
+        ? `Inside Dhaka Delivery (৳${shippingConfig.insideDhaka})`
+        : `Outside Dhaka Delivery (৳${shippingConfig.outsideDhaka})`;
+
+  const methods = useMemo(() => {
+    const standardPrice = isFreeShipping ? 0 : baseShippingCost;
+    const list = [
+      {
+        id: 'standard',
+        name: isDhaka ? 'Inside Dhaka Delivery' : 'Outside Dhaka Delivery',
+        description: isDhaka
+          ? 'Delivery within Dhaka metropolitan area'
+          : 'Delivery to districts outside Dhaka',
+        eta: isDhaka ? shippingConfig.insideDhakaEst : shippingConfig.outsideDhakaEst,
+        price: standardPrice,
+      },
+    ];
+    if (shippingConfig.pickup) {
+      list.push({
+        id: 'pickup',
+        name: 'Store pickup',
+        description: 'Collect from store — free',
+        eta: 'Ready today',
+        price: 0,
+      });
+    }
+    return list;
+  }, [isDhaka, shippingConfig, baseShippingCost, isFreeShipping]);
+
+  useEffect(() => {
+    if (shippingId === 'pickup' && !shippingConfig.pickup) {
+      setShippingId('standard');
+    }
+  }, [shippingId, shippingConfig.pickup]);
+
+  const appliedCoupon = appliedDiscount
     ? {
         code: appliedDiscount.code,
-        label: appliedDiscount.title || 'Special Discount',
+        label: appliedDiscount.title || 'Discount',
         type:
           appliedDiscount.type === 'FREE_SHIPPING'
-            ? 'free_shipping'
+            ? ('free_shipping' as const)
             : appliedDiscount.type === 'PERCENTAGE'
-            ? 'percent'
-            : 'fixed',
+              ? ('percent' as const)
+              : ('fixed' as const),
         value: appliedDiscount.value,
       }
-    : coupon;
-
-  const shippingMethodName = isDhaka
-    ? `Dhaka Inside Delivery (৳${shippingConfig.insideDhaka})`
-    : `Outside Dhaka Delivery (৳${shippingConfig.outsideDhaka})`;
-
-  const methods = [
-    {
-      id: 'standard',
-      name: isDhaka ? 'Inside Dhaka Delivery' : 'Outside Dhaka Delivery',
-      description: isDhaka
-        ? 'Delivery within Dhaka metropolitan area'
-        : 'Delivery to all 63 districts outside Dhaka',
-      eta: isDhaka ? '1–2 business days' : '2–4 business days',
-      price: () => calculatedShippingCost,
-      available: () => true,
-    },
-  ];
+    : undefined;
 
   const baseTotals = orderTotals({
     subtotal,
-    coupon: effectiveCoupon,
+    coupon: appliedCoupon,
     shipping: calculatedShippingCost,
     cod: payment === 'cod',
-    storeCredit: useCredit ? storeCredit : 0,
   });
 
   const totals = appliedDiscount
@@ -212,8 +351,7 @@ export default function CheckoutPage() {
           subtotal -
             appliedDiscount.discountAmount +
             calculatedShippingCost +
-            (payment === 'cod' ? baseTotals.codFee : 0) -
-            baseTotals.credit
+            (payment === 'cod' ? baseTotals.codFee : 0)
         ),
       }
     : baseTotals;
@@ -225,25 +363,30 @@ export default function CheckoutPage() {
       const recipientName = (newAddr.name || '').trim();
       let recipientPhone = (newAddr.phone || '').trim().replace(/[\s-]/g, '');
       if (recipientPhone.startsWith('+88')) recipientPhone = recipientPhone.slice(3);
-      if (recipientPhone.startsWith('88') && recipientPhone.length === 13) recipientPhone = recipientPhone.slice(2);
+      if (recipientPhone.startsWith('88') && recipientPhone.length === 13) {
+        recipientPhone = recipientPhone.slice(2);
+      }
 
       if (!recipientName || recipientName.length < 2) e.recipientName = 'Enter full name';
       if (!/^01[3-9]\d{8}$/.test(recipientPhone)) e.recipientPhone = 'Enter mobile number';
-      if (!newAddr.line1 || newAddr.line1.trim().length < 3)
-        e.line1 = 'Enter delivery address';
-      if (!newAddr.district)
-        e.district = 'Select district';
-      if (!newAddr.area)
-        e.area = 'Select thana';
+      if (!newAddr.line1 || newAddr.line1.trim().length < 3) e.line1 = 'Enter delivery address';
+      if (!newAddr.district) e.district = 'Select district';
+      if (!newAddr.area) e.area = 'Select thana';
     }
 
     if (payment === 'bkash' || payment === 'nagad') {
-      const pClean = (senderPhone || '').trim().replace(/[\s-]/g, '');
-      if (!/^01[3-9]\d{8}$/.test(pClean)) {
-        e.senderPhone = 'Enter your 11-digit mobile number';
+      let phone = senderPhone.trim().replace(/[\s-]/g, '');
+      if (phone.startsWith('+88')) phone = phone.slice(3);
+      if (phone.startsWith('88') && phone.length === 13) phone = phone.slice(2);
+      if (!/^01[3-9]\d{8}$/.test(phone)) e.senderPhone = 'Enter sender mobile number';
+      if (!transactionId.trim() || transactionId.trim().length < 5) {
+        e.transactionId = 'Enter transaction ID';
       }
-      if (!transactionId || transactionId.trim().length < 5) {
-        e.transactionId = 'Enter Transaction ID (TrxID)';
+      if (payment === 'bkash' && !paymentConfig.bkashNumber) {
+        e.payment = 'bKash is not configured for this store';
+      }
+      if (payment === 'nagad' && !paymentConfig.nagadNumber) {
+        e.payment = 'Nagad is not configured for this store';
       }
     }
 
@@ -265,16 +408,16 @@ export default function CheckoutPage() {
 
       if (res?.data) {
         setAppliedDiscount(res.data);
-        setApplied(res.data.code);
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('tanti.coupon', res.data.code);
         }
-        toast.success(
-          `${res.data.code} applied — ${res.data.title || 'Discount applied'}`
-        );
+        toast.success(`${res.data.code} applied — ${res.data.title || 'Discount applied'}`);
         return;
       }
+      setAppliedDiscount(null);
+      setCodeError('Invalid or expired coupon code');
     } catch (err: any) {
+      setAppliedDiscount(null);
       setCodeError(err?.message || 'Invalid or expired coupon code');
     } finally {
       setIsValidatingCoupon(false);
@@ -286,7 +429,9 @@ export default function CheckoutPage() {
     const recipientName = (newAddr.name || '').trim();
     let recipientPhone = (newAddr.phone || '').trim().replace(/[\s-]/g, '');
     if (recipientPhone.startsWith('+88')) recipientPhone = recipientPhone.slice(3);
-    if (recipientPhone.startsWith('88') && recipientPhone.length === 13) recipientPhone = recipientPhone.slice(2);
+    if (recipientPhone.startsWith('88') && recipientPhone.length === 13) {
+      recipientPhone = recipientPhone.slice(2);
+    }
 
     if (!recipientName || recipientName.length < 2) e.recipientName = 'Enter full name';
     if (!/^01[3-9]\d{8}$/.test(recipientPhone)) e.recipientPhone = 'Enter 11-digit mobile number';
@@ -326,7 +471,6 @@ export default function CheckoutPage() {
         label: '',
       });
       setErrors({});
-
       toast.success('Address saved successfully!');
     } catch {
       toast.error('Could not save address. Please try again.');
@@ -343,7 +487,12 @@ export default function CheckoutPage() {
     if (Object.keys(e).length) {
       const first = document.querySelector('[aria-invalid="true"]') as HTMLElement | null;
       first?.focus();
-      toast.error('Please fix the highlighted fields');
+      toast.error(e.payment || 'Please fix the highlighted fields');
+      return;
+    }
+    if (active.length === 0) {
+      toast.error('Your bag is empty');
+      router.push('/cart');
       return;
     }
     if (hasIssues) {
@@ -356,66 +505,73 @@ export default function CheckoutPage() {
     submitting.current = true;
     setPlacing(true);
 
-    let finalAddress = address;
-    if (addressId === 'new') {
-      try {
-        const savedResult: any = await saveAddress({
-          ...address,
-          label: newAddr.label || 'Home',
-          isDefaultShipping: addresses.length === 0,
-        });
-        if (savedResult && typeof savedResult === 'object' && savedResult.id) {
-          finalAddress = {
+    try {
+      let finalAddress = address;
+      if (addressId === 'new') {
+        try {
+          const savedResult: any = await saveAddress({
             ...address,
-            id: savedResult.id,
-            label: savedResult.label || newAddr.label || 'Home',
-          };
+            label: newAddr.label || 'Home',
+            isDefaultShipping: addresses.length === 0,
+          });
+          if (savedResult && typeof savedResult === 'object' && savedResult.id) {
+            finalAddress = {
+              ...address,
+              id: savedResult.id,
+              label: savedResult.label || newAddr.label || 'Home',
+            };
+          }
+        } catch (err) {
+          console.error('Failed to save address:', err);
         }
-      } catch (err) {
-        console.error('Failed to save address:', err);
       }
-    }
 
-    const order = await placeOrder({
-      contact: {
-        name: finalAddress.name,
-        email: user?.email || '',
-        phone: finalAddress.phone,
-      },
-      address: finalAddress,
-      shippingMethod: shippingMethodName,
-      shippingCost: calculatedShippingCost,
-      paymentMethod: payment,
-      discount: totals.discount + totals.credit,
-      couponCode: coupon?.code,
-      senderPhone: payment === 'bkash' || payment === 'nagad' ? senderPhone : undefined,
-      transactionId: payment === 'bkash' || payment === 'nagad' ? transactionId : undefined,
-      subtotal,
-      total: totals.total,
-    });
+      const order = await placeOrder({
+        contact: {
+          name: finalAddress.name,
+          email: user?.email || '',
+          phone: finalAddress.phone,
+        },
+        address: finalAddress,
+        shippingMethod: shippingMethodName,
+        shippingCost: calculatedShippingCost,
+        paymentMethod: payment,
+        discount: totals.discount,
+        couponCode: appliedDiscount?.code,
+        senderPhone: payment === 'bkash' || payment === 'nagad' ? senderPhone : undefined,
+        transactionId: payment === 'bkash' || payment === 'nagad' ? transactionId : undefined,
+        subtotal,
+        total: totals.total,
+      });
 
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('tanti.coupon');
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('tanti.coupon');
+      }
+
+      if (!order) {
+        toast.error('Could not place order. Please try again.');
+        submitting.current = false;
+        setPlacing(false);
+        return;
+      }
+
+      const targetId = order.number || order.id;
+      // Keep placing/submitting true so empty-cart guard does not bounce to /cart
+      router.replace(`/order-confirmation/${encodeURIComponent(targetId)}`);
+    } catch (err: any) {
+      console.error('Place order failed:', err);
+      toast.error(err?.message || 'Could not place order. Please try again.');
+      submitting.current = false;
+      setPlacing(false);
     }
-    const targetId = order.number || order.id;
-    router.replace(`/order-confirmation/${targetId}`);
   };
+
+  if (isCheckoutBootstrapping) {
+    return <CheckoutSkeleton />;
+  }
 
   return (
     <div className="min-h-screen w-full bg-canvas">
-      {/* Header */}
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="font-display text-2xl">
-            Tanti
-          </Link>
-          <span className="flex items-center gap-1.5 text-sm text-ink-muted">
-            <LockIcon className="h-3.5 w-3.5" aria-hidden /> Secure checkout
-          </span>
-        </div>
-      </header>
-
-      {/* Main Checkout Form */}
       <form
         onSubmit={submit}
         noValidate
@@ -429,7 +585,6 @@ export default function CheckoutPage() {
             <ChevronLeftIcon className="h-4 w-4" aria-hidden /> Back to bag
           </Link>
 
-          {/* Step 1: Delivery Address */}
           <AddressSection
             addresses={addresses}
             selectedAddressId={addressId}
@@ -445,17 +600,21 @@ export default function CheckoutPage() {
             isSavingAddress={savingAddress}
           />
 
-          {/* Step 2: Delivery Method */}
           <DeliveryMethodSection
             methods={methods}
             selectedMethodId={shippingId}
             onSelectMethod={setShippingId}
+            isDhaka={isDhaka}
             district={address.district}
-            subtotal={subtotal}
+            rates={{
+              insideDhaka: shippingConfig.insideDhaka,
+              outsideDhaka: shippingConfig.outsideDhaka,
+              insideEst: shippingConfig.insideDhakaEst,
+              outsideEst: shippingConfig.outsideDhakaEst,
+            }}
             isFreeShipping={isFreeShipping}
           />
 
-          {/* Step 3: Payment Method (COD, bKash, Nagad) */}
           <PaymentSection
             payment={payment}
             onSelectPayment={setPayment}
@@ -469,23 +628,21 @@ export default function CheckoutPage() {
           />
         </div>
 
-        {/* Sidebar: Order Summary & Place Order */}
         <OrderSummarySection
           items={active}
           code={code}
           onCodeChange={setCode}
           onApplyCode={applyCode}
           codeError={codeError}
-          appliedCoupon={effectiveCoupon}
-          isLoggedIn={!!user}
-          storeCredit={storeCredit}
-          useCredit={useCredit}
-          onToggleCredit={setUseCredit}
+          appliedCoupon={appliedCoupon}
+          isApplyingCode={isValidatingCoupon}
           subtotal={subtotal}
           totals={totals}
           shippingMethodName={shippingMethodName}
+          shippingIsFree={isFreeShipping || shippingId === 'pickup'}
           paymentMethod={payment}
           hasIssues={hasIssues}
+          canPlaceOrder={active.length > 0 && settingsLoaded}
           consent={consent}
           onConsentChange={setConsent}
           consentError={errors.consent}

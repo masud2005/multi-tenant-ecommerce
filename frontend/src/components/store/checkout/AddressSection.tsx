@@ -58,23 +58,24 @@ export function AddressSection({
                 key={a.id}
                 checked={isSelected}
                 onSelect={() => onSelectAddressId(a.id)}
+                className="pr-10"
               >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-ink">{a.label || 'Saved Address'}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-ink">{a.label || 'Saved address'}</p>
                   {a.isDefaultShipping ? (
-                    <span className="rounded bg-clay/10 px-2 py-0.5 text-xs font-medium text-clay">
+                    <span className="rounded bg-ink/5 px-2 py-0.5 text-xs font-medium text-ink">
                       Default
                     </span>
                   ) : (
-                    <span className="rounded bg-surface-muted px-2 py-0.5 text-xs text-ink-muted">
-                      Previous Address
+                    <span className="rounded bg-subtle px-2 py-0.5 text-xs text-ink/80">
+                      Saved
                     </span>
                   )}
                 </div>
                 <p className="mt-1 text-sm font-medium text-ink">
                   {a.name} · {a.phone}
                 </p>
-                <p className="text-sm text-ink-muted">
+                <p className="text-sm text-ink/80">
                   {a.line1}, {a.area}, {a.district}
                 </p>
               </RadioCard>
@@ -84,10 +85,10 @@ export function AddressSection({
             checked={selectedAddressId === 'new'}
             onSelect={() => onSelectAddressId('new')}
           >
-            <p className="text-sm font-medium text-brand flex items-center gap-1.5">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
               + Use a new address
             </p>
-            <p className="text-xs text-ink-muted mt-1">
+            <p className="mt-1 text-xs text-ink/80">
               Enter a different recipient or delivery location
             </p>
           </RadioCard>
@@ -110,7 +111,7 @@ export function AddressSection({
                   const def = addresses.find((a) => a.isDefaultShipping) ?? addresses[0];
                   if (def) onSelectAddressId(def.id);
                 }}
-                className="text-xs text-brand hover:underline cursor-pointer font-medium"
+                className="cursor-pointer text-xs font-medium text-ink hover:underline"
               >
                 ← Back to saved address
               </button>
@@ -213,7 +214,7 @@ export function AddressSection({
                   const def = addresses.find((a) => a.isDefaultShipping) ?? addresses[0];
                   if (def) onSelectAddressId(def.id);
                 }}
-                className="text-xs text-ink-muted hover:text-ink cursor-pointer font-medium"
+                className="cursor-pointer text-xs font-medium text-ink/80 hover:text-ink"
               >
                 Cancel & use saved address
               </button>

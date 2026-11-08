@@ -8,6 +8,10 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { UpdateStoreSettingsDto } from './dto';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
+import {
+  DEFAULT_STORE_SHIPPING,
+  mergeStoreShippingDefaults,
+} from '../../../common/constants/shipping.constant';
 
 @Injectable()
 export class SettingsService {
@@ -76,35 +80,59 @@ export class SettingsService {
       throw new NotFoundException('Store not found');
     }
 
-    // Default contact fallback if not yet configured in DB
+    // No mock contact/social fallbacks — empty if not configured
     const contactObj = (tenant.contact as Record<string, any>) || {};
     const defaultContact = {
-      email: contactObj.email || 'care@tanti.com.bd',
-      phone: contactObj.phone || '09612-826842',
-      whatsapp: contactObj.whatsapp || '+880 1700-000000',
-      address:
-        contactObj.address ||
-        'House 14, Road 27 (old), Dhanmondi, Dhaka 1209',
-      workingHours: contactObj.workingHours || 'Sat–Thu, 10 AM – 9 PM',
-      responseTime:
-        contactObj.responseTime || 'Replies within 2 to 4 working hours',
-      supportTeam: contactObj.supportTeam || `${tenant.name} Care team`,
+      email: contactObj.email || '',
+      phone: contactObj.phone || '',
+      whatsapp: contactObj.whatsapp || '',
+      address: contactObj.address || '',
+      workingHours: contactObj.workingHours || '',
+      responseTime: contactObj.responseTime || '',
+      supportTeam: contactObj.supportTeam || '',
     };
 
-    // Default socials fallback
     const socialsObj = (tenant.socials as Record<string, any>) || {};
     const defaultSocials = {
-      facebook: socialsObj.facebook || 'https://facebook.com/tanti',
-      instagram: socialsObj.instagram || 'https://instagram.com/tanti',
-      twitter: socialsObj.twitter || 'https://twitter.com/tanti',
+      facebook: socialsObj.facebook || '',
+      instagram: socialsObj.instagram || '',
+      twitter: socialsObj.twitter || '',
       youtube: socialsObj.youtube || '',
       tiktok: socialsObj.tiktok || '',
     };
+
+    // Ensure shipping defaults exist in DB (Inside Dhaka ৳70 / Outside ৳150)
+    const existingSettings = (tenant.settings as Record<string, any>) || {};
+    const existingShipping =
+      (existingSettings.shipping as Record<string, any>) || {};
+    const shipping = mergeStoreShippingDefaults(existingShipping);
+    const shippingIncomplete =
+      typeof existingShipping.insideDhaka !== 'number' ||
+      typeof existingShipping.outsideDhaka !== 'number';
+
+    let settings = {
+      ...existingSettings,
+      shipping,
+    };
+
+    if (shippingIncomplete) {
+      try {
+        await this.prisma.tenant.update({
+          where: { id: targetTenantId },
+          data: { settings },
+        });
+      } catch (err) {
+        this.logger.warn(
+          `Could not persist default shipping for tenant ${targetTenantId}: ${String(err)}`,
+        );
+      }
+    }
 
     const formattedData = {
       ...tenant,
       contact: defaultContact,
       socials: defaultSocials,
+      settings,
     };
 
     return ResponseHelper.success(
@@ -163,12 +191,39 @@ export class SettingsService {
       };
     }
 
-    // Merge Settings JSON safely
+    // Merge Settings JSON safely (deep-merge nested payment/shipping so toggles never get wiped)
     if (dto.settings !== undefined) {
       const existingSettings = (existing.settings as Record<string, any>) || {};
+      const incoming = dto.settings as Record<string, any>;
       updateData.settings = {
         ...existingSettings,
-        ...dto.settings,
+        ...incoming,
+        payment: {
+          ...((existingSettings.payment as Record<string, any>) || {}),
+          ...((incoming.payment as Record<string, any>) || {}),
+        },
+        shipping: (() => {
+          const mergedShipping: Record<string, any> = {
+            ...DEFAULT_STORE_SHIPPING,
+            ...((existingSettings.shipping as Record<string, any>) || {}),
+            ...((incoming.shipping as Record<string, any>) || {}),
+          };
+          // Drop retired mock/RTO toggles — restock is always automatic on return RECEIVED
+          delete mergedShipping.rto;
+          delete mergedShipping.autoRestock;
+          delete mergedShipping.restockOnReturn;
+          delete mergedShipping.couriers;
+          delete mergedShipping.logisticsOverview;
+          return mergeStoreShippingDefaults(mergedShipping);
+        })(),
+        pm: {
+          ...((existingSettings.pm as Record<string, any>) || {}),
+          ...((incoming.pm as Record<string, any>) || {}),
+        },
+        flags: {
+          ...((existingSettings.flags as Record<string, any>) || {}),
+          ...((incoming.flags as Record<string, any>) || {}),
+        },
       };
     }
 

@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PackageIcon, Loader2Icon } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { Button } from '@/components/ui/button';
 import { orderService, mapBackendOrderToFrontend } from '@/services/order-service';
 import {
   OrderSuccessBanner,
   OrderPaymentRetry,
   OrderConfirmationSummary,
+  DownloadInvoiceButton,
 } from '@/components/store/order-confirmation';
 import type { PaymentMethod, Order } from '@/types/commerce';
 
@@ -22,6 +24,7 @@ export default function OrderConfirmationPage({ params }: OrderConfirmationPageP
   const { orderId } = use(params);
   const router = useRouter();
   const { orders, retryPayment, user } = useStore();
+  const { tenant } = useTenant();
 
   const matchedOrder = orders.find((o) => o.id === orderId || o.number === orderId);
   const [dbOrder, setDbOrder] = useState<Order | null>(null);
@@ -110,19 +113,23 @@ export default function OrderConfirmationPage({ params }: OrderConfirmationPageP
           ) : (
             <Button href="/register">Create an account to track orders</Button>
           )}
+          <DownloadInvoiceButton order={order} />
           <Button variant="secondary" href="/shop">
             Continue shopping
           </Button>
         </div>
       )}
 
-      <p className="mt-6 text-center text-xs text-ink-muted">
-        Need help?{' '}
-        <Link href="/contact" className="underline">
-          Contact Tanti Care
-        </Link>{' '}
-        · 09612-826842
-      </p>
+      {(tenant?.name || tenant?.contact?.phone || tenant?.contact?.email) && (
+        <p className="mt-6 text-center text-xs text-ink-muted">
+          Need help?{' '}
+          <Link href="/contact" className="underline">
+            Contact{tenant?.name ? ` ${tenant.name}` : ''}
+          </Link>
+          {tenant?.contact?.phone ? ` · ${tenant.contact.phone}` : ''}
+          {tenant?.contact?.whatsapp ? ` · WhatsApp ${tenant.contact.whatsapp}` : ''}
+        </p>
+      )}
     </div>
   );
 }

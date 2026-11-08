@@ -79,6 +79,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
       // Cart
       cart: cartState.cart,
+      isCartLoading: cartState.isCartLoading,
       addToCart: cartState.addToCart,
       updateQty: cartState.updateQty,
       changeVariant: cartState.changeVariant,
@@ -99,7 +100,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       addresses: auth.addresses,
       isAddressesLoading: auth.isAddressesLoading,
       refreshAddresses: auth.loadAddressesFromBackend,
-      storeCredit: auth.storeCredit,
       customers: auth.customers,
       login: auth.login,
       register: auth.register,

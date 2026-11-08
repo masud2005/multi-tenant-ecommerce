@@ -14,7 +14,7 @@ import type { Order } from '@/types/commerce';
 
 export default function TrackOrderPage() {
   const { orders } = useStore();
-  const [number, setNumber] = useState('TN-10487');
+  const [number, setNumber] = useState('OR-10487');
   const [phone, setPhone] = useState('01712-345678');
   const [result, setResult] = useState<Order | null>(null);
   const [error, setError] = useState('');

@@ -815,15 +815,17 @@ export interface ShippingMethod {
   available: (district: string) => boolean;
 }
 
-export const FREE_SHIPPING_THRESHOLD = 2500;
-
+/**
+ * @deprecated Use Admin → Shipping via `useTenant().shipping` / `utils/store-shipping`.
+ * Kept only for type shape compatibility; prices are not storefront source of truth.
+ */
 export const shippingMethods: ShippingMethod[] = [
   {
     id: 'standard',
     name: 'Home delivery',
-    description: 'Inside Dhaka ৳70 (1–2 days) · Outside Dhaka ৳150 (3–5 days)',
+    description: 'Configured in Admin → Shipping',
     eta: '',
-    price: (d) => (d === 'Dhaka' ? 70 : 150),
+    price: () => 0,
     available: () => true,
   },
   {
@@ -836,13 +838,10 @@ export const shippingMethods: ShippingMethod[] = [
   },
 ];
 
-export function deliveryEstimate(district: string, method = 'standard') {
-  if (method === 'pickup') return 'Ready today';
-  return district === 'Dhaka' ? '1–2 days' : '3–5 days';
-}
-
 export const paymentMethods: { id: PaymentMethod; name: string; description: string; color: string; short: string }[] = [
   { id: 'cod', name: 'Cash on delivery', description: 'Pay when your order arrives at your doorstep', color: '#1C1A17', short: '৳' },
+  { id: 'bkash', name: 'bKash', description: 'Send money, then enter TrxID', color: '#E2136E', short: 'bK' },
+  { id: 'nagad', name: 'Nagad', description: 'Send money, then enter TrxID', color: '#F68712', short: 'Ng' },
 ];
 
 export const COD_FEE = 0;
@@ -855,11 +854,8 @@ export interface Coupon {
   minSubtotal?: number;
 }
 
-export const coupons: Coupon[] = [
-  { code: 'TANTI10', label: '10% off your order', type: 'percent', value: 10 },
-  { code: 'EID500', label: '৳500 off orders over ৳3,000', type: 'fixed', value: 500, minSubtotal: 3000 },
-  { code: 'FREESHIP', label: 'Free delivery', type: 'free_shipping', value: 0 },
-];
+/** Empty — coupons come from backend discount API only. */
+export const coupons: Coupon[] = [];
 
 export const shippingZones = [
   { id: 'z1', name: 'Inside Dhaka', districts: ['Dhaka'], rates: [{ name: 'Standard', rule: 'Flat ৳70 · Free over ৳2,500', price: 70 }, { name: 'Express', rule: 'Flat', price: 150 }] },
