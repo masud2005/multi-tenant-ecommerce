@@ -158,7 +158,6 @@ export async function seedAdmin(prisma: PrismaClient) {
                 customers: ['view', 'create', 'update'],
                 reviews: ['view', 'update', 'delete'],
                 discounts: ['view', 'create', 'update', 'delete'],
-                marketing: ['view', 'create', 'update'],
                 shipping: ['view', 'update'],
                 theme: ['view', 'update'],
                 content: ['view', 'create', 'update', 'delete'],

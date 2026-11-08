@@ -190,7 +190,6 @@ export type AdminModule =
   | 'customers'
   | 'reviews'
   | 'discounts'
-  | 'marketing'
   | 'shipping'
   | 'payments'
   | 'returns'

@@ -10,7 +10,6 @@
 
 | # | Area | Route | What’s mocked |
 |---|------|-------|----------------|
-| 1 | **Marketing** | `/admin/marketing` | পুরো page — KPI, campaigns, automations (`data/admin.ts`) |
 | 4 | **Notification templates** | `/admin/notifications` | Template list + channel toggles local-only; preview sample data |
 | 5 | **Inventory ledger** | `/admin/inventory` | Stock movements seed; levels API live |
 | 6 | **Product import** | `/admin/products/import` | Demo CSV wizard (no real upload API) |
@@ -20,7 +19,7 @@
 | 10 | **Product filters/editor fallback** | products UI | Empty DB হলে seed brands/categories/collections |
 | 11 | **Theme offline fallback** | `/admin/theme` | API down → fallback theme + seed products preview |
 | 12 | **Order ship couriers** | `/admin/orders/[id]` | Static courier list + fake success % |
-| 13 | **Reports — Marketing export** | `/admin/reports` | Marketing group → stub CSV |
+| 13 | **Reports — Growth export** | `/admin/reports` | Growth group → stub CSV |
 | 14 | **Demo login** | `/login` | `owner@gmail.com` / `customer@gmail.com` auto-fill |
 | 15 | **Dashboard greeting** | `/admin` | “Tanti” + `roleMeta` name fallback |
 
@@ -44,9 +43,8 @@ Orders, Returns, Products CRUD, Categories, Collections, Brands, Inventory **lev
 
 ## Priority to replace first
 
-1. Marketing (100% mock)
-2. Notification templates
-3. Inventory ledger
-4. Analytics fallbacks + fake export
-5. Product import wizard
-6. Demo credentials on login
+1. Notification templates
+2. Inventory ledger
+3. Analytics fallbacks + fake export
+4. Product import wizard
+5. Demo credentials on login

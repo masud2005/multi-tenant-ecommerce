@@ -90,7 +90,6 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             '/admin/customers': 'customers',
             '/admin/reviews': 'reviews',
             '/admin/discounts': 'discounts',
-            '/admin/marketing': 'marketing',
             '/admin/shipping': 'shipping',
             '/admin/theme': 'theme',
             '/admin/content': 'content',
@@ -126,7 +125,6 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             else if (perms.customers?.includes('view')) firstAllowedRoute = '/admin/customers';
             else if (perms.reviews?.includes('view')) firstAllowedRoute = '/admin/reviews';
             else if (perms.discounts?.includes('view')) firstAllowedRoute = '/admin/discounts';
-            else if (perms.marketing?.includes('view')) firstAllowedRoute = '/admin/marketing';
             else if (perms.shipping?.includes('view')) firstAllowedRoute = '/admin/shipping';
             else if (perms.theme?.includes('view')) firstAllowedRoute = '/admin/theme';
             else if (perms.content?.includes('view')) firstAllowedRoute = '/admin/content';

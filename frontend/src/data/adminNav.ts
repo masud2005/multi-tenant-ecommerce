@@ -12,7 +12,6 @@ import {
   Star,
   MessageSquare,
   Percent,
-  Megaphone,
   Truck,
   Palette,
   FileText,
@@ -80,7 +79,6 @@ export const adminNav: { group: string; items: AdminNavItem[] }[] = [
     group: 'Growth',
     items: [
       { to: '/admin/discounts', label: 'Discounts', icon: Percent, module: 'discounts' },
-      { to: '/admin/marketing', label: 'Marketing', icon: Megaphone, module: 'marketing' },
       { to: '/admin/shipping', label: 'Shipping', icon: Truck, module: 'shipping' }
     ]
   },

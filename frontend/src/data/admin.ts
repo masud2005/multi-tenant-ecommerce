@@ -4,7 +4,7 @@ import type { AdminModule, AdminRole, PermissionAction } from '../types/commerce
 const all: PermissionAction[] = ['view', 'create', 'update', 'delete'];
 const allModules: AdminModule[] = [
   'dashboard', 'orders', 'returns', 'payments', 'products', 'categories', 'collections', 'brands', 'inventory',
-  'customers', 'reviews', 'discounts', 'marketing', 'shipping', 'theme', 'content', 'media', 'analytics',
+  'customers', 'reviews', 'discounts', 'shipping', 'theme', 'content', 'media', 'analytics',
   'reports', 'staff', 'notifications', 'settings', 'audit'
 ];
 
@@ -23,7 +23,6 @@ export const rolePermissions: Record<AdminRole, Partial<Record<AdminModule, Perm
     customers: ['view', 'create', 'update'],
     reviews: ['view', 'update', 'delete'],
     discounts: ['view', 'create', 'update', 'delete'],
-    marketing: ['view', 'create', 'update'],
     shipping: ['view', 'update'],
     theme: ['view', 'update'],
     content: ['view', 'create', 'update', 'delete'],
@@ -62,7 +61,6 @@ export const permissionModules: { key: AdminModule; label: string }[] = [
   { key: 'customers', label: 'Customers' },
   { key: 'reviews', label: 'Reviews' },
   { key: 'discounts', label: 'Discounts' },
-  { key: 'marketing', label: 'Marketing' },
   { key: 'shipping', label: 'Shipping' },
   { key: 'theme', label: 'Theme' },
   { key: 'content', label: 'Content' },
@@ -102,22 +100,6 @@ export const discounts = [
   { id: 'd5', code: 'WELCOME15', title: '15% off first order', type: 'Percentage', method: 'code', status: 'active', used: 388, limit: null, starts: '2026-01-01', ends: '', revenue: 912000 },
   { id: 'd6', code: 'MONSOON20', title: '20% off Summer Linen', type: 'Percentage', method: 'code', status: 'expired', used: 721, limit: 800, starts: '2026-07-01', ends: '2026-08-31', revenue: 1640000 }
 ];
-
-export const campaigns = [
-  { id: 'cm1', name: 'Eid Collection launch', channel: 'Email + SMS', status: 'sent', audience: 'All subscribers · 18,420', sent: '2026-09-01', openRate: 42.1, clickRate: 8.4, revenue: 612000, utm: 'eid26_launch' },
-  { id: 'cm2', name: 'Final week of Eid offers', channel: 'Email', status: 'scheduled', audience: 'VIP + Loyal · 4,210', sent: '2026-09-29', openRate: 0, clickRate: 0, revenue: 0, utm: 'eid26_final' },
-  { id: 'cm3', name: 'Summer Linen restock', channel: 'Push', status: 'sent', audience: 'Linen viewers · 6,030', sent: '2026-08-20', openRate: 18.9, clickRate: 5.2, revenue: 184000, utm: 'linen_restock' },
-  { id: 'cm4', name: 'Win-back: 90 days inactive', channel: 'SMS', status: 'draft', audience: 'At risk · 1,280', sent: '', openRate: 0, clickRate: 0, revenue: 0, utm: 'winback_q3' }
-];
-
-export const automations = [
-  { id: 'au1', name: 'Welcome new customer', trigger: 'First account sign up', channel: 'Email', enabled: true, recovered: 240, revenue: 520000 },
-  { id: 'au2', name: 'Back in stock alert', trigger: 'Variant restocked', channel: 'Email + Push', enabled: true, recovered: 96, revenue: 221000 },
-  { id: 'au3', name: 'Price drop alert', trigger: 'Wishlisted item on sale', channel: 'Email', enabled: true, recovered: 71, revenue: 143000 },
-  { id: 'au4', name: 'Post-purchase review request', trigger: '5 days after delivery', channel: 'Email', enabled: true, recovered: 0, revenue: 0 },
-  { id: 'au5', name: 'Birthday reward', trigger: 'Customer birthday', channel: 'SMS', enabled: false, recovered: 0, revenue: 0 }
-];
-
 
 export const auditLogs = [
   { id: 'l1', at: '2026-09-26T09:14:00', actor: 'Shahana Parvin', action: 'Changed role permissions', resource: 'Role · Store Manager', category: 'Security', before: 'payments: view', after: 'payments: view, refund' },
@@ -207,10 +189,9 @@ export const reportCatalog: { group: string; items: { name: string; description:
     ]
   },
   {
-    group: 'Marketing',
+    group: 'Growth',
     items: [
       { name: 'Discounts & coupons', description: 'Usage and revenue attributed to each code' },
-      { name: 'Marketing campaigns', description: 'Campaign reach, clicks and revenue (UTM)' },
       { name: 'Staff activity', description: 'Actions by staff member' }
     ]
   }

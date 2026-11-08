@@ -123,13 +123,6 @@ export const adminNavItems: NavItem[] = [
     module: 'discounts',
   },
   {
-    title: 'Marketing',
-    href: '/admin/marketing',
-    icon: 'Megaphone',
-    category: 'Growth',
-    module: 'marketing',
-  },
-  {
     title: 'Shipping',
     href: '/admin/shipping',
     icon: 'Truck',

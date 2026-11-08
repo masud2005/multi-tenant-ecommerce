@@ -1,5 +1,5 @@
 import { apiClient } from './api-client';
-import { staff, roles, auditLogs, discounts, campaigns, automations } from '@/data/admin';
+import { staff, roles, auditLogs, discounts } from '@/data/admin';
 
 export const adminService = {
   async getStaff() {
@@ -31,22 +31,6 @@ export const adminService = {
       return await apiClient.get('/admin/discounts');
     } catch {
       return discounts;
-    }
-  },
-
-  async getMarketingCampaigns() {
-    try {
-      return await apiClient.get('/admin/marketing/campaigns');
-    } catch {
-      return campaigns;
-    }
-  },
-
-  async getAutomations() {
-    try {
-      return await apiClient.get('/admin/marketing/automations');
-    } catch {
-      return automations;
     }
   },
 };
