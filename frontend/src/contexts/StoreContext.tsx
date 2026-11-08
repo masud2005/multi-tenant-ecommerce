@@ -97,6 +97,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       // Auth & Customer
       user: auth.user,
       setUser: auth.setUser,
+      isAuthLoading: auth.isAuthLoading,
       addresses: auth.addresses,
       isAddressesLoading: auth.isAddressesLoading,
       refreshAddresses: auth.loadAddressesFromBackend,

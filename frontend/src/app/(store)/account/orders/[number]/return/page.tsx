@@ -17,7 +17,6 @@ import {
 import { useStore } from '@/contexts/StoreContext';
 import { orderService } from '@/services/order-service';
 import { returnService } from '@/services/return-service';
-import { returnReasons } from '@/data/orders';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Select } from '@/components/ui/Select';
@@ -27,6 +26,19 @@ import { cn } from '@/utils/cn';
 import type { Order } from '@/types/commerce';
 
 const steps = ['Select Items', 'Reason & Photos', 'Exchange Option', 'Review & Submit'];
+
+const returnReasons = [
+  'Size too small',
+  'Size too large',
+  'Wrong size',
+  'Damaged / defective',
+  'Not as described',
+  'Wrong item received',
+  'Changed my mind',
+];
+
+const MAX_RETURN_PHOTOS = 4;
+const MAX_PHOTO_BYTES = 1.5 * 1024 * 1024;
 
 interface ReturnWizardPageProps {
   params: Promise<{ number: string }>;
@@ -46,9 +58,11 @@ export default function ReturnRequestWizardPage({ params }: ReturnWizardPageProp
   const [reason, setReason] = useState(returnReasons[0]);
   const [details, setDetails] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [exchangeSize, setExchangeSize] = useState('L');
   const [exchangeNote, setExchangeNote] = useState('');
   const [error, setError] = useState('');
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load Order details from backend API (or store cache)
   const fetchOrder = useCallback(async () => {
@@ -124,17 +138,42 @@ export default function ReturnRequestWizardPage({ params }: ReturnWizardPageProp
     );
   };
 
-  // Add dummy/uploaded photo
-  const handleAddPhoto = () => {
-    if (photoUrls.length >= 4) return;
-    const samplePhotos = [
-      'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=600&q=80',
-    ];
-    const nextPhoto = samplePhotos[photoUrls.length % samplePhotos.length];
-    setPhotoUrls((prev) => [...prev, nextPhoto]);
+  const handlePhotoFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const remaining = MAX_RETURN_PHOTOS - photoUrls.length;
+    if (remaining <= 0) return;
+
+    setPhotoUploading(true);
+    setError('');
+    try {
+      const selected = Array.from(files).slice(0, remaining);
+      const reads = await Promise.all(
+        selected.map(
+          (file) =>
+            new Promise<string>((resolve, reject) => {
+              if (!file.type.startsWith('image/')) {
+                reject(new Error('Only image files are allowed'));
+                return;
+              }
+              if (file.size > MAX_PHOTO_BYTES) {
+                reject(new Error('Each photo must be under 1.5 MB'));
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result || ''));
+              reader.onerror = () => reject(new Error('Could not read photo'));
+              reader.readAsDataURL(file);
+            }),
+        ),
+      );
+      setPhotoUrls((prev) => [...prev, ...reads.filter(Boolean)].slice(0, MAX_RETURN_PHOTOS));
+    } catch (err: any) {
+      setError(err?.message || 'Could not add photo');
+      toast.error(err?.message || 'Could not add photo');
+    } finally {
+      setPhotoUploading(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
   };
 
   const handleRemovePhoto = (index: number) => {
@@ -168,7 +207,7 @@ export default function ReturnRequestWizardPage({ params }: ReturnWizardPageProp
 
         const payload = {
           orderId: order.id || order.number,
-          customerName: user?.name || order.customerName || 'Customer',
+          customerName: user?.name || order.customerName || undefined,
           reason,
           details: fullDetails,
           photos: photoUrls,
@@ -186,9 +225,7 @@ export default function ReturnRequestWizardPage({ params }: ReturnWizardPageProp
         const res = await returnService.createCustomerReturn(payload);
 
         if (res?.data || res?.success) {
-          toast.success(
-            `Return & exchange request #${res?.data?.id?.slice(0, 8) || 'R-100'} submitted successfully!`,
-          );
+          toast.success('Return request submitted');
           router.push('/account/returns');
         } else {
           throw new Error(res?.message || 'Could not submit request');
@@ -332,12 +369,21 @@ export default function ReturnRequestWizardPage({ params }: ReturnWizardPageProp
                   <span className="font-normal text-ink-muted">(optional, helps expedite review)</span>
                 )}
               </p>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => handlePhotoFiles(e.target.files)}
+              />
               <div className="mt-2.5 flex flex-wrap gap-2.5">
                 {photoUrls.map((photo, i) => (
                   <div
                     key={i}
                     className="relative h-20 w-20 overflow-hidden rounded-md border border-line bg-canvas group"
                   >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={photo}
                       alt={`Issue photo ${i + 1}`}
@@ -353,14 +399,19 @@ export default function ReturnRequestWizardPage({ params }: ReturnWizardPageProp
                     </button>
                   </div>
                 ))}
-                {photoUrls.length < 4 && (
+                {photoUrls.length < MAX_RETURN_PHOTOS && (
                   <button
                     type="button"
-                    onClick={handleAddPhoto}
-                    className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-line-strong text-xs text-ink-muted hover:border-clay hover:text-clay transition-colors cursor-pointer"
+                    disabled={photoUploading}
+                    onClick={() => photoInputRef.current?.click()}
+                    className="flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-line-strong text-xs text-ink-muted hover:border-clay hover:text-clay transition-colors cursor-pointer disabled:opacity-60"
                   >
-                    <CameraIcon className="h-5 w-5" aria-hidden />
-                    <span>Add photo</span>
+                    {photoUploading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                    ) : (
+                      <CameraIcon className="h-5 w-5" aria-hidden />
+                    )}
+                    <span>{photoUploading ? 'Adding…' : 'Add photo'}</span>
                   </button>
                 )}
               </div>

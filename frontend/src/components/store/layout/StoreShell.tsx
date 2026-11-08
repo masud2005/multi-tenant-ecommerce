@@ -1,28 +1,12 @@
 'use client';
 
 import React from 'react';
-import { usePathname } from 'next/navigation';
 import { StoreHeader, StoreFooter, SearchOverlay } from '@/components/store/layout';
 import { MiniCart } from '@/components/store/cart';
 import { QuickView } from '@/components/store/product';
 import { CompareDrawer, CookieBanner } from '@/components/store/shared';
 
 export function StoreShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isAccountRoute = pathname?.startsWith('/account');
-
-  // When inside the Customer Dashboard (/account), render a full-screen dedicated portal workspace
-  if (isAccountRoute) {
-    return (
-      <div className="h-screen w-full bg-canvas text-ink overflow-hidden">
-        {children}
-        <MiniCart />
-        <SearchOverlay />
-      </div>
-    );
-  }
-
-  // Standard Storefront pages with Header & Footer (including checkout)
   return (
     <div className="flex min-h-screen w-full flex-col bg-canvas text-ink">
       <a

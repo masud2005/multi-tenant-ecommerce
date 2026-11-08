@@ -30,7 +30,7 @@ export function AddressCard({
       <p className="mt-2 text-sm text-ink">
         {address.name} · {address.phone}
       </p>
-      <p className="text-sm text-ink-muted">
+      <p className="text-sm text-ink-soft">
         {address.line1}, {address.area}, {address.district}
       </p>
 
@@ -48,7 +48,7 @@ export function AddressCard({
           <button
             type="button"
             onClick={() => onSetDefault(address.id)}
-            className="text-ink-soft hover:text-ink cursor-pointer"
+            className="font-medium text-ink hover:underline cursor-pointer"
           >
             Set as default
           </button>
@@ -57,7 +57,7 @@ export function AddressCard({
         <button
           type="button"
           onClick={() => onDelete(address)}
-          className="ml-auto text-ink-muted hover:text-danger cursor-pointer"
+          className="ml-auto font-medium text-ink-soft hover:text-danger cursor-pointer"
         >
           Delete
         </button>

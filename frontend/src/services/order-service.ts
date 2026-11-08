@@ -2,8 +2,6 @@
 import { apiClient } from './api-client';
 import type { ApiResponse } from '@/types';
 import type { Order, OrderStatus } from '@/types/commerce';
-import { orders as seedOrders } from '@/data/orders';
-
 // Payload for an individual item in a new order
 export interface CreateOrderItemPayload {
   productId: string;
@@ -358,51 +356,46 @@ export const orderService = {
     return await apiClient.post<ApiResponse<any>>(endpoint, payload);
   },
 
-  // ----------------------------------------------------
-  // Legacy / Fallback helpers with mock seed data support
-  // ----------------------------------------------------
   async getOrders(): Promise<Order[]> {
-    try {
-      const res = await apiClient.get<ApiResponse<any>>('/owner/orders');
-      if (res?.data?.orders) {
-        return res.data.orders.map(mapBackendOrderToFrontend);
-      }
-      return seedOrders;
-    } catch {
-      return seedOrders;
+    const res = await apiClient.get<ApiResponse<any>>('/owner/orders');
+    if (res?.data?.orders) {
+      return res.data.orders.map(mapBackendOrderToFrontend);
     }
+    return [];
   },
 
   async getOrderById(idOrNumber: string): Promise<Order | undefined> {
-    try {
-      const res = await apiClient.get<ApiResponse<any>>(`/owner/orders/${idOrNumber}`);
-      if (res?.data) {
-        return mapBackendOrderToFrontend(res.data);
-      }
-      return seedOrders.find((o) => o.id === idOrNumber || o.number === idOrNumber);
-    } catch {
-      return seedOrders.find((o) => o.id === idOrNumber || o.number === idOrNumber);
+    const res = await apiClient.get<ApiResponse<any>>(
+      `/owner/orders/${encodeURIComponent(idOrNumber)}`,
+    );
+    if (res?.data) {
+      return mapBackendOrderToFrontend(res.data);
     }
+    return undefined;
   },
 
-  async updateOrderStatus(orderId: string, status: OrderStatus, eventData?: any): Promise<boolean> {
-    try {
-      await apiClient.patch(`/owner/orders/${orderId}/status`, {
-        status: status.toUpperCase(),
-        ...eventData,
-      });
-      return true;
-    } catch {
-      return true;
-    }
+  async updateOrderStatus(
+    orderId: string,
+    status: OrderStatus,
+    eventData?: any,
+  ): Promise<boolean> {
+    await apiClient.patch(`/owner/orders/${encodeURIComponent(orderId)}/status`, {
+      status: status.toUpperCase(),
+      ...eventData,
+    });
+    return true;
   },
 
-  async addOrderNote(orderId: string, text: string, internal: boolean, by: string): Promise<boolean> {
-    try {
-      await apiClient.post(`/owner/orders/${orderId}/notes`, { text, internal });
-      return true;
-    } catch {
-      return true;
-    }
+  async addOrderNote(
+    orderId: string,
+    text: string,
+    internal: boolean,
+    _by: string,
+  ): Promise<boolean> {
+    await apiClient.post(`/owner/orders/${encodeURIComponent(orderId)}/notes`, {
+      text,
+      internal,
+    });
+    return true;
   },
 };

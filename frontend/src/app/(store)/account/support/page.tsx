@@ -48,7 +48,7 @@ export default function AccountSupportPage() {
   const [messageInput, setMessageInput] = useState('');
   const [sending, setSending] = useState(false);
   const [chatLoading, setChatLoading] = useState(true);
-  const [isAgentOnline, setIsAgentOnline] = useState(true);
+  const [isAgentOnline, setIsAgentOnline] = useState(false);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
   const [attachedOrder, setAttachedOrder] = useState<string>('');
 

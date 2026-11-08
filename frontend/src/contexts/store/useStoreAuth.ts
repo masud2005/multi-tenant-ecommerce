@@ -9,21 +9,31 @@ import type { User } from './types';
 const LOCAL_STORAGE_SAVED_ADDRESSES = 'tanti_saved_delivery_addresses';
 const LOCAL_STORAGE_LAST_ADDRESS = 'tanti_last_delivery_address';
 
+function mapStoredUser(stored: {
+  id: string;
+  name?: string;
+  email: string;
+  phone?: string;
+  role?: string;
+}): User {
+  return {
+    id: stored.id,
+    name: stored.name || stored.email?.split('@')[0] || 'User',
+    email: stored.email,
+    phone: stored.phone || '',
+    role: stored.role,
+  };
+}
+
 export function useStoreAuth() {
   const [user, setUser] = useState<User | null>(() => {
     if (typeof window === 'undefined') return null;
     const stored = authService.getStoredUser();
-    if (stored) {
-      return {
-        id: stored.id,
-        name: stored.name || stored.email?.split('@')[0] || 'User',
-        email: stored.email,
-        phone: stored.phone || '',
-        role: stored.role,
-      };
-    }
-    return null;
+    return stored ? mapStoredUser(stored) : null;
   });
+
+  // Stay true until client session bootstrap finishes (avoids sign-in flash on refresh)
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   const [addresses, setAddresses] = useState<Address[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -84,53 +94,53 @@ export function useStoreAuth() {
     }
   }, []);
 
-  // Re-sync session state and fetch addresses on mount and when user changes
+  // Bootstrap session once on mount (storage + optional token refresh)
   useEffect(() => {
     let isMounted = true;
 
-    // Proactively refresh expired access token if valid refresh token exists
-    if (!authService.isAuthenticated() && authService.hasValidRefreshToken()) {
-      authService.refreshToken().then((token) => {
-        if (!isMounted) return;
-        if (token) {
+    const bootstrap = async () => {
+      try {
+        // Access token still valid — restore user immediately
+        if (authService.isAuthenticated()) {
           const stored = authService.getStoredUser();
-          if (stored) {
-            setUser({
-              id: stored.id,
-              name: stored.name || stored.email?.split('@')[0] || 'User',
-              email: stored.email,
-              phone: stored.phone || '',
-              role: stored.role,
-            });
+          if (stored && isMounted) {
+            setUser(mapStoredUser(stored));
             loadAddressesFromBackend();
           }
+          return;
         }
-      });
-      return;
-    }
 
-    const stored = authService.getStoredUser();
-    if (stored) {
-      setUser({
-        id: stored.id,
-        name: stored.name || stored.email?.split('@')[0] || 'User',
-        email: stored.email,
-        phone: stored.phone || '',
-        role: stored.role,
-      });
-      loadAddressesFromBackend();
-    } else {
-      // Load saved addresses from localStorage for guests
-      if (typeof window !== 'undefined') {
-        try {
-          const stored = localStorage.getItem(LOCAL_STORAGE_SAVED_ADDRESSES);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) setAddresses(parsed);
+        // Access expired but refresh token present — wait before deciding signed-out
+        if (authService.hasValidRefreshToken()) {
+          const token = await authService.refreshToken();
+          if (!isMounted) return;
+          if (token) {
+            const stored = authService.getStoredUser();
+            if (stored) {
+              setUser(mapStoredUser(stored));
+              loadAddressesFromBackend();
+            }
+            return;
           }
-        } catch {}
+        }
+
+        // No usable session
+        if (isMounted) {
+          setUser(null);
+          try {
+            const raw = localStorage.getItem(LOCAL_STORAGE_SAVED_ADDRESSES);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) setAddresses(parsed);
+            }
+          } catch {}
+        }
+      } finally {
+        if (isMounted) setIsAuthLoading(false);
       }
-    }
+    };
+
+    bootstrap();
 
     return () => {
       isMounted = false;
@@ -140,13 +150,8 @@ export function useStoreAuth() {
   const login = useCallback((_email: string) => {
     const stored = authService.getStoredUser();
     if (stored) {
-      setUser({
-        id: stored.id,
-        name: stored.name,
-        email: stored.email,
-        phone: stored.phone || '',
-        role: stored.role,
-      });
+      setUser(mapStoredUser(stored));
+      setIsAuthLoading(false);
       loadAddressesFromBackend();
     }
   }, [loadAddressesFromBackend]);
@@ -154,22 +159,19 @@ export function useStoreAuth() {
   const register = useCallback((u: Omit<User, 'id'>) => {
     const stored = authService.getStoredUser();
     if (stored) {
-      setUser({
-        id: stored.id,
-        name: stored.name,
-        email: stored.email,
-        phone: stored.phone || '',
-        role: stored.role,
-      });
+      setUser(mapStoredUser(stored));
+      setIsAuthLoading(false);
       loadAddressesFromBackend();
     } else {
       setUser({ ...u, id: u.email, role: 'CUSTOMER' });
+      setIsAuthLoading(false);
     }
   }, [loadAddressesFromBackend]);
 
   const logout = useCallback(() => {
     authService.logout();
     setUser(null);
+    setIsAuthLoading(false);
     setAddresses([]);
     if (typeof window !== 'undefined') {
       try {
@@ -328,6 +330,7 @@ export function useStoreAuth() {
   return {
     user,
     setUser,
+    isAuthLoading,
     addresses,
     isAddressesLoading,
     customers,
