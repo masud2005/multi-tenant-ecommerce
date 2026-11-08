@@ -13,7 +13,6 @@ import {
   XCircle,
   Mail,
   Phone,
-  Lock,
   Eye,
   CheckCircle2,
   RefreshCw,
@@ -68,7 +67,7 @@ const eventLabel: Partial<Record<OrderStatus, string>> = {
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { customers, setOrderStatus, refundOrder, markCodCollected, returns } = useStore();
+  const { customers, setOrderStatus, markCodCollected, returns } = useStore();
   const { actor, can } = useAdmin();
   const { tenant } = useTenant();
 
@@ -88,8 +87,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [refundOpen, setRefundOpen] = useState(false);
   const [refund, setRefund] = useState({ amount: '', reason: 'Customer request', restock: true });
   const [refundError, setRefundError] = useState('');
-  const [cancelOpen, setCancelOpen] = useState(false);
-  const [reauth, setReauth] = useState('');
+  const [isRefunding, setIsRefunding] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
@@ -333,15 +331,33 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const doRefund = () => {
+  const doRefund = async () => {
     const amt = Number(refund.amount);
     if (!amt || amt <= 0) return setRefundError('Enter an amount');
     if (amt > refundable) return setRefundError(`Maximum refundable is ${formatBDT(refundable)}`);
-    if (reauth.length < 4) return setRefundError('Confirm your password to issue a refund');
-    refundOrder(order.id, amt, actor, refund.reason);
-    setRefundOpen(false);
-    setReauth('');
-    toast.success(`Refund of ${formatBDT(amt)} sent to ${paymentMethodLabel[order.paymentMethod]}`);
+    try {
+      setIsRefunding(true);
+      setRefundError('');
+      const res = await orderService.refundOwnerOrder(order.id, {
+        amount: amt,
+        reason: refund.reason.trim() || 'Customer request',
+        restock: refund.restock,
+      });
+      if (res?.data) setLiveOrder(res.data);
+      setRefundOpen(false);
+      toast.success(
+        `Refund of ${formatBDT(amt)} recorded. Send the money manually via ${
+          paymentMethodLabel[order.paymentMethod] || order.paymentMethod
+        } if the customer already paid.`,
+      );
+      await fetchOrderDetail();
+    } catch (err: any) {
+      setRefundError(
+        err?.response?.data?.message || err?.message || 'Failed to record refund',
+      );
+    } finally {
+      setIsRefunding(false);
+    }
   };
 
   return (
@@ -390,7 +406,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <Banknote className="h-4 w-4" aria-hidden /> Mark COD collected
               </Button>
             )}
-            {order.paymentStatus === 'pending' && canUpdate && (
+            {/* Manual bKash/Nagad: use Verify only — no generic Mark as Paid */}
+            {order.paymentStatus === 'pending' &&
+              canUpdate &&
+              order.paymentMethod !== 'bkash' &&
+              order.paymentMethod !== 'nagad' &&
+              order.paymentMethod !== 'cod' && (
               <Button size="sm" variant="secondary" onClick={handleMarkPaid} disabled={isUpdating} className="cursor-pointer">
                 <Banknote className="h-4 w-4" aria-hidden /> Mark as Paid
               </Button>
@@ -595,12 +616,25 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               </p>
             )}
 
-            {order.paymentMethod === 'cod' && order.paymentStatus === 'pending' && canUpdate && (
-              <div className="mt-3 pt-3 border-t border-line flex items-center justify-between">
-                <span className="text-xs text-ink-muted">Cash on delivery pending collection from customer.</span>
-                <Button size="sm" variant="secondary" onClick={handleMarkPaid} disabled={isUpdating} className="cursor-pointer">
-                  <Banknote className="h-3.5 w-3.5 mr-1" /> Mark as Paid
+            {order.paymentMethod === 'cod' && !order.codCollected && canUpdate && (
+              <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-3">
+                <span className="text-xs text-ink-muted">
+                  Cash on delivery pending collection from customer.
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleMarkCodCollected}
+                  disabled={isUpdating}
+                  className="cursor-pointer"
+                >
+                  <Banknote className="h-3.5 w-3.5 mr-1" /> Mark COD collected
                 </Button>
+              </div>
+            )}
+            {order.paymentMethod === 'cod' && order.codCollected && (
+              <div className="mt-3 pt-3 border-t border-line text-xs text-emerald-700">
+                COD collected and marked as paid.
               </div>
             )}
           </Panel>
@@ -737,11 +771,22 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </Modal>
 
-      {/* Refund Modal */}
-      <Modal open={refundOpen} onClose={() => setRefundOpen(false)} title="Issue refund">
+      {/* Refund Modal — records ledger only; payout is manual bKash/Nagad */}
+      <Modal
+        open={refundOpen}
+        onClose={() => !isRefunding && setRefundOpen(false)}
+        title="Record refund"
+      >
         <div className="space-y-4 py-2">
+          <p className="text-xs text-ink-muted">
+            This stores the refund on the order. There is no payment gateway — send money to the
+            customer yourself via {paymentMethodLabel[order.paymentMethod] || order.paymentMethod}{' '}
+            when they already paid.
+          </p>
           <div>
-            <label className="text-xs font-medium text-ink">Refund Amount (max: {formatBDT(refundable)})</label>
+            <label className="text-xs font-medium text-ink">
+              Refund Amount (max: {formatBDT(refundable)})
+            </label>
             <input
               type="number"
               value={refund.amount}
@@ -757,22 +802,21 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               className="mt-1 h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
             />
           </div>
-          <div>
-            <label className="text-xs font-medium text-ink">Re-enter staff password to authorize</label>
+          <label className="flex items-center gap-2 text-xs text-ink">
             <input
-              type="password"
-              placeholder="••••••••"
-              value={reauth}
-              onChange={(e) => setReauth(e.target.value)}
-              className="mt-1 h-9 w-full rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
+              type="checkbox"
+              checked={refund.restock}
+              onChange={(e) => setRefund({ ...refund, restock: e.target.checked })}
+              className="rounded border-line"
             />
-          </div>
+            Restore item stock
+          </label>
           {refundError && <p className="text-xs text-danger">{refundError}</p>}
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setRefundOpen(false)}>
+            <Button variant="ghost" onClick={() => setRefundOpen(false)} disabled={isRefunding}>
               Cancel
             </Button>
-            <Button variant="danger" onClick={doRefund}>
+            <Button variant="danger" onClick={doRefund} loading={isRefunding} disabled={isRefunding}>
               Confirm refund
             </Button>
           </div>

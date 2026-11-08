@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Download, FileSpreadsheet, UploadCloud } from 'lucide-react';
+import { Download, UploadCloud } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
@@ -29,8 +29,8 @@ export default function AdminProductImportPage() {
       <div className="w-full space-y-6">
         <PageHeader
           back={{ href: '/admin/products', label: 'Products' }}
-          title="Import & export products"
-          description="Bulk-create or update products, variants, prices and stock using CSV."
+          title="Import products"
+          description="CSV bulk import is not available yet. Download the column template to prepare a file, or add products one at a time. For catalog export, use Products → Export or Reports → Inventory."
         />
 
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
@@ -38,7 +38,7 @@ export default function AdminProductImportPage() {
             <EmptyState
               icon={UploadCloud}
               title="CSV import is not available yet"
-              description="Bulk product import will land here soon. You can still download a column template to prepare your file, or add products one at a time."
+              description="Bulk product import will land here later. Add products individually from the products page for now."
               action={
                 <Button href="/admin/products/new" variant="secondary" size="sm">
                   Add a product
@@ -47,28 +47,16 @@ export default function AdminProductImportPage() {
             />
           </Panel>
 
-          <div className="space-y-6">
-            <Panel title="Template">
-              <p className="text-sm text-ink-muted">
-                Download a blank CSV with the supported column headers. Importing a filled file is not available yet.
-              </p>
-              <div className="mt-3">
-                <Button variant="secondary" size="sm" onClick={downloadTemplate}>
-                  <Download className="h-4 w-4" aria-hidden /> Download template
-                </Button>
-              </div>
-            </Panel>
-            <Panel title="Export">
-              <p className="text-sm text-ink-muted">
-                Bulk product export is not available yet.
-              </p>
-              <div className="mt-3">
-                <Button variant="secondary" size="sm" disabled>
-                  <FileSpreadsheet className="h-4 w-4" aria-hidden /> Export CSV
-                </Button>
-              </div>
-            </Panel>
-          </div>
+          <Panel title="Template">
+            <p className="text-sm text-ink-muted">
+              Download a blank CSV with the supported column headers. Importing a filled file is not available yet.
+            </p>
+            <div className="mt-3">
+              <Button variant="secondary" size="sm" onClick={downloadTemplate}>
+                <Download className="h-4 w-4" aria-hidden /> Download template
+              </Button>
+            </div>
+          </Panel>
         </div>
       </div>
     </ModuleGate>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Download, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 import { useAdmin } from '@/contexts/AdminContext';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
@@ -253,23 +253,50 @@ export function InventoryManager() {
             </Button>
             <GuardedButton
               module="inventory"
-              action="update"
-              variant="secondary"
-              size="sm"
-              onClick={() =>
-                toast.info('Physical count workflow is not available yet')
-              }
-            >
-              <ClipboardCheck className="h-4 w-4" aria-hidden /> Start count
-            </GuardedButton>
-            <GuardedButton
-              module="inventory"
               action="export"
               variant="secondary"
               size="sm"
-              onClick={() =>
-                toast.info('Inventory export is not available yet')
-              }
+              disabled={!items.length}
+              onClick={() => {
+                const headers = [
+                  'Product',
+                  'SKU',
+                  'Color',
+                  'Size',
+                  'Stock',
+                  'Reserved',
+                  'Available',
+                  'Low threshold',
+                ];
+                const csvRows = [headers.join(',')];
+                for (const v of items) {
+                  const available = Math.max(0, (v.stock || 0) - (v.reserved || 0));
+                  csvRows.push(
+                    [
+                      `"${(v.product?.title || '').replace(/"/g, '""')}"`,
+                      `"${(v.sku || '').replace(/"/g, '""')}"`,
+                      `"${(v.color || '').replace(/"/g, '""')}"`,
+                      `"${(v.size || '').replace(/"/g, '""')}"`,
+                      `"${v.stock}"`,
+                      `"${v.reserved}"`,
+                      `"${available}"`,
+                      `"${v.lowStockThreshold ?? ''}"`,
+                    ].join(','),
+                  );
+                }
+                const blob = new Blob([csvRows.join('\n')], {
+                  type: 'text/csv;charset=utf-8;',
+                });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `inventory_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                toast.success(`Exported ${items.length} variants`);
+              }}
             >
               <Download className="h-4 w-4" aria-hidden /> Export
             </GuardedButton>

@@ -20,6 +20,7 @@ interface OrderDetailHeaderProps {
   hasExistingReturn: boolean;
   onDownloadInvoice: () => void;
   onRequestCancel: () => void;
+  invoiceLoading?: boolean;
 }
 
 export function OrderDetailHeader({
@@ -29,6 +30,7 @@ export function OrderDetailHeader({
   hasExistingReturn,
   onDownloadInvoice,
   onRequestCancel,
+  invoiceLoading = false,
 }: OrderDetailHeaderProps) {
   return (
     <div>
@@ -68,8 +70,10 @@ export function OrderDetailHeader({
             variant="secondary"
             size="sm"
             onClick={onDownloadInvoice}
+            loading={invoiceLoading}
+            disabled={invoiceLoading}
           >
-            <DownloadIcon className="h-4 w-4" aria-hidden /> Invoice
+            {!invoiceLoading && <DownloadIcon className="h-4 w-4" aria-hidden />} Invoice
           </Button>
 
           {canReturn && !hasExistingReturn && (

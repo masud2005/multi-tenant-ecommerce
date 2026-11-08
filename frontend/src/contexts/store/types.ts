@@ -87,17 +87,13 @@ export interface StoreContextValue {
   placeOrder: (input: PlaceOrderInput) => Promise<Order>;
   isOrdersLoading?: boolean;
   refreshOrders?: () => Promise<void>;
-  completePayment: (orderId: string, result: 'success' | 'fail' | 'cancel') => void;
-  retryPayment: (orderId: string, method: PaymentMethod) => void;
   setOrderStatus: (
     orderId: string,
     status: OrderStatus,
     event?: Partial<TimelineEvent> & { courier?: string; tracking?: string }
   ) => void;
   addOrderNote: (orderId: string, text: string, internal: boolean, by: string) => void;
-  refundOrder: (orderId: string, amount: number, by: string, reason: string) => void;
   markCodCollected: (orderId: string, by: string) => void;
-  cancelOrder: (orderId: string, by: string) => void;
   createReturn: (r: Omit<ReturnRequest, 'id' | 'createdAt' | 'timeline' | 'status'>) => ReturnRequest;
   updateReturn: (id: string, status: ReturnStatus, by: string, note?: string) => void;
   saveProduct: (p: Product) => void;

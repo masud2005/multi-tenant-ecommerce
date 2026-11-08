@@ -11,6 +11,7 @@ import {
   OrderQueryDto,
   UpdateOrderStatusDto,
   AddOrderNoteDto,
+  RefundOrderDto,
 } from './dto';
 import {
   OrderStatus,
@@ -18,6 +19,8 @@ import {
   FulfillmentStatus,
   PaymentMethod,
   OrderChannel,
+  StockMovementReason,
+  Prisma,
 } from '../../../../prisma/generated/client';
 
 @Injectable()
@@ -47,6 +50,47 @@ export class OrderService {
     }
 
     return defaultTenant.id;
+  }
+
+  /** Restore variant stock + ledger rows for cancelled / failed / refunded orders. */
+  private async restoreOrderStock(
+    tx: Prisma.TransactionClient,
+    order: {
+      id: string;
+      number: string;
+      tenantId: string;
+      items: Array<{ variantId: string | null; qty: number }>;
+    },
+    reason: StockMovementReason,
+    by: string,
+    note: string,
+  ) {
+    for (const item of order.items) {
+      if (!item.variantId || item.qty <= 0) continue;
+      const variant = await tx.productVariant.findFirst({
+        where: { id: item.variantId, deletedAt: null },
+      });
+      if (!variant) continue;
+      const stockBefore = variant.stock;
+      const stockAfter = stockBefore + item.qty;
+      await tx.productVariant.update({
+        where: { id: variant.id },
+        data: { stock: { increment: item.qty } },
+      });
+      await tx.stockMovement.create({
+        data: {
+          tenantId: order.tenantId,
+          variantId: variant.id,
+          change: item.qty,
+          stockBefore,
+          stockAfter,
+          reason,
+          ref: order.number,
+          note,
+          by,
+        },
+      });
+    }
   }
 
   // Fetch all orders for tenant with filtering, search, pagination, and status counters
@@ -394,16 +438,39 @@ export class OrderService {
       }
     }
 
-    // Auto-resolve payment for COD on delivery if not explicitly specified
+    // COD payment resolution: collected flag must stay in sync with PAID
     let targetPaymentStatus = dto.paymentStatus;
     let codCollected = existingOrder.codCollected;
+    const isCod = existingOrder.paymentMethod === PaymentMethod.COD;
     if (
-      (dto.status === OrderStatus.DELIVERED || (!dto.status && existingOrder.status === OrderStatus.DELIVERED)) &&
-      existingOrder.paymentMethod === PaymentMethod.COD &&
+      isCod &&
+      (dto.status === OrderStatus.DELIVERED ||
+        (!dto.status && existingOrder.status === OrderStatus.DELIVERED)) &&
       !targetPaymentStatus
     ) {
       targetPaymentStatus = PaymentStatus.PAID;
       codCollected = true;
+    }
+    if (isCod && targetPaymentStatus === PaymentStatus.PAID) {
+      codCollected = true;
+    }
+
+    const becomingCancelled =
+      dto.status === OrderStatus.CANCELLED &&
+      existingOrder.status !== OrderStatus.CANCELLED &&
+      existingOrder.status !== OrderStatus.REFUNDED &&
+      existingOrder.status !== OrderStatus.FAILED;
+
+    // Unpaid cancel → payment cancelled; paid cancel keeps PAID until refund is recorded
+    if (becomingCancelled && !targetPaymentStatus) {
+      if (
+        existingOrder.paymentStatus === PaymentStatus.PAID ||
+        existingOrder.paymentStatus === PaymentStatus.PARTIALLY_REFUNDED
+      ) {
+        // leave payment as-is
+      } else {
+        targetPaymentStatus = PaymentStatus.CANCELLED;
+      }
     }
 
     const updatedOrder = await this.prisma.$transaction(async (tx) => {
@@ -412,7 +479,9 @@ export class OrderService {
         data: {
           status: targetStatus,
           ...(derivedFulfillmentStatus ? { fulfillmentStatus: derivedFulfillmentStatus } : {}),
-          ...(targetPaymentStatus ? { paymentStatus: targetPaymentStatus, codCollected } : {}),
+          ...(targetPaymentStatus
+            ? { paymentStatus: targetPaymentStatus, ...(isCod ? { codCollected } : {}) }
+            : {}),
           ...(dto.courier ? { courier: dto.courier } : {}),
           ...(dto.trackingNumber ? { trackingNumber: dto.trackingNumber } : {}),
         },
@@ -445,6 +514,16 @@ export class OrderService {
               : undefined),
         },
       });
+
+      if (becomingCancelled) {
+        await this.restoreOrderStock(
+          tx,
+          order,
+          StockMovementReason.CORRECTION,
+          adminName,
+          'Stock restored — order cancelled',
+        );
+      }
 
       return order;
     });
@@ -605,44 +684,222 @@ export class OrderService {
         });
       }
 
+      if (order.status === OrderStatus.PENDING_PAYMENT) {
+        (async () => {
+          try {
+            let customerUserId: string | undefined;
+            if (order.customerId) {
+              const profile = await this.prisma.customerProfile.findUnique({
+                where: { id: order.customerId },
+                select: { userId: true },
+              });
+              customerUserId = profile?.userId || undefined;
+            }
+            const tenant = await this.prisma.tenant.findUnique({
+              where: { id: order.tenantId },
+              select: { name: true },
+            });
+            await this.notificationService.sendFromTemplate({
+              tenantId: order.tenantId,
+              key: 'ORDER_CONFIRMED',
+              userId: customerUserId,
+              emailTo: order.email,
+              type: 'ORDER',
+              link: `/account/orders`,
+              vars: {
+                customer_name:
+                  updated.shippingAddress?.name ||
+                  order.customerName ||
+                  order.email ||
+                  '',
+                order_number: order.number,
+                total_amount: `৳${Number(order.total || 0).toLocaleString('en-BD')}`,
+                store_name: tenant?.name || 'Store',
+                payment_method: String(order.paymentMethod || '—'),
+              },
+            });
+          } catch (err) {
+            this.logger.error('Failed to send payment-approved notification', err);
+          }
+        })();
+      }
+
       return ResponseHelper.success(
         updated,
         'Payment verified and order updated to PAID successfully',
       );
     } else {
-      const updated = await this.prisma.order.update({
-        where: { id: order.id },
-        data: {
-          paymentStatus: PaymentStatus.FAILED,
-          status: OrderStatus.FAILED,
-          timeline: {
-            create: {
-              label: 'Manual Payment Rejected / Invalid TrxID',
-              note: note || `Rejected by ${actorName}`,
-              by: actorName,
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const failed = await tx.order.update({
+          where: { id: order.id },
+          data: {
+            paymentStatus: PaymentStatus.FAILED,
+            status: OrderStatus.FAILED,
+            timeline: {
+              create: {
+                label: 'Manual Payment Rejected / Invalid TrxID',
+                note: note || `Rejected by ${actorName}`,
+                by: actorName,
+              },
             },
           },
-        },
-        include: {
-          items: true,
-          shippingAddress: true,
-          timeline: { orderBy: { createdAt: 'asc' } },
-          attempts: true,
-        },
+          include: {
+            items: true,
+            shippingAddress: true,
+            timeline: { orderBy: { createdAt: 'asc' } },
+            attempts: true,
+          },
+        });
+
+        if (order.attempts.length > 0) {
+          await tx.paymentAttempt.update({
+            where: { id: order.attempts[0].id },
+            data: { status: PaymentStatus.FAILED },
+          });
+        }
+
+        await this.restoreOrderStock(
+          tx,
+          failed,
+          StockMovementReason.CORRECTION,
+          actorName,
+          'Stock restored — payment rejected',
+        );
+
+        return failed;
       });
 
-      if (order.attempts.length > 0) {
-        await this.prisma.paymentAttempt.update({
-          where: { id: order.attempts[0].id },
-          data: { status: PaymentStatus.FAILED },
-        });
-      }
+      (async () => {
+        try {
+          let customerUserId: string | undefined;
+          if (order.customerId) {
+            const profile = await this.prisma.customerProfile.findUnique({
+              where: { id: order.customerId },
+              select: { userId: true },
+            });
+            customerUserId = profile?.userId || undefined;
+          }
+          const tenant = await this.prisma.tenant.findUnique({
+            where: { id: order.tenantId },
+            select: { name: true },
+          });
+          await this.notificationService.sendFromTemplate({
+            tenantId: order.tenantId,
+            key: 'PAYMENT_FAILED',
+            userId: customerUserId,
+            emailTo: order.email,
+            type: 'PAYMENT',
+            link: `/account/orders`,
+            vars: {
+              customer_name:
+                updated.shippingAddress?.name ||
+                order.customerName ||
+                order.email ||
+                '',
+              order_number: order.number,
+              total_amount: `৳${Number(order.total || 0).toLocaleString('en-BD')}`,
+              store_name: tenant?.name || 'Store',
+              payment_method: String(order.paymentMethod || '—'),
+            },
+          });
+        } catch (err) {
+          this.logger.error('Failed to send payment-rejected notification', err);
+        }
+      })();
 
       return ResponseHelper.success(
         updated,
         'Payment marked as rejected/failed',
       );
     }
+  }
+
+  /**
+   * Record a manual refund (owner already sent money via bKash/Nagad, or COD never collected).
+   * Updates refunded amount + payment/order status; optional restock.
+   */
+  async refundOrder(
+    id: string,
+    dto: RefundOrderDto,
+    tenantId?: string,
+    adminUser?: any,
+  ) {
+    const existingOrder = await this.prisma.order.findFirst({
+      where: {
+        OR: [{ id }, { number: id }],
+        ...(tenantId ? { tenantId } : {}),
+        deletedAt: null,
+      },
+      include: { items: true },
+    });
+
+    if (!existingOrder) {
+      throw new NotFoundException(`Order with identifier "${id}" not found`);
+    }
+
+    const amount = Number(dto.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException('Refund amount must be greater than zero');
+    }
+
+    const alreadyRefunded = Number(existingOrder.refunded) || 0;
+    const total = Number(existingOrder.total) || 0;
+    const refundable = Math.max(0, total - alreadyRefunded);
+    if (amount > refundable + 0.001) {
+      throw new BadRequestException(
+        `Maximum refundable amount is ৳${refundable.toLocaleString('en-BD')}`,
+      );
+    }
+
+    const adminName = adminUser?.name || adminUser?.email || 'Admin';
+    const newRefunded = alreadyRefunded + amount;
+    const full = newRefunded >= total - 0.001;
+    const reason = (dto.reason || 'Customer request').trim();
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.update({
+        where: { id: existingOrder.id },
+        data: {
+          refunded: newRefunded,
+          status: full ? OrderStatus.REFUNDED : OrderStatus.PARTIALLY_REFUNDED,
+          paymentStatus: full
+            ? PaymentStatus.REFUNDED
+            : PaymentStatus.PARTIALLY_REFUNDED,
+          timeline: {
+            create: {
+              label: `Refund of ৳${amount.toLocaleString('en-BD')} recorded`,
+              note: `${reason}${dto.restock ? ' · stock restored' : ''} (manual payout — no gateway)`,
+              by: adminName,
+            },
+          },
+        },
+        include: {
+          items: true,
+          shippingAddress: true,
+          attempts: true,
+          timeline: { orderBy: { createdAt: 'asc' } },
+        },
+      });
+
+      if (dto.restock) {
+        await this.restoreOrderStock(
+          tx,
+          order,
+          StockMovementReason.RETURN,
+          adminName,
+          `Stock restored — refund on ${order.number}`,
+        );
+      }
+
+      return order;
+    });
+
+    return ResponseHelper.success(
+      updated,
+      full
+        ? 'Full refund recorded on order'
+        : 'Partial refund recorded on order',
+    );
   }
 }
 

@@ -1,58 +1,81 @@
-# Admin mock-data review
+# Admin / storefront functional status
 
-**Verdict:** Admin business screens now load from live APIs (or show empty/error). Fake seed rows are no longer shown when the API fails or returns empty. Demo login credentials remain on purpose.
+**Verdict:** Core **owner-operated** store is functional for **COD + manual bKash/Nagad** (checkout → order → verify/collect → cancel/refund ledger → fulfill → payments → CSV exports). Fake-success polish items (cancel, refund, invoice, list exports) and dashboard StoreContext leftovers were fixed.
 
-> Updated after removing frontend mock/fallback displays across inventory, analytics, staff, payments, products, theme, orders, reports, import, and dashboard greeting.
-
----
-
-## Intentionally kept
-
-| Area | Route | Notes |
-|------|-------|--------|
-| **Demo login** | `/login` | `owner@gmail.com` / `customer@gmail.com` auto-fill — keep for local/dev demos |
-| Static config | nav, permissions, status labels, BD districts, theme presets, courier **name** options | Not business data |
+> Last reviewed after cancel/refund APIs, export honesty, dashboard live panels, FAQ seed alignment, and dead payment helper cleanup. Demo login stays intentional.
 
 ---
 
-## Fully live / empty-or-error (no mock fallback)
+## Payment model (product truth)
 
-| Area | Route | Behavior |
-|------|-------|----------|
-| Notification templates + logs | `/admin/notifications` | DB CRUD; empty/error only |
-| Inventory levels + **movement ledger** | `/admin/inventory` | `GET /owner/inventory` + `GET /owner/inventory/movements` |
-| Analytics | `/admin/analytics` | Overview API; fail → empty/`—`, not seed KPIs |
-| Staff & roles | `/admin/staff` | API only; fail/empty → empty states |
-| Payments | `/admin/payments` | Order payment rows only; no fake reconcile/sync |
-| Product editor taxonomies | products editor | Empty selects + “create first” hints |
-| Theme | `/admin/theme` | Fail → error + retry (no invented theme) |
-| Orders list / detail | `/admin/orders` | API only; no client-store fallback |
-| Reports | `/admin/reports` | Only 3 DB CSV exports: Orders, Inventory variants, Customers |
-| Content / policies | `/admin/content` | DB-only |
-| Dashboard greeting | `/admin` | Auth name + tenant store name |
+No SSLCommerz / Stripe / auto gateway.
+
+| Method | Customer | Owner |
+|--------|----------|--------|
+| **COD** | Order `CONFIRMED`, pay on delivery | Mark COD collected → `PAID` + `codCollected` (also auto on Delivered) |
+| **bKash / Nagad** | Phone + TrxID → `PENDING_PAYMENT` | Verify → PAID + CONFIRMED; Reject → FAILED + stock restore + notify |
+| **Cancel** | Self-cancel until packed (`PATCH /customer/orders/:id/cancel`) | Owner status → `CANCELLED` restores stock |
+| **Refund** | Via returns or owner records ledger | `POST /owner/orders/:id/refund` — **records** amount; payout is manual MFS |
+| **`/pay` gateway page** | Removed (redirects to confirmation) | N/A |
+
+Checkout API: only COD/bKash/Nagad, must be enabled in Settings → Payments, TrxID + sender required for MFS.
 
 ---
 
-## Not available yet (honest UI — no fake success)
+## What is fully live (OK)
 
-| Area | Route | UI |
-|------|-------|-----|
-| Product CSV import/export | `/admin/products/import` | “Not available yet” + optional blank template headers |
-| Analytics / inventory / payments export & gateway sync | various | Toast: not available yet |
-| Physical stock count workflow | `/admin/inventory` | Toast: not available yet |
+| Area | Notes |
+|------|--------|
+| Checkout + order create | Live APIs; method/TrxID enforced |
+| Customer cancel + invoice PDF | Real cancel API + real PDF download |
+| Admin orders (list/detail) | Owner API; MFS verify/reject; COD collect; refund ledger |
+| Admin payments | Owner orders ledger + real CSV |
+| Reports | 3 DB CSVs: Orders, Inventory variants, Customers |
+| List Exports | Products / Customers / Inventory / Orders / Audit — client CSV from loaded rows |
+| Inventory levels + ledger | Live overview + movements |
+| Analytics charts/KPIs | Overview API (page Export removed — use Reports) |
+| Staff list/roles CRUD | Live staff API (see RBAC caveat below) |
+| Theme, content/policies, discounts, shipping settings, returns admin | Live APIs |
+| Notification templates | DB CRUD |
+| Dashboard | Owner orders + analytics + returns counts + inventory low-stock + top from orders |
 
 ---
 
-## Orphan seed files (unused by live pages; safe to delete later)
+## Remaining honest limitations (not bugs)
 
-`data/admin.ts` leftovers: `stockMovements`, `auditLogs`, `notificationLogs`, `mediaAssets`, `themeVersions`, `entitlements`, `planFeatures`, `discounts`, person fields in `roleMeta`  
-`data/analytics.ts` — seed series/KPIs (no longer imported by analytics page/service)
+| Item | Status |
+|------|--------|
+| Product CSV **import** | “Not available yet” (template download only) |
+| Staff module permissions vs `@Roles(OWNER)` on most owner routes | Staff may see pages → API 403; fine if only Owner runs the store |
+| Notification “logs” | User inbox, not delivery audit log |
+| Seed FAQ/policies | Aligned to COD/MFS in seed file; **existing DB content** needs re-seed or Content editor update |
+| `sslcommerz` / `stripe` in types/labels | Legacy enum compatibility; not offered in checkout |
 
 ---
 
-## Priority leftovers (optional cleanup)
+## Intentionally kept (not business mock)
 
-1. Delete unused seed arrays in `data/admin.ts` / `data/analytics.ts`
-2. Wire real CSV import when backend exists
-3. Payments reconcile / gateway sync when APIs exist
-4. Add more report types only when dedicated accurate aggregations exist
+| Item | Notes |
+|------|--------|
+| Demo login | `owner@gmail.com` / `customer@gmail.com` |
+| RBAC label config | `data/admin.ts` titles + permission matrices |
+| Districts, courier **names**, `sizeGuide`, payment method marks | Static config |
+| `data/tenants.ts` bootstrap | Until public store-info loads |
+
+---
+
+## Ops assumption
+
+**Production path = Owner account.** Multi-staff with real module permissions needs backend role expansion before it is truthful.
+
+---
+
+## Cleanup done this pass
+
+- Customer cancel API + stock restore; account invoice → real PDF  
+- Owner refund API (ledger + optional restock); reject payment restores stock  
+- Fake Export toasts → real CSV (products, customers, inventory); analytics Export removed  
+- Dashboard returns / low-stock / top products from live APIs (no empty StoreContext)  
+- FAQ/privacy/returns seed wording → COD + manual bKash/Nagad  
+- Removed dead `completePayment` / `retryPayment` / local-only `refundOrder` / `cancelOrder` helpers  
+- Removed unused inventory “Start count” and import “Export unavailable” panel  

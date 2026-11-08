@@ -47,7 +47,7 @@ import { cn } from '@/lib/utils';
 const sections = [
   { id: 'Store Profile', label: 'Store Profile', icon: Store },
   { id: 'Checkout', label: 'Checkout & Orders', icon: ShoppingCart },
-  { id: 'Payments', label: 'Payment Gateways', icon: CreditCard },
+  { id: 'Payments', label: 'Payments', icon: CreditCard },
   { id: 'Taxes', label: 'Taxes & VAT', icon: Percent },
   { id: 'Returns', label: 'Returns Policy', icon: RotateCcw },
   { id: 'Customer accounts', label: 'Customer Accounts', icon: Users },

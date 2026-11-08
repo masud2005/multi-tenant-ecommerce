@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   UnauthorizedException,
   UseGuards,
@@ -83,5 +84,27 @@ export class OrderController {
     const tenantId = tenantHeader || user?.tenantId;
     const userId = user?.id || user?.sub;
     return this.orderService.getOrderByNumber(orderNumber, tenantId, userId);
+  }
+
+  // Customer self-cancel (before packed / shipped)
+  @Patch(':orderNumber/cancel')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Cancel own order before it is packed or shipped' })
+  @ApiResponse({ status: 200, description: 'Order cancelled successfully' })
+  @ApiResponse({ status: 400, description: 'Order can no longer be cancelled' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Order not found' })
+  async cancelOrder(
+    @Param('orderNumber') orderNumber: string,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const userId = user?.id || user?.sub;
+    if (!userId) {
+      throw new UnauthorizedException('Please log in to cancel an order');
+    }
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.orderService.cancelOrder(orderNumber, userId, tenantId);
   }
 }

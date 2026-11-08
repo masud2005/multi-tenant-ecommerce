@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { toast } from 'sonner';
-import { Download, Loader2, RotateCw } from 'lucide-react';
+import { Loader2, RotateCw } from 'lucide-react';
 import {
   Area,
   ComposedChart,
@@ -17,7 +16,6 @@ import {
 } from 'recharts';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
-import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
 import { formatBDT, formatCompactBDT, formatNumber } from '@/utils/format';
 import { cn } from '@/utils/cn';
@@ -249,17 +247,6 @@ export default function AdminAnalyticsPage() {
                   </button>
                 ))}
               </div>
-              <GuardedButton
-                module="analytics"
-                action="export"
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  toast.info('Analytics export is not available yet')
-                }
-              >
-                <Download className="h-4 w-4" aria-hidden /> Export
-              </GuardedButton>
             </>
           }
         />

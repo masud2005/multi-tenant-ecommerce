@@ -134,19 +134,21 @@ Total was {{total_amount}}.`,
     key: 'PAYMENT_FAILED',
     event: 'Payment Failed',
     group: 'Orders',
-    description: 'Sent when an online payment attempt fails.',
+    description:
+      'Sent when a manual bKash/Nagad payment is rejected or cannot be verified.',
     email: true,
     inApp: true,
-    subject: 'Payment failed for order {{order_number}} — {{store_name}}',
+    subject: 'Payment could not be verified for {{order_number}} — {{store_name}}',
     body: `Hi {{customer_name}},
 
-We could not confirm payment for order {{order_number}} ({{total_amount}}).
+We could not verify payment for order {{order_number}} ({{total_amount}}).
 
-You can retry payment from your account, or choose another method at checkout.
+If you already sent money via bKash or Nagad, please contact {{store_name}} with your TrxID. Do not send payment again unless asked.
 
 — {{store_name}}`,
-    inAppTitle: 'Payment failed for {{order_number}}',
-    inAppMessage: 'Payment for order {{order_number}} could not be completed.',
+    inAppTitle: 'Payment not verified for {{order_number}}',
+    inAppMessage:
+      'We could not verify payment for order {{order_number}}. Contact the store with your TrxID if needed.',
     variables: orderVars,
   },
   {
