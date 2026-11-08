@@ -846,6 +846,7 @@ export function CategoryDetailPanel({
                         <Input
                           value={editingSubValue}
                           onChange={(e) => setEditingSubValue(e.target.value)}
+                          placeholder="Subcategory name"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();

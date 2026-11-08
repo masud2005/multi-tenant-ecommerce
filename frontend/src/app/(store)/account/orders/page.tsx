@@ -24,13 +24,8 @@ export default function AccountOrdersPage() {
     }
   }, [refreshOrders]);
 
-  // Match orders by customer ID or by authenticated email
-  const mine = orders.filter((o) => {
-    if (!user) return false;
-    const matchId = o.customerId === user.id;
-    const matchEmail = Boolean(user.email && o.email && o.email.toLowerCase() === user.email.toLowerCase());
-    return matchId || matchEmail;
-  });
+  // Store already loads this customer's orders from the backend
+  const mine = user ? orders : [];
 
   const groups: Record<OrderFilter, (s: string) => boolean> = {
     all: () => true,
@@ -62,7 +57,14 @@ export default function AccountOrdersPage() {
 
   return (
     <div>
-      <AccountHeader title="Orders" description={`${mine.length} orders placed`} />
+      <AccountHeader
+        title="Orders"
+        description={
+          mine.length === 0
+            ? 'Track and manage your purchases.'
+            : `${mine.length} order${mine.length === 1 ? '' : 's'} placed`
+        }
+      />
 
       <OrderFilterTabs
         value={filter}

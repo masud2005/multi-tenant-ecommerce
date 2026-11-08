@@ -18,10 +18,10 @@ export function OrderDeliveryCard({
       <p className="mt-2 text-ink">
         {shippingAddress.name} · {shippingAddress.phone}
       </p>
-      <p className="text-ink-muted">
+      <p className="text-ink-soft">
         {shippingAddress.line1}, {shippingAddress.area}, {shippingAddress.district}
       </p>
-      <p className="mt-2 text-ink-muted">{shippingMethod}</p>
+      <p className="mt-2 text-ink-soft">{shippingMethod}</p>
     </section>
   );
 }

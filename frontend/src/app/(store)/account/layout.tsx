@@ -2,8 +2,8 @@ import React from 'react';
 import { AccountLayout } from '@/components/account/AccountLayout';
 
 export const metadata = {
-  title: 'My Account | Tanti',
-  description: 'Manage your profile, orders, addresses, and preferences.',
+  title: 'My Account',
+  description: 'Manage your orders, addresses, and account details.',
 };
 
 export default function AccountRootLayout({

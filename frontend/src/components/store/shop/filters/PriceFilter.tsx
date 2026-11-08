@@ -20,7 +20,7 @@ export function PriceFilter({
         <input
           aria-label="Minimum price"
           inputMode="numeric"
-          placeholder="Min"
+          placeholder="e.g. 500"
           value={minPrice}
           onChange={(e) => onChange(e.target.value.replace(/\D/g, ''), maxPrice)}
           className="h-9 w-full rounded-md border border-line-strong bg-surface px-2.5 text-sm text-ink focus:border-clay focus:outline-none"
@@ -29,7 +29,7 @@ export function PriceFilter({
         <input
           aria-label="Maximum price"
           inputMode="numeric"
-          placeholder="Max"
+          placeholder="e.g. 5000"
           value={maxPrice}
           onChange={(e) => onChange(minPrice, e.target.value.replace(/\D/g, ''))}
           className="h-9 w-full rounded-md border border-line-strong bg-surface px-2.5 text-sm text-ink focus:border-clay focus:outline-none"

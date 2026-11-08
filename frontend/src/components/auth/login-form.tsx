@@ -136,7 +136,7 @@ function LoginFormContent() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             error={errors.phone}
-            placeholder="01XXX-XXXXXX"
+            placeholder="01XXXXXXXXX"
             hint="We’ll text you a 6-digit code"
           />
         )}
@@ -145,23 +145,6 @@ function LoginFormContent() {
           {mode === 'email' ? 'Sign in' : 'Send code'}
         </Button>
       </form>
-
-      {/* Social / Alternative Actions */}
-      <div className="my-6 flex items-center gap-3 text-xs text-ink-muted">
-        <span className="h-px flex-1 bg-line" />
-        or
-        <span className="h-px flex-1 bg-line" />
-      </div>
-
-      <Button
-        variant="secondary"
-        size="lg"
-        fullWidth
-        type="button"
-        onClick={() => setErrors({ email: 'Google Sign-in is not configured yet. Please sign in with email.' })}
-      >
-        <span className="font-bold text-[#4285F4] mr-2">G</span> Continue with Google
-      </Button>
 
       {/* Demo Credentials Helper */}
       <div className="mt-6 rounded-lg border border-line bg-surface p-3.5 text-xs">

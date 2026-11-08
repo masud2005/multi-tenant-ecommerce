@@ -1,8 +1,6 @@
 import { apiClient } from './api-client';
 import type { ApiResponse } from '@/types';
 import type { ReturnRequest, ReturnResolution, ReturnStatus } from '@/types/commerce';
-import { returns as seedReturns } from '@/data/orders';
-
 export interface OwnerReturnQueryParams {
   search?: string;
   tab?: string;
@@ -231,32 +229,18 @@ export const returnService = {
     };
   },
 
-  // ----------------------------------------------------
-  // Legacy / Fallback helpers
-  // ----------------------------------------------------
   async getReturns(): Promise<ReturnRequest[]> {
-    try {
-      const res = await this.getOwnerReturns();
-      if (res?.data?.returns) {
-        return res.data.returns;
-      }
-      return seedReturns;
-    } catch {
-      return seedReturns;
-    }
+    const res = await this.getOwnerReturns();
+    return res?.data?.returns ?? [];
   },
 
   async updateReturn(
     id: string,
     status: ReturnStatus,
-    by: string,
+    _by: string,
     note?: string,
   ): Promise<boolean> {
-    try {
-      await this.updateOwnerReturnStatus(id, { status, note });
-      return true;
-    } catch {
-      return true;
-    }
+    await this.updateOwnerReturnStatus(id, { status, note });
+    return true;
   },
 };

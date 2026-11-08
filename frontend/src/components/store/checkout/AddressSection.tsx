@@ -139,7 +139,7 @@ export function AddressSection({
               if (errors.recipientName) onClearError('recipientName');
             }}
             error={errors.recipientName}
-            placeholder={"Enter full name"}
+            placeholder="e.g. Rahim Ahmed"
           />
 
           <Input
@@ -151,7 +151,7 @@ export function AddressSection({
               if (errors.recipientPhone) onClearError('recipientPhone');
             }}
             error={errors.recipientPhone}
-            placeholder="(e.g. 01700000000)"
+            placeholder="01XXXXXXXXX"
           />
 
           <Input

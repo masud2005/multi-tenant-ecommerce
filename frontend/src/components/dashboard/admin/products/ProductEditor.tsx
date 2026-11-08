@@ -573,12 +573,14 @@ export function ProductEditor({ id }: { id?: string }) {
                 rows={2}
                 value={p.shortDescription}
                 onChange={(e) => set({ shortDescription: e.target.value })}
+                placeholder="One line for product cards, collections, and search results"
               />
               <Textarea
                 label="Description"
                 rows={5}
                 value={p.description}
                 onChange={(e) => set({ description: e.target.value })}
+                placeholder="Materials, fit, care instructions, and what makes this piece special"
               />
             </div>
           </Panel>
@@ -784,6 +786,7 @@ export function ProductEditor({ id }: { id?: string }) {
                 value={p.price || ''}
                 onChange={(e) => set({ price: Number(e.target.value.replace(/\D/g, '')) })}
                 error={errors.price}
+                placeholder="e.g. 2490"
               />
               <Input
                 label="Sale price"
@@ -798,6 +801,7 @@ export function ProductEditor({ id }: { id?: string }) {
                   })
                 }
                 error={errors.salePrice}
+                placeholder="Optional — e.g. 1990"
               />
               <Input
                 label="Cost per item"
@@ -805,6 +809,7 @@ export function ProductEditor({ id }: { id?: string }) {
                 inputMode="numeric"
                 value={p.cost || ''}
                 onChange={(e) => set({ cost: Number(e.target.value.replace(/\D/g, '')) })}
+                placeholder="e.g. 1200"
                 hint={
                   p.price
                     ? `Margin ${margin}% · Profit ${formatBDT(
@@ -1042,13 +1047,15 @@ export function ProductEditor({ id }: { id?: string }) {
                 onChange={(e) =>
                   set({ weightGrams: Number(e.target.value.replace(/\D/g, '')) })
                 }
+                placeholder="e.g. 450"
               />
               <Input
                 label="Barcode / GTIN"
                 value={p.barcode}
                 onChange={(e) => set({ barcode: e.target.value })}
+                placeholder="e.g. 8945000123456"
               />
-              <Input label="HS code" defaultValue="6211.42" />
+              <Input label="HS code" defaultValue="6211.42" placeholder="e.g. 6211.42" />
             </div>
             <div className="mt-4 space-y-2">
               <Checkbox

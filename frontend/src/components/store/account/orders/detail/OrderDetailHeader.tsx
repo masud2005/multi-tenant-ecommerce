@@ -35,7 +35,7 @@ export function OrderDetailHeader({
       {/* Back to all orders link */}
       <Link
         href="/account/orders"
-        className="inline-flex items-center gap-1 text-sm text-ink-muted hover:text-ink"
+        className="inline-flex items-center gap-1 text-sm font-medium text-ink hover:underline"
       >
         <ChevronLeftIcon className="h-4 w-4" aria-hidden /> All orders
       </Link>
@@ -43,8 +43,12 @@ export function OrderDetailHeader({
       {/* Header title and action buttons */}
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl">Order {order.number}</h1>
-          <p className="mt-1 text-sm text-ink-muted">Placed {formatDateTime(order.createdAt)}</p>
+          <h1 className="font-display text-3xl font-semibold text-ink">
+            Order {order.number}
+          </h1>
+          <p className="mt-1 text-sm text-ink-soft">
+            Placed {formatDateTime(order.createdAt)}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

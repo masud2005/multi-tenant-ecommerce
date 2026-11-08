@@ -90,6 +90,7 @@ export function AddressModal({
 
         <Input
           label="Recipient name"
+          placeholder="Who should receive the delivery"
           value={draft.name}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           error={errors.name}
@@ -100,11 +101,12 @@ export function AddressModal({
           value={draft.phone}
           onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
           error={errors.phone}
-          placeholder="01XXX-XXXXXX"
+          placeholder="01XXXXXXXXX"
         />
 
         <Input
           label="House, road, area"
+          placeholder="House / flat, road, landmark"
           value={draft.line1}
           onChange={(e) => setDraft({ ...draft, line1: e.target.value })}
           error={errors.line1}

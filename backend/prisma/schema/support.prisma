@@ -81,6 +81,7 @@ model ChatMessage {
   senderName     String
   encryptedText  String   @db.Text
   iv             String
+  attachments    String[] @default([])
   isRead         Boolean  @default(false)
   createdAt      DateTime @default(now())
 

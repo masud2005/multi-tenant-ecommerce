@@ -65,6 +65,19 @@ export interface UpdateReturnsPagePayload {
   status?: string;
 }
 
+export type PolicySlug =
+  | 'returns'
+  | 'shipping'
+  | 'privacy'
+  | 'terms'
+  | 'cookies';
+
+export type PolicyPageData = ReturnsPageData & {
+  slug?: PolicySlug | string;
+};
+
+export type UpdatePolicyPagePayload = UpdateReturnsPagePayload;
+
 class PageService {
   // 1. Get About Us page for Admin / Owner
   async getOwnerAboutPage(): Promise<AboutPageData | null> {
@@ -125,13 +138,31 @@ class PageService {
 
   // 7. Get Public Return page for Storefront
   async getPublicReturnsPage(): Promise<ReturnsPageData | null> {
+    return this.getPublicPage<ReturnsPageData>('returns');
+  }
+
+  // 8. Owner policy pages (returns, shipping, privacy, terms, cookies)
+  async getOwnerPolicyPage(slug: PolicySlug): Promise<PolicyPageData | null> {
     try {
-      const res = await apiClient.get<ApiResponse<ReturnsPageData>>('/customer/pages/returns');
+      const res = await apiClient.get<ApiResponse<PolicyPageData>>(
+        `/owner/pages/policies/${encodeURIComponent(slug)}`,
+      );
       return res.data || null;
     } catch (error) {
-      console.error('Failed to fetch public returns page:', error);
+      console.error(`Failed to fetch owner policy '${slug}':`, error);
       return null;
     }
+  }
+
+  async updateOwnerPolicyPage(
+    slug: PolicySlug,
+    payload: UpdatePolicyPagePayload,
+  ): Promise<PolicyPageData | null> {
+    const res = await apiClient.put<ApiResponse<PolicyPageData>>(
+      `/owner/pages/policies/${encodeURIComponent(slug)}`,
+      payload,
+    );
+    return res.data || null;
   }
 }
 

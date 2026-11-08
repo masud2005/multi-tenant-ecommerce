@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Rating } from '@/components/ui/Rating';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { MediaLightbox } from '@/components/ui/MediaLightbox';
 import { formatDate } from '@/utils/format';
 import { getDisplayReviewTitle } from '@/utils/review';
 import { reviewService } from '@/services/review-service';
@@ -465,23 +466,11 @@ export function ReviewsManager({ initialReviews = [] }: ReviewsManagerProps) {
         }}
       />
 
-      {lightboxImg && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4"
-          onClick={() => setLightboxImg(null)}
-        >
-          <button
-            type="button"
-            onClick={() => setLightboxImg(null)}
-            className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white"
-            aria-label="Close photo"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightboxImg} alt="" className="max-h-[85vh] max-w-full rounded-lg object-contain" />
-        </div>
-      )}
+      <MediaLightbox
+        src={lightboxImg}
+        kind="image"
+        onClose={() => setLightboxImg(null)}
+      />
     </div>
   );
 }

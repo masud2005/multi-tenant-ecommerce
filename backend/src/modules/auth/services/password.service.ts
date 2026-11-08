@@ -1,21 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { RedisService } from '../../../shared/redis/redis.service';
 import { OtpService } from './otp.service';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { OtpType } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
-import { generateTokens } from '../utils/token.util';
 import * as bcrypt from 'bcrypt';
 import {
     NotFoundException,
     OtpInvalidException,
     UnauthorizedException,
 } from '../../../common/exceptions/business.exception';
+import { SessionService } from './session.service';
+import type { AuthRequestMeta } from '../types/auth-meta';
 
 @Injectable()
 export class PasswordService {
@@ -23,8 +22,7 @@ export class PasswordService {
         private readonly prisma: PrismaService,
         private readonly otpService: OtpService,
         private readonly jwtService: JwtService,
-        private readonly configService: ConfigService,
-        private readonly redisService: RedisService,
+        private readonly sessionService: SessionService,
     ) { }
 
     async forgotPassword(dto: ForgotPasswordDto) {
@@ -34,7 +32,7 @@ export class PasswordService {
         });
     }
 
-    async resetPassword(dto: ResetPasswordDto) {
+    async resetPassword(dto: ResetPasswordDto, meta?: AuthRequestMeta) {
         try {
             const decoded = this.jwtService.verify(dto.resetToken);
             if (decoded.purpose !== 'reset-password') {
@@ -58,24 +56,14 @@ export class PasswordService {
                 },
             });
 
-            // Generate tokens for seamless auto-login
             const payload = {
                 sub: updatedUser.id,
                 email: updatedUser.email,
+                name: updatedUser.name || 'User',
                 role: updatedUser.role,
             };
-            const { accessToken, refreshToken } = generateTokens(
-                this.jwtService,
-                this.configService,
-                payload,
-            );
-
-            // Store refresh token in Redis (30 days)
-            const refreshExpiresInStr = this.configService.get<string>('REFRESH_TOKEN_EXPIRES_IN') as string;
-            const ttlSeconds = refreshExpiresInStr && refreshExpiresInStr.includes('d')
-                ? parseInt(refreshExpiresInStr) * 24 * 60 * 60
-                : 30 * 24 * 60 * 60;
-            await this.redisService.set(`refresh_token:${updatedUser.id}`, refreshToken, ttlSeconds);
+            const { accessToken, refreshToken } =
+                await this.sessionService.issueTokens(payload, meta);
 
             return ResponseHelper.success(
                 {

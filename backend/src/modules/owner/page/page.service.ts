@@ -1,72 +1,55 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { UpdateAboutPageDto, UpdateReturnsPageDto } from './dto';
+import { UpdateAboutPageDto, UpdatePolicyPageDto, UpdateReturnsPageDto } from './dto';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import {
   ConflictException,
   NotFoundException,
 } from '../../../common/exceptions/business.exception';
 
-export const DEFAULT_RETURNS_PAGE = {
-  title: 'Return Policy',
-  heading: 'Easy 7-day returns & doorstep size exchange',
-  sections: [
-    {
-      heading: 'Return window',
-      body: 'You may request a return within 7 days of delivery. Items must be unworn, unwashed and have all original tags attached.',
-    },
-    {
-      heading: 'Non-returnable items',
-      body: 'Sarees, jewellery and innerwear are non-returnable unless they arrive damaged or defective. Sale items marked “Final sale” cannot be returned.',
-    },
-    {
-      heading: 'Exchanges',
-      body: 'Size exchanges are free inside Dhaka. Our courier delivers the replacement and collects the original in a single visit.',
-    },
-  ],
-  status: 'published',
+export const POLICY_SLUGS = [
+  'returns',
+  'shipping',
+  'privacy',
+  'terms',
+  'cookies',
+] as const;
+
+export type PolicySlug = (typeof POLICY_SLUGS)[number];
+
+const POLICY_TITLES: Record<PolicySlug, string> = {
+  returns: 'Return Policy',
+  shipping: 'Shipping Policy',
+  privacy: 'Privacy Policy',
+  terms: 'Terms of Service',
+  cookies: 'Cookie Policy',
 };
 
-export const DEFAULT_ABOUT_PAGE = {
-  title: 'Our story',
-  heading: 'Clothing that carries the hands that made it',
-  heroImage:
-    'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=1200&auto=format&fit=crop',
-  heroImageAlt: 'Two people in Tanti festive wear in a courtyard',
-  storyParagraphs: [
-    'Tanti means weaver. We started because the most beautiful textiles in the world were being made a few hours from Dhaka — and too few people could buy them without a middleman taking most of the value.',
-    'Today we work directly with weavers, block-printers, cobblers and silversmiths across Bangladesh, paying fair, transparent rates and investing in the next generation of makers.',
-  ],
-  milestones: [
-    {
-      year: '2019',
-      text: 'Started with 40 block-printed kurtas made with three families in Tangail.',
-    },
-    {
-      year: '2021',
-      text: 'Opened our flagship on Road 27, Dhanmondi, and launched Tanti Loom with Rupganj jamdani weavers.',
-    },
-    {
-      year: '2023',
-      text: 'Welcomed Pora — handmade leather from Bhairab — into the Tanti family.',
-    },
-    {
-      year: '2026',
-      text: '1,200+ artisans, delivery to all 64 districts and a new warehouse in Chattogram.',
-    },
-  ],
-  stats: [
-    { value: '1,200+', label: 'artisans we work with directly' },
-    { value: '64', label: 'districts we deliver to' },
-    { value: '38%', label: 'of every sale goes to makers' },
-  ],
-  ctaText: 'Read stories from our makers',
-  ctaLink: '/journal',
-  status: 'published',
-  seoTitle: 'Our Story | Tanti',
-  seoDescription:
-    'Clothing that carries the hands that made it. Fair rates and craft empowerment across Bangladesh.',
+const EMPTY_ABOUT = {
+  title: '',
+  heading: '',
+  heroImage: '',
+  heroImageAlt: '',
+  storyParagraphs: [] as string[],
+  milestones: [] as { year: string; text: string }[],
+  stats: [] as { value: string; label: string }[],
+  ctaText: '',
+  ctaLink: '',
+  status: 'draft' as const,
+  seoTitle: '',
+  seoDescription: '',
 };
+
+const EMPTY_POLICY = {
+  title: '',
+  heading: '',
+  sections: [] as { heading: string; body: string }[],
+  status: 'draft' as const,
+};
+
+function isPolicySlug(slug: string): slug is PolicySlug {
+  return (POLICY_SLUGS as readonly string[]).includes(slug);
+}
 
 @Injectable()
 export class OwnerPageService {
@@ -74,87 +57,91 @@ export class OwnerPageService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // 1. Get About Us page content for editing
-  async getAboutPage(tenantId?: string) {
+  private requireTenant(tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user.',
+      );
     }
+    return tenantId;
+  }
+
+  // ─── About ───────────────────────────────────────────────
+
+  async getAboutPage(tenantId?: string) {
+    const tid = this.requireTenant(tenantId);
 
     const page = await this.prisma.cmsPage.findUnique({
-      where: {
-        tenantId_slug: {
-          tenantId,
-          slug: 'about',
-        },
-      },
+      where: { tenantId_slug: { tenantId: tid, slug: 'about' } },
     });
 
     if (!page || !page.content) {
       return ResponseHelper.success(
         {
-          ...DEFAULT_ABOUT_PAGE,
+          ...EMPTY_ABOUT,
           id: page?.id || null,
-          isDefault: !page,
-          updatedAt: page?.updatedAt || new Date().toISOString(),
+          isEmpty: true,
+          updatedAt: page?.updatedAt || null,
         },
-        'Default About Us page retrieved successfully'
+        'About page is empty',
       );
     }
 
     try {
       const parsed = JSON.parse(page.content);
+      const storyParagraphs = Array.isArray(parsed.storyParagraphs)
+        ? parsed.storyParagraphs.filter((p: string) => String(p || '').trim())
+        : [];
+      const isEmpty =
+        !String(parsed.heading || page.title || '').trim() &&
+        storyParagraphs.length === 0;
+
       return ResponseHelper.success(
         {
-          ...DEFAULT_ABOUT_PAGE,
+          ...EMPTY_ABOUT,
           ...parsed,
-          title: page.title || parsed.title || DEFAULT_ABOUT_PAGE.title,
-          status: page.status || parsed.status || 'published',
+          title: page.title || parsed.title || '',
+          status: page.status || parsed.status || 'draft',
           id: page.id,
-          isDefault: false,
+          isEmpty,
           updatedAt: page.updatedAt,
         },
-        'About Us page retrieved successfully'
+        'About Us page retrieved successfully',
       );
     } catch {
       return ResponseHelper.success(
         {
-          ...DEFAULT_ABOUT_PAGE,
+          ...EMPTY_ABOUT,
           id: page.id,
+          title: page.title || '',
+          status: page.status || 'draft',
           rawContent: page.content,
-          isDefault: false,
+          isEmpty: !page.title,
           updatedAt: page.updatedAt,
         },
-        'About Us page retrieved successfully'
+        'About Us page retrieved successfully',
       );
     }
   }
 
-  // 2. Update / Upsert About Us page content
-  async updateAboutPage(dto: UpdateAboutPageDto, tenantId?: string, authorName?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
-    }
+  async updateAboutPage(
+    dto: UpdateAboutPageDto,
+    tenantId?: string,
+    authorName?: string,
+  ) {
+    const tid = this.requireTenant(tenantId);
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-    });
-    if (!tenant) {
-      throw new NotFoundException('Tenant');
-    }
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tid } });
+    if (!tenant) throw new NotFoundException('Tenant');
 
-    const title = dto.title?.trim() || DEFAULT_ABOUT_PAGE.title;
-    const status = dto.status || 'published';
+    const title = dto.title?.trim() || 'About';
+    const status = dto.status || 'draft';
     const contentString = JSON.stringify(dto);
 
     const saved = await this.prisma.cmsPage.upsert({
-      where: {
-        tenantId_slug: {
-          tenantId,
-          slug: 'about',
-        },
-      },
+      where: { tenantId_slug: { tenantId: tid, slug: 'about' } },
       create: {
-        tenantId,
+        tenantId: tid,
         title,
         slug: 'about',
         status,
@@ -169,156 +156,120 @@ export class OwnerPageService {
       },
     });
 
-    this.logger.log(`Upserted About Us page [${saved.id}] for tenant [${tenantId}]`);
+    this.logger.log(`Upserted About page [${saved.id}] for tenant [${tid}]`);
 
     return ResponseHelper.success(
       {
-        ...DEFAULT_ABOUT_PAGE,
         ...dto,
         id: saved.id,
         title: saved.title,
         status: saved.status,
         updatedAt: saved.updatedAt,
+        isEmpty: false,
       },
-      'About Us page saved successfully'
+      'About Us page saved successfully',
     );
   }
 
-  // 3. Get all CMS pages list for Owner dashboard
-  async getAllPages(tenantId?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
-    }
+  // ─── Policies (returns, shipping, privacy, terms, cookies) ─
 
-    const pages = await this.prisma.cmsPage.findMany({
-      where: { tenantId },
-      orderBy: { updatedAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        status: true,
-        author: true,
-        updatedAt: true,
-      },
-    });
-
-    // Ensure 'about' and 'returns' pages appear in the list even if not yet saved in DB
-    const hasAbout = pages.some((p) => p.slug === 'about' || p.slug === '/about');
-    const hasReturns = pages.some(
-      (p) => p.slug === 'returns' || p.slug === '/policies/returns' || p.slug === 'policies/returns'
-    );
-
-    const defaultPages: any[] = [];
-    if (!hasAbout) {
-      defaultPages.push({
-        id: 'default-about',
-        title: DEFAULT_ABOUT_PAGE.title,
-        slug: '/about',
-        status: DEFAULT_ABOUT_PAGE.status,
-        author: 'System Default',
-        updatedAt: new Date(),
-      });
-    }
-    if (!hasReturns) {
-      defaultPages.push({
-        id: 'default-returns',
-        title: DEFAULT_RETURNS_PAGE.title,
-        slug: '/policies/returns',
-        status: DEFAULT_RETURNS_PAGE.status,
-        author: 'System Default',
-        updatedAt: new Date(),
-      });
-    }
-
-    const allPages = [...defaultPages, ...pages];
-
-    return ResponseHelper.success(allPages, 'Pages retrieved successfully');
-  }
-
-  // 4. Get Returns page content for editing
-  async getReturnsPage(tenantId?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+  async getPolicyPage(slug: string, tenantId?: string) {
+    const tid = this.requireTenant(tenantId);
+    const clean = (slug || '').replace(/^\//, '').trim().toLowerCase();
+    if (!isPolicySlug(clean)) {
+      throw new BadRequestException(
+        `Unsupported policy slug. Allowed: ${POLICY_SLUGS.join(', ')}`,
+      );
     }
 
     const page = await this.prisma.cmsPage.findUnique({
-      where: {
-        tenantId_slug: {
-          tenantId,
-          slug: 'returns',
-        },
-      },
+      where: { tenantId_slug: { tenantId: tid, slug: clean } },
     });
 
     if (!page || !page.content) {
       return ResponseHelper.success(
         {
-          ...DEFAULT_RETURNS_PAGE,
+          ...EMPTY_POLICY,
+          title: POLICY_TITLES[clean],
+          slug: clean,
           id: page?.id || null,
-          isDefault: !page,
-          updatedAt: page?.updatedAt || new Date().toISOString(),
+          isEmpty: true,
+          updatedAt: page?.updatedAt || null,
         },
-        'Default Returns page retrieved successfully'
+        'Policy page is empty',
       );
     }
 
     try {
       const parsed = JSON.parse(page.content);
+      const sections = Array.isArray(parsed.sections)
+        ? parsed.sections.filter(
+            (s: any) =>
+              String(s?.heading || '').trim() || String(s?.body || '').trim(),
+          )
+        : [];
+      const isEmpty =
+        sections.length === 0 &&
+        !String(parsed.heading || '').trim() &&
+        !String(page.title || parsed.title || '').trim();
+
       return ResponseHelper.success(
         {
-          ...DEFAULT_RETURNS_PAGE,
+          ...EMPTY_POLICY,
           ...parsed,
-          title: page.title || parsed.title || DEFAULT_RETURNS_PAGE.title,
-          status: page.status || parsed.status || 'published',
+          title: page.title || parsed.title || POLICY_TITLES[clean],
+          status: page.status || parsed.status || 'draft',
+          slug: clean,
           id: page.id,
-          isDefault: false,
+          isEmpty,
           updatedAt: page.updatedAt,
+          sections,
         },
-        'Returns page retrieved successfully'
+        'Policy page retrieved successfully',
       );
     } catch {
       return ResponseHelper.success(
         {
-          ...DEFAULT_RETURNS_PAGE,
+          ...EMPTY_POLICY,
+          title: page.title || POLICY_TITLES[clean],
+          slug: clean,
           id: page.id,
-          rawContent: page.content,
-          isDefault: false,
+          status: page.status || 'draft',
+          isEmpty: true,
           updatedAt: page.updatedAt,
         },
-        'Returns page retrieved successfully'
+        'Policy page retrieved successfully',
       );
     }
   }
 
-  // 5. Update / Upsert Returns page content
-  async updateReturnsPage(dto: UpdateReturnsPageDto, tenantId?: string, authorName?: string) {
-    if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+  async updatePolicyPage(
+    slug: string,
+    dto: UpdatePolicyPageDto | UpdateReturnsPageDto,
+    tenantId?: string,
+    authorName?: string,
+  ) {
+    const tid = this.requireTenant(tenantId);
+    const clean = (slug || '').replace(/^\//, '').trim().toLowerCase();
+    if (!isPolicySlug(clean)) {
+      throw new BadRequestException(
+        `Unsupported policy slug. Allowed: ${POLICY_SLUGS.join(', ')}`,
+      );
     }
 
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-    });
-    if (!tenant) {
-      throw new NotFoundException('Tenant');
-    }
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tid } });
+    if (!tenant) throw new NotFoundException('Tenant');
 
-    const title = dto.title?.trim() || DEFAULT_RETURNS_PAGE.title;
-    const status = dto.status || 'published';
+    const title = dto.title?.trim() || POLICY_TITLES[clean];
+    const status = dto.status || 'draft';
     const contentString = JSON.stringify(dto);
 
     const saved = await this.prisma.cmsPage.upsert({
-      where: {
-        tenantId_slug: {
-          tenantId,
-          slug: 'returns',
-        },
-      },
+      where: { tenantId_slug: { tenantId: tid, slug: clean } },
       create: {
-        tenantId,
+        tenantId: tid,
         title,
-        slug: 'returns',
+        slug: clean,
         status,
         author: authorName || 'Store Admin',
         content: contentString,
@@ -331,19 +282,52 @@ export class OwnerPageService {
       },
     });
 
-    this.logger.log(`Upserted Returns page [${saved.id}] for tenant [${tenantId}]`);
+    this.logger.log(
+      `Upserted policy [${clean}] page [${saved.id}] for tenant [${tid}]`,
+    );
 
     return ResponseHelper.success(
       {
-        ...DEFAULT_RETURNS_PAGE,
         ...dto,
         id: saved.id,
         title: saved.title,
         status: saved.status,
+        slug: clean,
         updatedAt: saved.updatedAt,
+        isEmpty: false,
       },
-      'Returns page saved successfully'
+      'Policy page saved successfully',
     );
   }
-}
 
+  /** @deprecated Prefer getPolicyPage('returns') */
+  async getReturnsPage(tenantId?: string) {
+    return this.getPolicyPage('returns', tenantId);
+  }
+
+  /** @deprecated Prefer updatePolicyPage('returns', dto) */
+  async updateReturnsPage(
+    dto: UpdateReturnsPageDto,
+    tenantId?: string,
+    authorName?: string,
+  ) {
+    return this.updatePolicyPage('returns', dto, tenantId, authorName);
+  }
+
+  async getAllPages(tenantId?: string) {
+    const tid = this.requireTenant(tenantId);
+    const pages = await this.prisma.cmsPage.findMany({
+      where: { tenantId: tid },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        author: true,
+        updatedAt: true,
+      },
+    });
+    return ResponseHelper.success(pages, 'Pages retrieved successfully');
+  }
+}

@@ -10,10 +10,15 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -47,6 +52,39 @@ export class MediaController {
   ) {
     const tenantId = tenantHeader || user?.tenantId;
     return this.mediaService.getMedia(query, tenantId);
+  }
+
+  @Post('upload')
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file (PNG, JPG, WebP, AVIF, GIF · max 5MB)',
+        },
+        alt: {
+          type: 'string',
+          description: 'Optional accessibility alt text',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload an image file to Cloudinary media library' })
+  @ApiResponse({ status: 201, description: 'Image uploaded successfully' })
+  async uploadMediaFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('alt') alt?: string,
+    @CurrentUser() user?: any,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.mediaService.uploadMediaFile(file, alt, tenantId);
   }
 
   @Post()

@@ -90,12 +90,10 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             '/admin/customers': 'customers',
             '/admin/reviews': 'reviews',
             '/admin/discounts': 'discounts',
-            '/admin/marketing': 'marketing',
             '/admin/shipping': 'shipping',
             '/admin/theme': 'theme',
             '/admin/content': 'content',
             '/admin/media': 'media',
-            '/admin/seo': 'content',
             '/admin/domains': 'domains',
             '/admin/analytics': 'analytics',
             '/admin/reports': 'reports',
@@ -104,7 +102,6 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             '/admin/integrations': 'integrations',
             '/admin/settings': 'settings',
             '/admin/audit': 'audit',
-            '/admin/billing': 'billing',
             '/admin': 'dashboard',
           };
 
@@ -116,9 +113,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             }
           }
 
-          const hasAccess = currentModule === 'billing'
-            ? false
-            : (perms[currentModule]?.includes('view') ?? false);
+          const hasAccess = perms[currentModule]?.includes('view') ?? false;
 
           if (!hasAccess) {
             let firstAllowedRoute = '';
@@ -130,7 +125,6 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
             else if (perms.customers?.includes('view')) firstAllowedRoute = '/admin/customers';
             else if (perms.reviews?.includes('view')) firstAllowedRoute = '/admin/reviews';
             else if (perms.discounts?.includes('view')) firstAllowedRoute = '/admin/discounts';
-            else if (perms.marketing?.includes('view')) firstAllowedRoute = '/admin/marketing';
             else if (perms.shipping?.includes('view')) firstAllowedRoute = '/admin/shipping';
             else if (perms.theme?.includes('view')) firstAllowedRoute = '/admin/theme';
             else if (perms.content?.includes('view')) firstAllowedRoute = '/admin/content';

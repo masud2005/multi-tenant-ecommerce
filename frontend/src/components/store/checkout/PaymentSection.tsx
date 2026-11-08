@@ -175,7 +175,7 @@ export function PaymentSection({
                         type="text"
                         value={senderPhone}
                         onChange={(e) => onSenderPhoneChange(e.target.value)}
-                        placeholder="017XXXXXXXX"
+                        placeholder="01XXXXXXXXX"
                         maxLength={14}
                         className="h-9 w-full rounded-md border border-line-strong bg-canvas pl-8 pr-3 text-sm text-ink placeholder:text-ink/50 focus:border-ink focus:outline-none"
                       />
@@ -197,7 +197,7 @@ export function PaymentSection({
                         type="text"
                         value={transactionId}
                         onChange={(e) => onTransactionIdChange(e.target.value.toUpperCase())}
-                        placeholder="TrxID"
+                        placeholder="e.g. CK8A2B3C4D5"
                         className="h-9 w-full rounded-md border border-line-strong bg-canvas pl-8 pr-3 font-mono text-sm uppercase text-ink placeholder:text-ink/50 focus:border-ink focus:outline-none"
                       />
                     </div>
@@ -256,7 +256,7 @@ export function PaymentSection({
                         type="text"
                         value={senderPhone}
                         onChange={(e) => onSenderPhoneChange(e.target.value)}
-                        placeholder="018XXXXXXXX"
+                        placeholder="01XXXXXXXXX"
                         maxLength={14}
                         className="h-9 w-full rounded-md border border-line-strong bg-canvas pl-8 pr-3 text-sm text-ink placeholder:text-ink/50 focus:border-ink focus:outline-none"
                       />
@@ -278,7 +278,7 @@ export function PaymentSection({
                         type="text"
                         value={transactionId}
                         onChange={(e) => onTransactionIdChange(e.target.value.toUpperCase())}
-                        placeholder="TrxID"
+                        placeholder="e.g. CK8A2B3C4D5"
                         className="h-9 w-full rounded-md border border-line-strong bg-canvas pl-8 pr-3 font-mono text-sm uppercase text-ink placeholder:text-ink/50 focus:border-ink focus:outline-none"
                       />
                     </div>

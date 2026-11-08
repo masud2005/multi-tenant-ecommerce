@@ -118,18 +118,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   handleDisconnect(client: AuthenticatedSocket) {
     this.logger.log(`Client disconnected: ${client.id}`);
-    this.trackUserOffline(client);
+    try {
+      this.trackUserOffline(client);
 
-    // If staff/owner disconnected, check if any admin sockets remain in /chat namespace
-    if (client.user?.role === 'OWNER' || client.user?.role === 'STAFF') {
-      const adminRoom = client.nsp?.adapter?.rooms?.get('admins');
-      const hasAdminsLeft = adminRoom ? adminRoom.size > 0 : false;
-      if (!hasAdminsLeft) {
-        client.broadcast.emit('presence_status', {
-          role: 'OWNER',
-          isOnline: false,
-        });
+      // If staff/owner disconnected, check if any admin sockets remain in /chat namespace
+      if (client.user?.role === 'OWNER' || client.user?.role === 'STAFF') {
+        const adminRoom = client.nsp?.adapter?.rooms?.get('admins');
+        const hasAdminsLeft = adminRoom ? adminRoom.size > 0 : false;
+        if (!hasAdminsLeft) {
+          client.broadcast.emit('presence_status', {
+            role: 'OWNER',
+            isOnline: false,
+          });
+        }
       }
+    } catch (error) {
+      this.logger.error(`Socket disconnect error for client ${client.id}`, error);
     }
   }
 
@@ -245,10 +249,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('send_message')
   async handleSendMessage(
     @ConnectedSocket() client: AuthenticatedSocket,
-    @MessageBody() data: { conversationId: string; text: string; senderName?: string },
+    @MessageBody()
+    data: {
+      conversationId: string;
+      text?: string;
+      senderName?: string;
+      attachments?: string[];
+    },
   ) {
     try {
-      const { conversationId, text, senderName } = data;
+      const { conversationId, text, senderName, attachments } = data;
       const user = client.user;
 
       const senderRole =
@@ -259,7 +269,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 🔒 AES-256 এনক্রিপ্ট করে ডাটাবেজে সেভ এবং ডিক্রিপ্ট করা মেসেজ রেসপন্স তৈরি
       const response = await this.chatService.saveMessage(
         conversationId,
-        { text, senderName: resolvedName, senderRole },
+        { text, senderName: resolvedName, senderRole, attachments },
         { id: user?.id, name: resolvedName, role: senderRole },
         client.tenantId,
       );
@@ -389,8 +399,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     tenantMap.get(userId)!.socketIds.add(client.id);
 
-    // Broadcast to tenant that user is online
-    this.server.of('/chat').to(`tenant_${tenantId}`).emit('tenant_presence', {
+    // this.server is already the /chat namespace (see @WebSocketGateway namespace)
+    this.server.to(`tenant_${tenantId}`).emit('tenant_presence', {
       userId,
       role,
       name,
@@ -410,8 +420,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         if (entry.socketIds.size === 0) {
           tenantMap.delete(userId);
-          // Broadcast offline
-          this.server.of('/chat').to(`tenant_${tenantId}`).emit('tenant_presence', {
+          this.server.to(`tenant_${tenantId}`).emit('tenant_presence', {
             userId,
             role: entry.role,
             name: entry.name,

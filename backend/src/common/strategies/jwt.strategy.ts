@@ -25,6 +25,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             throw new UnauthorizedException('Token has been revoked');
         }
 
+        if (payload.sid) {
+            const revoked = await this.redisService.get(
+                `session_revoked:${payload.sid}`,
+            );
+            if (revoked) {
+                throw new UnauthorizedException('Session has been revoked');
+            }
+        }
+
         const user = await this.prisma.user.findUnique({
             where: { id: payload.sub },
             include: {
@@ -59,6 +68,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         return {
             ...user,
             tenantId,
+            sid: payload.sid || null,
         };
     }
 }

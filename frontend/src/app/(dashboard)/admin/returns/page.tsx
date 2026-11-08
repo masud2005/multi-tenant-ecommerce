@@ -16,7 +16,6 @@ import {
   Truck,
   PackageCheck,
   Eye,
-  X,
 } from 'lucide-react';
 import { useAdmin } from '@/contexts/AdminContext';
 import { returnService } from '@/services/return-service';
@@ -29,6 +28,7 @@ import { Drawer } from '@/components/ui/Drawer';
 import { Textarea } from '@/components/ui/Textarea';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
+import { MediaLightbox } from '@/components/ui/MediaLightbox';
 import { returnStatusMeta } from '@/utils/status';
 import { formatBDT, formatDate, formatDateTime } from '@/utils/format';
 import type { ReturnRequest, ReturnStatus } from '@/types/commerce';
@@ -704,30 +704,12 @@ function ReturnsContent() {
         )}
       </Drawer>
 
-      {/* Full Photo Preview Modal */}
-      {previewPhoto && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/80 p-4"
-          onClick={() => setPreviewPhoto(null)}
-        >
-          <div
-            className="relative max-w-2xl max-h-[85vh] overflow-hidden rounded-lg bg-surface p-2 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setPreviewPhoto(null)}
-              className="absolute right-3 top-3 z-10 rounded-full bg-ink/70 p-1.5 text-white hover:bg-ink"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <img
-              src={previewPhoto}
-              alt="Return Photo Preview"
-              className="max-h-[75vh] w-auto rounded object-contain"
-            />
-          </div>
-        </div>
-      )}
+      <MediaLightbox
+        src={previewPhoto}
+        kind="image"
+        alt="Return photo preview"
+        onClose={() => setPreviewPhoto(null)}
+      />
     </div>
   );
 }

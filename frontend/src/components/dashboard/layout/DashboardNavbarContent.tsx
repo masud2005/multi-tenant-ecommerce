@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Search, Palette, Sun, Moon } from 'lucide-react';
 import { DashboardMobileSidebar } from './DashboardMobileSidebar';
 import { NotificationBell } from './NotificationBell';
@@ -60,14 +59,6 @@ export function DashboardNavbarContent({
 
         {/* Right: Plan badge, Theme Studio button, Mode Toggle, Notifications, and User Profile */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Subscription Plan Badge */}
-          <Link
-            href="/admin/billing"
-            className="hidden whitespace-nowrap rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-soft hover:border-ink hover:text-ink transition-colors sm:inline-block"
-          >
-            Growth plan
-          </Link>
-
           {/* Theme & Ambience Studio Button */}
           <button
             type="button"

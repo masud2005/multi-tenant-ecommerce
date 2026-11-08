@@ -20,7 +20,6 @@ function resolveFirstAllowedRoute(perms?: Record<string, string[]>): string {
     ['customers', '/admin/customers'],
     ['reviews', '/admin/reviews'],
     ['discounts', '/admin/discounts'],
-    ['marketing', '/admin/marketing'],
     ['shipping', '/admin/shipping'],
     ['theme', '/admin/theme'],
     ['content', '/admin/content'],

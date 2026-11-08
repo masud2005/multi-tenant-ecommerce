@@ -1,0 +1,18 @@
+model AuthSession {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceLabel  String
+  deviceType   String    @default("desktop") // desktop | mobile | tablet | unknown
+  browser      String?
+  os           String?
+  ipAddress    String?
+  userAgent    String?
+  lastActiveAt DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+
+  @@index([userId, revokedAt])
+  @@index([userId, lastActiveAt])
+  @@map("auth_sessions")
+}

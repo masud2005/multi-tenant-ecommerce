@@ -300,7 +300,7 @@ export default function ContactPage() {
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   error={errors.phone}
-                  placeholder="017xxxxxxxx"
+                  placeholder="01XXXXXXXXX"
                 />
               </div>
 
