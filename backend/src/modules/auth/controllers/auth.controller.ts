@@ -20,7 +20,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
-  ThrottleLogin,
   ThrottleRefreshToken,
   ThrottleRegister,
 } from '../../../common/decorators/throttle.decorator';
@@ -31,17 +30,27 @@ import { RefreshTokenDto } from '../dto/refresh-token.dto';
 import { AcceptStaffInviteDto } from '../dto/accept-staff-invite.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { Request } from 'express';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 
-function requestMeta(req: any, userAgentHeader?: string) {
-  const forwarded = req?.headers?.['x-forwarded-for'];
+function headerText(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
+  return undefined;
+}
+
+function requestMeta(req: Request, userAgentHeader?: string) {
+  const forwarded = headerText(req.headers['x-forwarded-for']);
   const ip =
-    (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : null) ||
-    req?.ip ||
-    req?.socket?.remoteAddress ||
+    forwarded?.split(',')[0]?.trim() ||
+    req.ip ||
+    req.socket?.remoteAddress ||
     null;
   return {
-    userAgent: userAgentHeader || req?.headers?.['user-agent'] || null,
+    userAgent: userAgentHeader || headerText(req.headers['user-agent']) || null,
     ipAddress: ip,
   };
 }
@@ -70,7 +79,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(
     @Body() dto: LoginDto,
-    @Req() req: any,
+    @Req() req: Request,
     @Headers('user-agent') userAgent?: string,
   ) {
     return this.authService.login(dto, requestMeta(req, userAgent));
@@ -93,7 +102,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout current device session' })
   @ApiResponse({ status: 200, description: 'User successfully logged out' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async logout(@CurrentUser() user: any) {
+  async logout(@CurrentUser() user: AuthUser) {
     return this.authService.logout(user.id, user.sid);
   }
 
@@ -101,7 +110,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List active login sessions for the current user' })
-  async listSessions(@CurrentUser() user: any) {
+  async listSessions(@CurrentUser() user: AuthUser) {
     return this.authService.listSessions(user.id, user.sid);
   }
 
@@ -110,7 +119,7 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Sign out of all devices except the current one' })
-  async revokeOtherSessions(@CurrentUser() user: any) {
+  async revokeOtherSessions(@CurrentUser() user: AuthUser) {
     return this.authService.revokeOtherSessions(user.id, user.sid);
   }
 
@@ -119,7 +128,7 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Sign out a specific device session' })
-  async revokeSession(@CurrentUser() user: any, @Param('id') id: string) {
+  async revokeSession(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.authService.revokeSession(user.id, id, user.sid);
   }
 
@@ -137,11 +146,14 @@ export class AuthController {
   @Post('staff/accept-invite')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Accept staff invitation and set initial password' })
-  @ApiResponse({ status: 200, description: 'Staff account activated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Staff account activated successfully',
+  })
   @ApiResponse({ status: 401, description: 'Invalid or expired token' })
   async acceptStaffInvite(
     @Body() dto: AcceptStaffInviteDto,
-    @Req() req: any,
+    @Req() req: Request,
     @Headers('user-agent') userAgent?: string,
   ) {
     return this.authService.acceptStaffInvite(dto, requestMeta(req, userAgent));
@@ -153,7 +165,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile and session info' })
   @ApiResponse({ status: 200, description: 'Profile returned successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@CurrentUser() user: any) {
+  async getProfile(@CurrentUser() user: AuthUser) {
     return this.authService.getProfile(user.id);
   }
 
@@ -163,7 +175,10 @@ export class AuthController {
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async updateProfile(@CurrentUser() user: any, @Body() dto: UpdateProfileDto) {
+  async updateProfile(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.authService.updateProfile(user.id, dto);
   }
 }

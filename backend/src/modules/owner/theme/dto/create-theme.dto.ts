@@ -2,7 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateThemeDto {
-  @ApiProperty({ example: 'My Custom Summer Theme', description: 'Name of the theme' })
+  @ApiProperty({
+    example: 'My Custom Summer Theme',
+    description: 'Name of the theme',
+  })
   @IsString()
   @IsNotEmpty()
   name: string;

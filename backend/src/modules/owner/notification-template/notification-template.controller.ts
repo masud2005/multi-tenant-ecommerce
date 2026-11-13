@@ -19,7 +19,10 @@ import { UpdateNotificationTemplateDto } from './dto/update-notification-templat
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Notification Templates')
@@ -36,14 +39,14 @@ export class OwnerNotificationTemplateController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'List store notification event templates' })
   @ApiResponse({ status: 200, description: 'Templates retrieved successfully' })
-  async list(@CurrentUser() user?: any) {
+  async list(@CurrentUser() user?: AuthUser) {
     return this.templateService.list(user?.tenantId);
   }
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get one notification template' })
-  async getOne(@Param('id') id: string, @CurrentUser() user?: any) {
+  async getOne(@Param('id') id: string, @CurrentUser() user?: AuthUser) {
     return this.templateService.getOne(id, user?.tenantId);
   }
 
@@ -55,7 +58,7 @@ export class OwnerNotificationTemplateController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateNotificationTemplateDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.templateService.update(id, dto, user?.tenantId);
   }

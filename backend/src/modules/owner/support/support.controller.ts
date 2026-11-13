@@ -24,7 +24,10 @@ import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Support Tickets & Messages')
@@ -38,11 +41,13 @@ export class OwnerSupportController {
   // 1. List all customer support tickets
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List customer inquiries, messages and support tickets' })
+  @ApiOperation({
+    summary: 'List customer inquiries, messages and support tickets',
+  })
   @ApiResponse({ status: 200, description: 'Tickets retrieved successfully' })
   async getTickets(
     @Query() query: TicketQueryDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -52,11 +57,16 @@ export class OwnerSupportController {
   // 2. Get single ticket with full message history
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get single ticket details with full conversation thread' })
-  @ApiResponse({ status: 200, description: 'Ticket details retrieved successfully' })
+  @ApiOperation({
+    summary: 'Get single ticket details with full conversation thread',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Ticket details retrieved successfully',
+  })
   async getTicketById(
     @Param('id') id: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -71,7 +81,7 @@ export class OwnerSupportController {
   async replyToTicket(
     @Param('id') id: string,
     @Body() dto: ReplyTicketDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -81,12 +91,14 @@ export class OwnerSupportController {
   // 4. Update status of a support ticket
   @Patch(':id/status')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update ticket status (open, pending, resolved, closed)' })
+  @ApiOperation({
+    summary: 'Update ticket status (open, pending, resolved, closed)',
+  })
   @ApiResponse({ status: 200, description: 'Status updated successfully' })
   async updateTicketStatus(
     @Param('id') id: string,
     @Body() dto: UpdateTicketStatusDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;

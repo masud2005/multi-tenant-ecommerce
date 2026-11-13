@@ -79,7 +79,8 @@ export class AddressService {
     }
 
     const userEmail = user.email || `${user.id}@customer.store`;
-    const profileName = user.name || (user.email ? user.email.split('@')[0] : 'Customer');
+    const profileName =
+      user.name || (user.email ? user.email.split('@')[0] : 'Customer');
 
     const newProfile = await this.prisma.customerProfile.upsert({
       where: {
@@ -113,7 +114,10 @@ export class AddressService {
     tenantId?: string,
   ) {
     const targetTenantId = await this.resolveTenantId(dto.tenantId || tenantId);
-    const customerProfileId = await this.resolveCustomerId(userId, targetTenantId);
+    const customerProfileId = await this.resolveCustomerId(
+      userId,
+      targetTenantId,
+    );
 
     // গ্রাহকের বর্তমান ঠিকানার সংখ্যা গণনা করা
     const existingCount = await this.prisma.customerAddress.count({
@@ -163,17 +167,20 @@ export class AddressService {
    */
   async getAddresses(userId: string, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
-    const customerProfileId = await this.resolveCustomerId(userId, targetTenantId);
+    const customerProfileId = await this.resolveCustomerId(
+      userId,
+      targetTenantId,
+    );
 
     const addresses = await this.prisma.customerAddress.findMany({
       where: { customerProfileId },
-      orderBy: [
-        { isDefaultShipping: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ isDefaultShipping: 'desc' }, { createdAt: 'desc' }],
     });
 
-    return ResponseHelper.success(addresses, 'Addresses retrieved successfully');
+    return ResponseHelper.success(
+      addresses,
+      'Addresses retrieved successfully',
+    );
   }
 
   /**
@@ -186,7 +193,10 @@ export class AddressService {
     tenantId?: string,
   ) {
     const targetTenantId = await this.resolveTenantId(dto.tenantId || tenantId);
-    const customerProfileId = await this.resolveCustomerId(userId, targetTenantId);
+    const customerProfileId = await this.resolveCustomerId(
+      userId,
+      targetTenantId,
+    );
 
     const existing = await this.prisma.customerAddress.findFirst({
       where: { id: addressId, customerProfileId },
@@ -219,8 +229,12 @@ export class AddressService {
         line1: dto.line1 !== undefined ? dto.line1.trim() : undefined,
         district: dto.district !== undefined ? dto.district.trim() : undefined,
         area: dto.area !== undefined ? dto.area.trim() : undefined,
-        isDefaultShipping: dto.isDefaultShipping !== undefined ? dto.isDefaultShipping : undefined,
-        isDefaultBilling: dto.isDefaultBilling !== undefined ? dto.isDefaultBilling : undefined,
+        isDefaultShipping:
+          dto.isDefaultShipping !== undefined
+            ? dto.isDefaultShipping
+            : undefined,
+        isDefaultBilling:
+          dto.isDefaultBilling !== undefined ? dto.isDefaultBilling : undefined,
       },
     });
 
@@ -232,7 +246,10 @@ export class AddressService {
    */
   async deleteAddress(userId: string, addressId: string, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
-    const customerProfileId = await this.resolveCustomerId(userId, targetTenantId);
+    const customerProfileId = await this.resolveCustomerId(
+      userId,
+      targetTenantId,
+    );
 
     const existing = await this.prisma.customerAddress.findFirst({
       where: { id: addressId, customerProfileId },

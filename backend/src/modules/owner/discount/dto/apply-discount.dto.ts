@@ -16,12 +16,15 @@ export class ApplyDiscountDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   code: string;
 
   @ApiProperty({
     example: 3500,
-    description: 'Current cart items subtotal amount before shipping and discounts',
+    description:
+      'Current cart items subtotal amount before shipping and discounts',
   })
   @IsNumber()
   @Min(0)
@@ -30,10 +33,13 @@ export class ApplyDiscountDto {
 
   @ApiPropertyOptional({
     example: 'customer@example.com',
-    description: 'Customer email address for guest checkout per-user limit verification',
+    description:
+      'Customer email address for guest checkout per-user limit verification',
   })
   @IsEmail()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   customerEmail?: string;
 }

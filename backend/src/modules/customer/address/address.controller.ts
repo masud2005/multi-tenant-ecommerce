@@ -19,7 +19,10 @@ import {
 } from '@nestjs/swagger';
 import { AddressService } from './address.service';
 import { CreateAddressDto, UpdateAddressDto } from './dto';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @ApiTags('(Customer) Addresses')
@@ -31,13 +34,17 @@ export class AddressController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all saved delivery addresses for current customer' })
+  @ApiOperation({
+    summary: 'Get all saved delivery addresses for current customer',
+  })
   @ApiResponse({ status: 200, description: 'Addresses retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getAddresses(@CurrentUser() user?: any) {
+  async getAddresses(@CurrentUser() user?: AuthUser) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to view addresses');
+      throw new UnauthorizedException(
+        'Authentication required to view addresses',
+      );
     }
     return this.addressService.getAddresses(userId, user?.tenantId);
   }
@@ -50,11 +57,13 @@ export class AddressController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createAddress(
     @Body() dto: CreateAddressDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to save address');
+      throw new UnauthorizedException(
+        'Authentication required to save address',
+      );
     }
     return this.addressService.createAddress(userId, dto, user?.tenantId);
   }
@@ -68,11 +77,13 @@ export class AddressController {
   async updateAddress(
     @Param('id') id: string,
     @Body() dto: UpdateAddressDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to update address');
+      throw new UnauthorizedException(
+        'Authentication required to update address',
+      );
     }
     return this.addressService.updateAddress(userId, id, dto, user?.tenantId);
   }
@@ -83,13 +94,12 @@ export class AddressController {
   @ApiResponse({ status: 200, description: 'Address deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Address not found' })
-  async deleteAddress(
-    @Param('id') id: string,
-    @CurrentUser() user?: any,
-  ) {
+  async deleteAddress(@Param('id') id: string, @CurrentUser() user?: AuthUser) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to delete address');
+      throw new UnauthorizedException(
+        'Authentication required to delete address',
+      );
     }
     return this.addressService.deleteAddress(userId, id, user?.tenantId);
   }

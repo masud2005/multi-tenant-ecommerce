@@ -4,7 +4,7 @@ import { ExceptionCode } from './codes.exception';
 export interface IValidationError {
   field: string;
   message: string;
-  value?: any;
+  value?: unknown;
 }
 
 export class BaseException extends HttpException {

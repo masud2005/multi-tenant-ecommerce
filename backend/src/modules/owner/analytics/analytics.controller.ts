@@ -18,7 +18,10 @@ import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Analytics')
@@ -33,7 +36,8 @@ export class AnalyticsController {
   @Get('sales-by-district')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get real sales aggregation grouped by district from order database',
+    summary:
+      'Get real sales aggregation grouped by district from order database',
   })
   @ApiResponse({
     status: 200,
@@ -41,7 +45,7 @@ export class AnalyticsController {
   })
   async getSalesByDistrict(
     @Query() query: AnalyticsQueryDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -60,7 +64,7 @@ export class AnalyticsController {
   })
   async getAnalyticsOverview(
     @Query() query: AnalyticsQueryDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -78,7 +82,7 @@ export class AnalyticsController {
     description: 'Top searches retrieved successfully',
   })
   async getTopSearches(
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;

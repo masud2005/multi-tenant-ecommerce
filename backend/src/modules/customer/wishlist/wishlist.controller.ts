@@ -21,7 +21,10 @@ import { WishlistService } from './wishlist.service';
 import { AddToWishlistDto } from './dto/add-to-wishlist.dto';
 import { QueryWishlistDto } from './dto/query-wishlist.dto';
 import { SyncWishlistDto } from './dto/sync-wishlist.dto';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @ApiTags('(Customer) Wishlist')
@@ -42,11 +45,13 @@ export class WishlistController {
   })
   async getWishlist(
     @Query() query: QueryWishlistDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to view wishlist');
+      throw new UnauthorizedException(
+        'Authentication required to view wishlist',
+      );
     }
     const tenantId = user?.tenantId || query?.tenantId;
     return this.wishlistService.getWishlist(userId, { ...query, tenantId });
@@ -63,11 +68,13 @@ export class WishlistController {
   })
   async toggleWishlist(
     @Body() dto: AddToWishlistDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to manage wishlist');
+      throw new UnauthorizedException(
+        'Authentication required to manage wishlist',
+      );
     }
     const tenantId = user?.tenantId || dto?.tenantId;
     return this.wishlistService.toggleWishlist(userId, { ...dto, tenantId });
@@ -76,7 +83,8 @@ export class WishlistController {
   @Post('sync')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Sync and merge guest wishlist items into user database wishlist upon login',
+    summary:
+      'Sync and merge guest wishlist items into user database wishlist upon login',
   })
   @ApiResponse({
     status: 200,
@@ -84,11 +92,13 @@ export class WishlistController {
   })
   async syncWishlist(
     @Body() dto: SyncWishlistDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to sync wishlist');
+      throw new UnauthorizedException(
+        'Authentication required to sync wishlist',
+      );
     }
     const tenantId = user?.tenantId || dto?.tenantId;
     return this.wishlistService.syncWishlist(userId, { ...dto, tenantId });
@@ -106,11 +116,13 @@ export class WishlistController {
   async removeFromWishlist(
     @Param('productId') productId: string,
     @Query('tenantId') queryTenantId?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to update wishlist');
+      throw new UnauthorizedException(
+        'Authentication required to update wishlist',
+      );
     }
     const tenantId = user?.tenantId || queryTenantId;
     return this.wishlistService.removeFromWishlist(userId, productId, tenantId);

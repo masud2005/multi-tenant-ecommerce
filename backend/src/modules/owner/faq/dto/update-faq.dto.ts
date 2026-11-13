@@ -19,7 +19,8 @@ export class UpdateFaqDto {
   question?: string;
 
   @ApiPropertyOptional({
-    example: 'Use the Track order page with your order number and phone number.',
+    example:
+      'Use the Track order page with your order number and phone number.',
     description: 'Answer text',
   })
   @IsString()

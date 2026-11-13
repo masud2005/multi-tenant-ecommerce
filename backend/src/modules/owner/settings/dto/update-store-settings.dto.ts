@@ -70,7 +70,8 @@ export class UpdateStoreSettingsDto {
   currencyPosition?: 'prefix' | 'suffix';
 
   @ApiPropertyOptional({
-    description: 'Public contact details (email, phone, whatsapp, address, hours, response time)',
+    description:
+      'Public contact details (email, phone, whatsapp, address, hours, response time)',
     type: () => StoreContactDto,
   })
   @ValidateNested()
@@ -79,7 +80,8 @@ export class UpdateStoreSettingsDto {
   contact?: StoreContactDto;
 
   @ApiPropertyOptional({
-    description: 'Public social media links (facebook, instagram, twitter, etc.)',
+    description:
+      'Public social media links (facebook, instagram, twitter, etc.)',
     type: () => StoreSocialsDto,
   })
   @ValidateNested()
@@ -102,7 +104,7 @@ export class UpdateStoreSettingsDto {
   })
   @IsObject()
   @IsOptional()
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 
   @ApiPropertyOptional({
     description: 'Store-wide announcement banner text',

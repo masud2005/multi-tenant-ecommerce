@@ -19,5 +19,5 @@ export class UpdateSectionDto {
 
   @ApiProperty({ example: { subtitle: 'New Arrivals' }, required: false })
   @IsOptional()
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }

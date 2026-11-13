@@ -2,7 +2,10 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsObject, IsOptional, IsString } from 'class-validator';
 
 export class UpdateRoleDto {
-  @ApiPropertyOptional({ description: 'Updated role name', example: 'Lead Inventory Manager' })
+  @ApiPropertyOptional({
+    description: 'Updated role name',
+    example: 'Lead Inventory Manager',
+  })
   @IsOptional()
   @IsString()
   name?: string;

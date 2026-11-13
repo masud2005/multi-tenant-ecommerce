@@ -11,4 +11,3 @@ import { EmailService } from '../../shared/mail/email-service';
   exports: [NotificationService, NotificationGateway],
 })
 export class NotificationModule {}
-

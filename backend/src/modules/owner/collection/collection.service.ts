@@ -27,9 +27,15 @@ export class CollectionService {
   }
 
   // Create a new collection with optional image upload and rollback support
-  async create(dto: CreateCollectionDto, file?: Express.Multer.File, tenantId?: string) {
+  async create(
+    dto: CreateCollectionDto,
+    file?: Express.Multer.File,
+    tenantId?: string,
+  ) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // Verify tenant exists
@@ -78,7 +84,9 @@ export class CollectionService {
           name: dto.name,
           slug,
           description: dto.description,
-          image: uploadedImageUrl || dto.image,
+          image:
+            uploadedImageUrl ||
+            (typeof dto.image === 'string' ? dto.image : undefined),
           seoTitle: dto.seoTitle,
           seoDescription: dto.seoDescription,
           type: dto.type ?? CollectionType.MANUAL,
@@ -91,7 +99,10 @@ export class CollectionService {
         },
       });
 
-      return ResponseHelper.created(collection, 'Collection created successfully');
+      return ResponseHelper.created(
+        collection,
+        'Collection created successfully',
+      );
     } catch (error) {
       // Rollback uploaded image from storage if database operation fails
       if (uploadedImageUrl) {
@@ -102,9 +113,16 @@ export class CollectionService {
   }
 
   // Update an existing collection with image replacement and cleanup
-  async update(idOrSlug: string, dto: UpdateCollectionDto, file?: Express.Multer.File, tenantId?: string) {
+  async update(
+    idOrSlug: string,
+    dto: UpdateCollectionDto,
+    file?: Express.Multer.File,
+    tenantId?: string,
+  ) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // Find collection by id or slug
@@ -161,10 +179,17 @@ export class CollectionService {
         data: {
           name: dto.name ?? undefined,
           slug: slug !== collection.slug ? slug : undefined,
-          description: dto.description !== undefined ? dto.description : undefined,
-          image: newImageUrl !== undefined ? newImageUrl : dto.image !== undefined ? dto.image : undefined,
+          description:
+            dto.description !== undefined ? dto.description : undefined,
+          image:
+            newImageUrl !== undefined
+              ? newImageUrl
+              : typeof dto.image === 'string'
+                ? dto.image
+                : undefined,
           seoTitle: dto.seoTitle !== undefined ? dto.seoTitle : undefined,
-          seoDescription: dto.seoDescription !== undefined ? dto.seoDescription : undefined,
+          seoDescription:
+            dto.seoDescription !== undefined ? dto.seoDescription : undefined,
           type: dto.type ?? undefined,
           rule: dto.rule !== undefined ? dto.rule : undefined,
           isActive: dto.isActive !== undefined ? dto.isActive : undefined,
@@ -180,7 +205,10 @@ export class CollectionService {
         this.storageService.deleteFile(collection.image).catch(() => {});
       }
 
-      return ResponseHelper.success(updatedCollection, 'Collection updated successfully');
+      return ResponseHelper.success(
+        updatedCollection,
+        'Collection updated successfully',
+      );
     } catch (error) {
       // Rollback newly uploaded image if database update fails
       if (newImageUrl) {
@@ -270,7 +298,9 @@ export class CollectionService {
   // Delete a collection (soft delete) and remove its image from storage
   async remove(idOrSlug: string, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const collection = await this.prisma.collection.findFirst({

@@ -12,6 +12,22 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
+import { parseJson } from '../../../../common/helpers/json.helper';
+
+function toStringList(value: unknown): string[] {
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  if (typeof value !== 'object' || value === null) return [];
+  const items: string[] = [];
+  for (const item of Object.values(value)) {
+    if (typeof item === 'string' && item.trim()) items.push(item.trim());
+  }
+  return items;
+}
 
 export enum ProductStatus {
   DRAFT = 'DRAFT',
@@ -238,7 +254,7 @@ export class CreateProductDto {
     default: false,
     description: 'Whether product is open for pre-orders',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -253,7 +269,7 @@ export class CreateProductDto {
     default: false,
     description: 'Display "New" arrival badge',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -268,7 +284,7 @@ export class CreateProductDto {
     default: false,
     description: 'Display "Bestseller" badge',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -282,16 +298,15 @@ export class CreateProductDto {
     required: false,
     description: 'Product search and filter tags',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'string') {
       try {
-        const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed : [parsed];
+        return toStringList(parseJson(value));
       } catch {
-        return value.split(',').map((s: string) => s.trim()).filter(Boolean);
+        return toStringList(value);
       }
     }
-    return value;
+    return toStringList(value);
   })
   @IsArray()
   @IsString({ each: true })
@@ -299,14 +314,18 @@ export class CreateProductDto {
   tags?: string[];
 
   @ApiProperty({
-    example: { Fabric: '100% Organic Cotton', Fit: 'Regular', Care: 'Hand wash cold' },
+    example: {
+      Fabric: '100% Organic Cotton',
+      Fit: 'Regular',
+      Care: 'Hand wash cold',
+    },
     required: false,
     description: 'Key-value technical specifications or attributes',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'string') {
       try {
-        return JSON.parse(value);
+        return parseJson(value);
       } catch {
         return value;
       }
@@ -315,7 +334,7 @@ export class CreateProductDto {
   })
   @IsObject()
   @IsOptional()
-  specs?: Record<string, any>;
+  specs?: Record<string, unknown>;
 
   @ApiProperty({
     example: 'Handloom Cotton Panjabi | Tanti Studio',
@@ -327,7 +346,8 @@ export class CreateProductDto {
   seoTitle?: string;
 
   @ApiProperty({
-    example: 'Shop authentic Bangladeshi handloom cotton panjabi online at best price.',
+    example:
+      'Shop authentic Bangladeshi handloom cotton panjabi online at best price.',
     required: false,
     description: 'Custom SEO meta description',
   })
@@ -366,16 +386,15 @@ export class CreateProductDto {
     required: false,
     description: 'Array of collection IDs or slugs to assign product to',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'string') {
       try {
-        const parsed = JSON.parse(value);
-        return Array.isArray(parsed) ? parsed : [parsed];
+        return toStringList(parseJson(value));
       } catch {
-        return value.split(',').map((s: string) => s.trim()).filter(Boolean);
+        return toStringList(value);
       }
     }
-    return value;
+    return toStringList(value);
   })
   @IsArray()
   @IsString({ each: true })
@@ -392,17 +411,25 @@ export class CreateProductDto {
     description: 'Product image files to upload',
   })
   @IsOptional()
-  images?: any;
+  images?: Array<
+    | string
+    | {
+        url?: string;
+        alt?: string;
+        isCover?: boolean;
+        order?: number;
+      }
+  >;
 
   @ApiProperty({
     type: [CreateProductVariantDto],
     required: false,
     description: 'Size and color variants with specific pricing and inventory',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'string') {
       try {
-        return JSON.parse(value);
+        return parseJson(value);
       } catch {
         return value;
       }

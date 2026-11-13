@@ -6,7 +6,9 @@ export class StoreContactDto {
     description: 'Public customer support email address',
     example: 'care@tanti.com.bd',
   })
-  @ValidateIf((_, v) => v !== undefined && v !== null && String(v).trim() !== '')
+  @ValidateIf(
+    (_, v) => v !== undefined && v !== null && String(v).trim() !== '',
+  )
   @IsEmail({}, { message: 'Invalid support email format' })
   @IsOptional()
   email?: string;
@@ -28,7 +30,8 @@ export class StoreContactDto {
   whatsapp?: string;
 
   @ApiPropertyOptional({
-    description: 'Physical flagship store / office address (road, area, city, postal code)',
+    description:
+      'Physical flagship store / office address (road, area, city, postal code)',
     example: 'House 14, Road 27 (old), Dhanmondi, Dhaka 1209',
   })
   @IsString()

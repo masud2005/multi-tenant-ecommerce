@@ -1,3 +1,4 @@
+import { Prisma } from '../../../prisma/generated/client';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../shared/mail/email-service';
@@ -23,12 +24,15 @@ export class NotificationService {
   /** Replace {{var}} tokens. Missing values become empty string (no fake defaults). */
   renderTemplate(text: string | null | undefined, vars: TemplateVarMap = {}) {
     const source = String(text || '');
-    return source.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, rawKey: string) => {
-      const key = rawKey.trim();
-      const val = vars[key];
-      if (val === null || val === undefined) return '';
-      return String(val);
-    });
+    return source.replace(
+      /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
+      (_, rawKey: string) => {
+        const key = rawKey.trim();
+        const val = vars[key];
+        if (val === null || val === undefined) return '';
+        return String(val);
+      },
+    );
   }
 
   private toEmailHtml(body: string) {
@@ -102,7 +106,10 @@ export class NotificationService {
       return null;
     }
 
-    const title = this.renderTemplate(template.inAppTitle || template.event, vars);
+    const title = this.renderTemplate(
+      template.inAppTitle || template.event,
+      vars,
+    );
     const message = this.renderTemplate(
       template.inAppMessage || template.body || '',
       vars,
@@ -142,10 +149,18 @@ export class NotificationService {
    * and optional email. Guest / email-only flows must not pass a fake userId.
    */
   async send(options: SendNotificationOptions) {
-    const { tenantId, userId, title, message, type = 'SYSTEM', link, email } = options;
+    const {
+      tenantId,
+      userId,
+      title,
+      message,
+      type = 'SYSTEM',
+      link,
+      email,
+    } = options;
 
     try {
-      let notification: any = null;
+      let notification: Prisma.NotificationGetPayload<object> | null = null;
 
       if (userId) {
         const user = await this.prisma.user.findUnique({
@@ -198,7 +213,10 @@ export class NotificationService {
             },
           });
         } catch (err) {
-          this.logger.error(`Failed to send email notification to ${email.to}`, err);
+          this.logger.error(
+            `Failed to send email notification to ${email.to}`,
+            err,
+          );
         }
       }
 
@@ -218,7 +236,7 @@ export class NotificationService {
     const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const whereClause: any = {
+    const whereClause: Prisma.NotificationWhereInput = {
       userId,
       tenantId,
     };
@@ -252,7 +270,8 @@ export class NotificationService {
     };
   }
 
-  async markAsRead(id: string, userId: string, tenantId?: string) {
+  async markAsRead(id: string, userId: string, _tenantId?: string) {
+    void _tenantId;
     const notification = await this.prisma.notification.findFirst({
       where: { id, userId },
     });
@@ -267,7 +286,8 @@ export class NotificationService {
     });
   }
 
-  async markAllAsRead(userId: string, tenantId?: string) {
+  async markAllAsRead(userId: string, _tenantId?: string) {
+    void _tenantId;
     await this.prisma.notification.updateMany({
       where: { userId, isRead: false },
       data: { isRead: true },

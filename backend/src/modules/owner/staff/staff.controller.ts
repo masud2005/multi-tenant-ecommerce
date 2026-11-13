@@ -29,7 +29,10 @@ import {
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Staff & Roles')
@@ -44,7 +47,8 @@ export class StaffController {
   @Get('members')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'List all store staff members with role permissions and status counters',
+    summary:
+      'List all store staff members with role permissions and status counters',
   })
   @ApiResponse({
     status: 200,
@@ -60,7 +64,7 @@ export class StaffController {
   })
   async getStaffMembers(
     @Query() query: QueryStaffDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -91,7 +95,7 @@ export class StaffController {
   })
   async inviteStaff(
     @Body() dto: InviteStaffDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -114,7 +118,7 @@ export class StaffController {
   })
   async resendInvite(
     @Param('id') id: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -125,7 +129,8 @@ export class StaffController {
   @Patch('members/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Update staff member role, status (active/deactivated), or details',
+    summary:
+      'Update staff member role, status (active/deactivated), or details',
   })
   @ApiResponse({
     status: 200,
@@ -146,7 +151,7 @@ export class StaffController {
   async updateStaffMember(
     @Param('id') id: string,
     @Body() dto: UpdateStaffDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -177,7 +182,7 @@ export class StaffController {
   })
   async removeStaffMember(
     @Param('id') id: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -188,7 +193,8 @@ export class StaffController {
   @Get('roles')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'List all store roles with assigned member counts and permission matrices',
+    summary:
+      'List all store roles with assigned member counts and permission matrices',
   })
   @ApiResponse({
     status: 200,
@@ -199,7 +205,7 @@ export class StaffController {
     description: 'Unauthorized - Owner login token required',
   })
   async getRoles(
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -226,7 +232,7 @@ export class StaffController {
   })
   async createRole(
     @Body() dto: CreateRoleDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -258,7 +264,7 @@ export class StaffController {
   async updateRole(
     @Param('id') id: string,
     @Body() dto: UpdateRoleDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -269,7 +275,8 @@ export class StaffController {
   @Delete('roles/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Delete a custom staff role (System default roles cannot be deleted)',
+    summary:
+      'Delete a custom staff role (System default roles cannot be deleted)',
   })
   @ApiResponse({
     status: 200,
@@ -277,7 +284,8 @@ export class StaffController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Cannot delete system default role or role with assigned members',
+    description:
+      'Cannot delete system default role or role with assigned members',
   })
   @ApiResponse({
     status: 401,
@@ -289,7 +297,7 @@ export class StaffController {
   })
   async deleteRole(
     @Param('id') id: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;

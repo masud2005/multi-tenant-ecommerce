@@ -46,10 +46,7 @@ export interface SendNotificationOptions {
   };
 }
 
-export type TemplateVarMap = Record<
-  string,
-  string | number | null | undefined
->;
+export type TemplateVarMap = Record<string, string | number | null | undefined>;
 
 export interface SendFromTemplateOptions {
   tenantId: string;

@@ -20,7 +20,10 @@ import { ReorderSectionsDto } from '../dto/reorder-sections.dto';
 import { CreateSectionDto } from '../dto/create-section.dto';
 import { UpdateSectionDto } from '../dto/update-section.dto';
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
-import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../../common/decorators/current-user.decorator';
 
 @ApiTags('(Owner) Theme Sections')
 @Controller('owner/theme')
@@ -37,7 +40,7 @@ export class ThemeSectionController {
   async reorderSections(
     @Param('id') id: string,
     @Body() dto: ReorderSectionsDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.themeService.reorderSections(id, dto, user.tenantId);
   }
@@ -50,7 +53,7 @@ export class ThemeSectionController {
   async addSection(
     @Param('id') id: string,
     @Body() dto: CreateSectionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.themeService.addSection(id, dto, user.tenantId);
   }
@@ -64,7 +67,7 @@ export class ThemeSectionController {
     @Param('id') id: string,
     @Param('sectionId') sectionId: string,
     @Body() dto: UpdateSectionDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.themeService.updateSection(id, sectionId, dto, user.tenantId);
   }
@@ -77,7 +80,7 @@ export class ThemeSectionController {
   async deleteSection(
     @Param('id') id: string,
     @Param('sectionId') sectionId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.themeService.deleteSection(id, sectionId, user.tenantId);
   }

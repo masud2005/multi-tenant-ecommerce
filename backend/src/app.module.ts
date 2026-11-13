@@ -42,4 +42,4 @@ import { StorageModule } from './shared/storage/storage.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

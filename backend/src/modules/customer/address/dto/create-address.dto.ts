@@ -16,7 +16,9 @@ export class CreateAddressDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : 'Home'))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : 'Home',
+  )
   label?: string = 'Home';
 
   @ApiProperty({
@@ -25,28 +27,39 @@ export class CreateAddressDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Recipient name is required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   name: string;
 
   @ApiProperty({
-    description: '11-digit Bangladeshi mobile number for courier rider communication',
+    description:
+      '11-digit Bangladeshi mobile number for courier rider communication',
     example: '01712-345678',
   })
   @IsString()
   @IsNotEmpty({ message: 'Recipient mobile number is required' })
   @Matches(/^01[3-9]\d{2}-?\d{6}$|^01[3-9]\d{8}$/, {
-    message: 'Please enter a valid 11-digit Bangladeshi mobile number (e.g. 01712-345678 or 01712345678)',
+    message:
+      'Please enter a valid 11-digit Bangladeshi mobile number (e.g. 01712-345678 or 01712345678)',
   })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   phone: string;
 
   @ApiProperty({
-    description: 'Detailed street address (House number, road number, block, flat/apartment)',
+    description:
+      'Detailed street address (House number, road number, block, flat/apartment)',
     example: 'House 42, Road 9/A, Block C',
   })
   @IsString()
-  @IsNotEmpty({ message: 'Street address details (House/Road/Area) are required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsNotEmpty({
+    message: 'Street address details (House/Road/Area) are required',
+  })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   line1: string;
 
   @ApiProperty({
@@ -55,7 +68,9 @@ export class CreateAddressDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'District is required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   district: string;
 
   @ApiProperty({
@@ -64,7 +79,9 @@ export class CreateAddressDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Thana or area is required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   area: string;
 
   @ApiPropertyOptional({

@@ -1,3 +1,5 @@
+import { Prisma } from '../../../prisma/generated/client';
+import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import {
   BadRequestException,
   Injectable,
@@ -7,7 +9,10 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { StorageService } from '../../shared/storage/storage.service';
-import { encryptMessage, decryptMessage } from '../../common/helpers/crypto.helper';
+import {
+  encryptMessage,
+  decryptMessage,
+} from '../../common/helpers/crypto.helper';
 import { SendMessageDto } from './dto/send-message.dto';
 import { StartConversationDto } from './dto/start-conversation.dto';
 import { ConversationQueryDto } from './dto/conversation-query.dto';
@@ -57,7 +62,9 @@ export class ChatService {
       'application/pdf',
     ];
     if (!allowed.includes(file.mimetype)) {
-      throw new BadRequestException('Only images (JPG, PNG, WebP, GIF) or PDF are allowed');
+      throw new BadRequestException(
+        'Only images (JPG, PNG, WebP, GIF) or PDF are allowed',
+      );
     }
 
     const resolvedTenantId = await this.resolveTenantId(tenantId);
@@ -67,8 +74,7 @@ export class ChatService {
       tags: ['chat', resolvedTenantId],
     });
 
-    const resourceType =
-      file.mimetype === 'application/pdf' ? 'raw' : 'image';
+    const resourceType = file.mimetype === 'application/pdf' ? 'raw' : 'image';
 
     return ResponseHelper.success(
       {
@@ -142,12 +148,17 @@ export class ChatService {
       throw new NotFoundException('Conversation not found');
     }
 
-    const resolvedTenantId = conversation.tenantId || (await this.resolveTenantId(tenantId));
+    const resolvedTenantId =
+      conversation.tenantId || (await this.resolveTenantId(tenantId));
     const senderRole = dto.senderRole || sender.role;
     const senderName =
-      dto.senderName || sender.name || (senderRole === 'CUSTOMER' ? 'Customer' : 'Store Support');
+      dto.senderName ||
+      sender.name ||
+      (senderRole === 'CUSTOMER' ? 'Customer' : 'Store Support');
     const attachments = Array.isArray(dto.attachments)
-      ? dto.attachments.filter((u) => typeof u === 'string' && u.trim().length > 0).slice(0, 4)
+      ? dto.attachments
+          .filter((u) => typeof u === 'string' && u.trim().length > 0)
+          .slice(0, 4)
       : [];
     const plainText = (dto.text || '').trim();
 
@@ -181,7 +192,8 @@ export class ChatService {
       where: { id: conversationId },
       data: {
         lastMessageAt: new Date(),
-        status: conversation.status === 'resolved' ? 'active' : conversation.status,
+        status:
+          conversation.status === 'resolved' ? 'active' : conversation.status,
         ...(isCustomerSender
           ? { unreadByOwner: { increment: 1 } }
           : { unreadByCustomer: { increment: 1 } }),
@@ -190,7 +202,7 @@ export class ChatService {
 
     // If message is from customer, notify store owner & staff (In-App)
     if (isCustomerSender) {
-      this.dispatchChatNotification(
+      void this.dispatchChatNotification(
         resolvedTenantId,
         conversationId,
         senderName,
@@ -211,7 +223,10 @@ export class ChatService {
       createdAt: message.createdAt,
     };
 
-    return ResponseHelper.created(decryptedResponse, 'Message sent successfully');
+    return ResponseHelper.created(
+      decryptedResponse,
+      'Message sent successfully',
+    );
   }
 
   /**
@@ -220,8 +235,9 @@ export class ChatService {
   async getChatHistory(
     conversationId: string,
     viewerRole: 'OWNER' | 'CUSTOMER' = 'OWNER',
-    tenantId?: string,
+    _tenantId?: string,
   ) {
+    void _tenantId;
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
       include: {
@@ -236,24 +252,26 @@ export class ChatService {
     }
 
     // 🔓 Decrypt each message for frontend display
-    const decryptedMessages: DecryptedChatMessage[] = conversation.messages.map((msg) => {
-      const text = decryptMessage(msg.encryptedText, msg.iv);
-      return {
-        id: msg.id,
-        conversationId: msg.conversationId,
-        tenantId: msg.tenantId,
-        senderId: msg.senderId,
-        senderRole: msg.senderRole,
-        senderName: msg.senderName,
-        text,
-        attachments: msg.attachments || [],
-        isRead: msg.isRead,
-        createdAt: msg.createdAt,
-      };
-    });
+    const decryptedMessages: DecryptedChatMessage[] = conversation.messages.map(
+      (msg) => {
+        const text = decryptMessage(msg.encryptedText, msg.iv);
+        return {
+          id: msg.id,
+          conversationId: msg.conversationId,
+          tenantId: msg.tenantId,
+          senderId: msg.senderId,
+          senderRole: msg.senderRole,
+          senderName: msg.senderName,
+          text,
+          attachments: msg.attachments || [],
+          isRead: msg.isRead,
+          createdAt: msg.createdAt,
+        };
+      },
+    );
 
     // Mark messages as read based on viewer role
-    (async () => {
+    void (async () => {
       try {
         if (viewerRole === 'OWNER' && conversation.unreadByOwner > 0) {
           await this.prisma.conversation.update({
@@ -264,7 +282,10 @@ export class ChatService {
             where: { conversationId, senderRole: 'CUSTOMER', isRead: false },
             data: { isRead: true },
           });
-        } else if (viewerRole === 'CUSTOMER' && conversation.unreadByCustomer > 0) {
+        } else if (
+          viewerRole === 'CUSTOMER' &&
+          conversation.unreadByCustomer > 0
+        ) {
           await this.prisma.conversation.update({
             where: { id: conversationId },
             data: { unreadByCustomer: 0 },
@@ -279,7 +300,10 @@ export class ChatService {
           });
         }
       } catch (err) {
-        this.logger.error('Failed to mark conversation read in background', err);
+        this.logger.error(
+          'Failed to mark conversation read in background',
+          err,
+        );
       }
     })();
 
@@ -291,8 +315,10 @@ export class ChatService {
           customerEmail: conversation.customerEmail,
           customerPhone: conversation.customerPhone,
           status: conversation.status,
-          unreadByOwner: viewerRole === 'OWNER' ? 0 : conversation.unreadByOwner,
-          unreadByCustomer: viewerRole === 'CUSTOMER' ? 0 : conversation.unreadByCustomer,
+          unreadByOwner:
+            viewerRole === 'OWNER' ? 0 : conversation.unreadByOwner,
+          unreadByCustomer:
+            viewerRole === 'CUSTOMER' ? 0 : conversation.unreadByCustomer,
           lastMessageAt: conversation.lastMessageAt,
           createdAt: conversation.createdAt,
         },
@@ -307,10 +333,12 @@ export class ChatService {
    */
   async initConversation(
     dto: StartConversationDto,
-    user?: any,
+    user?: AuthUser,
     tenantHeader?: string,
   ) {
-    const resolvedTenantId = await this.resolveTenantId(tenantHeader || user?.tenantId);
+    const resolvedTenantId = await this.resolveTenantId(
+      tenantHeader || user?.tenantId,
+    );
 
     // 1. Check if conversationId was supplied and exists
     if (dto.conversationId) {
@@ -330,7 +358,8 @@ export class ChatService {
       });
     }
 
-    const email = dto.customerEmail || customerProfile?.email || user?.email || null;
+    const email =
+      dto.customerEmail || customerProfile?.email || user?.email || null;
     if (!customerProfile && email) {
       customerProfile = await this.prisma.customerProfile.findUnique({
         where: {
@@ -365,7 +394,10 @@ export class ChatService {
     }
 
     if (existingActive) {
-      return ResponseHelper.success(existingActive, 'Active conversation resumed');
+      return ResponseHelper.success(
+        existingActive,
+        'Active conversation resumed',
+      );
     }
 
     // 4. Create new conversation
@@ -374,7 +406,8 @@ export class ChatService {
       customerProfile?.name ||
       user?.name ||
       (email ? email.split('@')[0] : 'Guest Customer');
-    const phone = dto.customerPhone || customerProfile?.phone || user?.phone || null;
+    const phone =
+      dto.customerPhone || customerProfile?.phone || user?.phone || null;
 
     const conversation = await this.prisma.conversation.create({
       data: {
@@ -398,21 +431,21 @@ export class ChatService {
       );
     }
 
-    return ResponseHelper.created(conversation, 'Chat session initialized successfully');
+    return ResponseHelper.created(
+      conversation,
+      'Chat session initialized successfully',
+    );
   }
 
   /**
    * 🏢 Get Owner conversations list with decrypted last message previews & pagination
    */
-  async getOwnerConversations(
-    query: ConversationQueryDto,
-    tenantId?: string,
-  ) {
+  async getOwnerConversations(query: ConversationQueryDto, tenantId?: string) {
     const resolvedTenantId = await this.resolveTenantId(tenantId);
     const { status, search, page = 1, limit = 20 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where: Prisma.ConversationWhereInput = {
       tenantId: resolvedTenantId,
     };
 
@@ -496,7 +529,11 @@ export class ChatService {
       totalUnread,
     };
 
-    return ResponseHelper.paginated(formatted, meta, 'Conversations retrieved successfully');
+    return ResponseHelper.paginated(
+      formatted,
+      meta,
+      'Conversations retrieved successfully',
+    );
   }
 
   /**
@@ -505,8 +542,9 @@ export class ChatService {
   async markAsRead(
     conversationId: string,
     viewerRole: 'OWNER' | 'CUSTOMER',
-    tenantId?: string,
+    _tenantId?: string,
   ) {
+    void _tenantId;
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
     });
@@ -548,8 +586,9 @@ export class ChatService {
   async updateStatus(
     conversationId: string,
     status: string,
-    tenantId?: string,
+    _tenantId?: string,
   ) {
+    void _tenantId;
     const conversation = await this.prisma.conversation.findUnique({
       where: { id: conversationId },
     });
@@ -563,7 +602,10 @@ export class ChatService {
       data: { status },
     });
 
-    return ResponseHelper.success(updated, 'Conversation status updated successfully');
+    return ResponseHelper.success(
+      updated,
+      'Conversation status updated successfully',
+    );
   }
 
   /**
@@ -577,7 +619,9 @@ export class ChatService {
   ) {
     try {
       const truncated =
-        messageText.length > 60 ? `${messageText.slice(0, 57)}...` : messageText;
+        messageText.length > 60
+          ? `${messageText.slice(0, 57)}...`
+          : messageText;
 
       const staffWithUsers = await this.prisma.tenantMember.findMany({
         where: {

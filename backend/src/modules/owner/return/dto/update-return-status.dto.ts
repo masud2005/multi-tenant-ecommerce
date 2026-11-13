@@ -10,8 +10,10 @@ export class UpdateReturnStatusDto {
     description:
       'Updated return status (REQUESTED, APPROVED, REJECTED, IN_TRANSIT, RECEIVED, REFUNDED, EXCHANGED)',
   })
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value,
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
   )
   @IsEnum(ReturnStatus)
   status: ReturnStatus;

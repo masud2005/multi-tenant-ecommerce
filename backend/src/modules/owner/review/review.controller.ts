@@ -29,7 +29,10 @@ import {
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Reviews')
@@ -43,13 +46,18 @@ export class ReviewController {
   // 1. Fetch all store reviews with filters, search, metrics, and pagination
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List all store reviews with ratings, metrics, and filtering' })
-  @ApiResponse({ status: 200, description: 'Store reviews retrieved successfully' })
+  @ApiOperation({
+    summary: 'List all store reviews with ratings, metrics, and filtering',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Store reviews retrieved successfully',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async getReviews(
     @Query() query: OwnerReviewQueryDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -59,12 +67,17 @@ export class ReviewController {
   // 2. Fetch specific review details by ID
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get single review details with product and customer' })
-  @ApiResponse({ status: 200, description: 'Review details retrieved successfully' })
+  @ApiOperation({
+    summary: 'Get single review details with product and customer',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Review details retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async getReviewById(
     @Param('id') id: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -74,13 +87,15 @@ export class ReviewController {
   // 3. Post or update official store reply to customer review
   @Post(':id/reply')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Add or update public store reply to a customer review' })
+  @ApiOperation({
+    summary: 'Add or update public store reply to a customer review',
+  })
   @ApiResponse({ status: 200, description: 'Admin reply posted successfully' })
   @ApiResponse({ status: 404, description: 'Review not found' })
   async replyToReview(
     @Param('id') id: string,
     @Body() dto: ReplyReviewDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -94,7 +109,7 @@ export class ReviewController {
   @ApiResponse({ status: 201, description: 'Review created successfully' })
   async createReview(
     @Body() dto: CreateOwnerReviewDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -105,11 +120,14 @@ export class ReviewController {
   @Patch(':id/status')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update review moderation status' })
-  @ApiResponse({ status: 200, description: 'Review status updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Review status updated successfully',
+  })
   async updateStatus(
     @Param('id') id: string,
     @Body() dto: UpdateReviewStatusDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -124,7 +142,7 @@ export class ReviewController {
   async updateReview(
     @Param('id') id: string,
     @Body() dto: UpdateOwnerReviewDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -138,7 +156,7 @@ export class ReviewController {
   @ApiResponse({ status: 200, description: 'Review deleted successfully' })
   async deleteReview(
     @Param('id') id: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;

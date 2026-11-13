@@ -3,7 +3,8 @@ import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class DeleteChatAttachmentDto {
   @ApiProperty({
-    description: 'Cloudinary public_id or full secure URL of the pending attachment',
+    description:
+      'Cloudinary public_id or full secure URL of the pending attachment',
   })
   @IsString()
   @IsNotEmpty()

@@ -9,7 +9,8 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { CollectionType } from '../../../../../prisma/generated/client';
+import { CollectionType, Prisma } from '../../../../../prisma/generated/client';
+import { toInputJson, parseJson } from '../../../../common/helpers/json.helper';
 
 export class CreateCollectionDto {
   @ApiProperty({
@@ -45,7 +46,7 @@ export class CreateCollectionDto {
     description: 'Collection cover image file to upload',
   })
   @IsOptional()
-  image?: any;
+  image?: string | Express.Multer.File;
 
   @ApiProperty({
     example: 'Eid Collection 2026 | Tanti Fashion',
@@ -80,18 +81,18 @@ export class CreateCollectionDto {
     required: false,
     description: 'Automated rules for dynamic collections (JSON)',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'string') {
       try {
-        return JSON.parse(value);
+        return toInputJson(parseJson(value));
       } catch {
-        return value;
+        return toInputJson(value);
       }
     }
-    return value;
+    return toInputJson(value);
   })
   @IsOptional()
-  rule?: any;
+  rule?: Prisma.InputJsonValue;
 
   @ApiProperty({
     example: true,
@@ -99,7 +100,7 @@ export class CreateCollectionDto {
     default: true,
     description: 'Whether the collection is publicly visible',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -114,7 +115,7 @@ export class CreateCollectionDto {
     default: false,
     description: 'Whether to highlight in featured sections on home page',
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;

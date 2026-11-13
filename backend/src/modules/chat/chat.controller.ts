@@ -32,7 +32,10 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../prisma/generated/client';
 
 @ApiTags('Live Chat & Messages')
@@ -49,10 +52,12 @@ export class ChatController {
   @Post('customer/chat/init')
   @HttpCode(HttpStatus.OK)
   @UseGuards(OptionalJwtAuthGuard)
-  @ApiOperation({ summary: 'Initialize or resume customer live chat conversation' })
+  @ApiOperation({
+    summary: 'Initialize or resume customer live chat conversation',
+  })
   async initCustomerChat(
     @Body() dto: StartConversationDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     return this.chatService.initConversation(dto, user, tenantHeader);
@@ -63,12 +68,18 @@ export class ChatController {
    */
   @Get('customer/chat/conversations/:id/messages')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get decrypted message history for customer storefront widget' })
+  @ApiOperation({
+    summary: 'Get decrypted message history for customer storefront widget',
+  })
   async getCustomerChatHistory(
     @Param('id') conversationId: string,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
-    return this.chatService.getChatHistory(conversationId, 'CUSTOMER', tenantHeader);
+    return this.chatService.getChatHistory(
+      conversationId,
+      'CUSTOMER',
+      tenantHeader,
+    );
   }
 
   /**
@@ -81,7 +92,7 @@ export class ChatController {
   async sendCustomerMessage(
     @Param('id') conversationId: string,
     @Body() dto: SendMessageDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const customerName = dto.senderName || user?.name || 'Customer';
@@ -113,7 +124,7 @@ export class ChatController {
   @ApiOperation({ summary: 'Upload an image or PDF for live chat' })
   async uploadCustomerChatFile(
     @UploadedFile() file: Express.Multer.File,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     return this.chatService.uploadAttachment(
@@ -146,7 +157,11 @@ export class ChatController {
     @Param('id') conversationId: string,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
-    return this.chatService.markAsRead(conversationId, 'CUSTOMER', tenantHeader);
+    return this.chatService.markAsRead(
+      conversationId,
+      'CUSTOMER',
+      tenantHeader,
+    );
   }
 
   /**
@@ -157,10 +172,12 @@ export class ChatController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
-  @ApiOperation({ summary: 'Get owner conversations list with decrypted last messages' })
+  @ApiOperation({
+    summary: 'Get owner conversations list with decrypted last messages',
+  })
   async getOwnerConversations(
     @Query() query: ConversationQueryDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = user?.tenantId || tenantHeader;
@@ -175,10 +192,12 @@ export class ChatController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
-  @ApiOperation({ summary: 'Get decrypted message history for a conversation (Owner/Staff)' })
+  @ApiOperation({
+    summary: 'Get decrypted message history for a conversation (Owner/Staff)',
+  })
   async getOwnerChatHistory(
     @Param('id') conversationId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = user?.tenantId || tenantHeader;
@@ -197,12 +216,13 @@ export class ChatController {
   async sendOwnerMessage(
     @Param('id') conversationId: string,
     @Body() dto: SendMessageDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = user?.tenantId || tenantHeader;
     const senderRole = user?.isOwner ? 'OWNER' : 'STAFF';
-    const senderName = user?.name || (user?.isOwner ? 'Store Owner' : 'Store Staff');
+    const senderName =
+      user?.name || (user?.isOwner ? 'Store Owner' : 'Store Staff');
     const result = await this.chatService.saveMessage(
       conversationId,
       dto,
@@ -224,7 +244,7 @@ export class ChatController {
   @ApiOperation({ summary: 'Mark conversation as read by owner' })
   async markOwnerRead(
     @Param('id') conversationId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = user?.tenantId || tenantHeader;
@@ -248,10 +268,12 @@ export class ChatController {
       required: ['file'],
     },
   })
-  @ApiOperation({ summary: 'Upload an image or PDF for live chat (owner/staff)' })
+  @ApiOperation({
+    summary: 'Upload an image or PDF for live chat (owner/staff)',
+  })
   async uploadOwnerChatFile(
     @UploadedFile() file: Express.Multer.File,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     return this.chatService.uploadAttachment(
@@ -288,7 +310,7 @@ export class ChatController {
   async updateOwnerConversationStatus(
     @Param('id') conversationId: string,
     @Body('status') status: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = user?.tenantId || tenantHeader;

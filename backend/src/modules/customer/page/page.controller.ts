@@ -17,12 +17,19 @@ export class CustomerPageController {
   @Get(':slug')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get public CMS page content by slug (e.g. about)' })
-  @ApiParam({ name: 'slug', description: 'Page slug, e.g. about', example: 'about' })
-  @ApiResponse({ status: 200, description: 'Page content retrieved successfully' })
+  @ApiParam({
+    name: 'slug',
+    description: 'Page slug, e.g. about',
+    example: 'about',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Page content retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Page not found' })
   async getPage(
     @Param('slug') slug: string,
-    @Headers('x-tenant-id') tenantHeader?: string
+    @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     return this.pageService.getPageBySlug(slug, tenantHeader);
   }

@@ -11,7 +11,8 @@ export class MilestoneDto {
   year: string;
 
   @ApiProperty({
-    example: 'Started with 40 block-printed kurtas made with three families in Tangail.',
+    example:
+      'Started with 40 block-printed kurtas made with three families in Tangail.',
     description: 'Description of the milestone',
   })
   @IsString()

@@ -7,10 +7,10 @@ import { ConfigService } from '@nestjs/config';
 import { OtpType } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import {
-    NotFoundException,
-    OtpInvalidException,
-    ServiceUnavailableException,
-    TooManyAttemptsException,
+  NotFoundException,
+  OtpInvalidException,
+  ServiceUnavailableException,
+  TooManyAttemptsException,
 } from '../../../common/exceptions/business.exception';
 import { generateOtpCode } from '../utils/otp.util';
 import { EmailService } from '@/shared/mail/email-service';
@@ -21,168 +21,165 @@ import type { AuthRequestMeta } from '../types/auth-meta';
 
 @Injectable()
 export class OtpService {
-    constructor(
-        private readonly prisma: PrismaService,
-        private readonly emailService: EmailService,
-        private readonly jwtService: JwtService,
-        private readonly configService: ConfigService,
-        private readonly redisService: RedisService,
-        private readonly sessionService: SessionService,
-    ) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
+    private readonly sessionService: SessionService,
+  ) {}
 
-    async sendOtp(
-        dto: SendOtpDto,
-        isResend: boolean = false,
-    ) {
-        const user = await this.prisma.user.findUnique({
-            where: { email: dto.email },
-        });
-        if (!user) {
-            throw new NotFoundException('User');
-        }
-
-        const code = generateOtpCode();
-        const expiresAt = new Date();
-        expiresAt.setMinutes(expiresAt.getMinutes() + 10);
-
-        await this.prisma.oTP.updateMany({
-            where: { userId: user.id, type: dto.type, isUsed: false },
-            data: { isUsed: true },
-        });
-
-        await this.prisma.oTP.create({
-            data: {
-                userId: user.id,
-                code,
-                type: dto.type,
-                expiresAt,
-            },
-        });
-
-        const emailContent = getOtpEmailContent(code, dto.type, isResend);
-        const isSent = await this.emailService.sendEmail(
-            user.email!,
-            emailContent.subject,
-            emailContent.html,
-        );
-        if (!isSent) {
-            throw new ServiceUnavailableException(
-                'Failed to send email. Please try again.',
-            );
-        }
-
-        return ResponseHelper.success(null, 'OTP sent successfully');
+  async sendOtp(dto: SendOtpDto, isResend: boolean = false) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (!user) {
+      throw new NotFoundException('User');
     }
 
-    async resendOtp(dto: { email: string; type: OtpType }) {
-        return this.sendOtp(dto, true);
+    const code = generateOtpCode();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    await this.prisma.oTP.updateMany({
+      where: { userId: user.id, type: dto.type, isUsed: false },
+      data: { isUsed: true },
+    });
+
+    await this.prisma.oTP.create({
+      data: {
+        userId: user.id,
+        code,
+        type: dto.type,
+        expiresAt,
+      },
+    });
+
+    const emailContent = getOtpEmailContent(code, dto.type, isResend);
+    const isSent = await this.emailService.sendEmail(
+      user.email!,
+      emailContent.subject,
+      emailContent.html,
+    );
+    if (!isSent) {
+      throw new ServiceUnavailableException(
+        'Failed to send email. Please try again.',
+      );
     }
 
-    async verifyOtp(dto: VerifyOtpDto, meta?: AuthRequestMeta) {
-        const user = await this.prisma.user.findUnique({
-            where: { email: dto.email },
-        });
-        if (!user) {
-            throw new NotFoundException('User');
-        }
+    return ResponseHelper.success(null, 'OTP sent successfully');
+  }
 
-        const otp = await this.prisma.oTP.findFirst({
-            where: {
-                userId: user.id,
-                type: dto.type,
-                isUsed: false,
-                expiresAt: { gt: new Date() },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+  async resendOtp(dto: { email: string; type: OtpType }) {
+    return this.sendOtp(dto, true);
+  }
 
-        if (!otp) {
-            throw new OtpInvalidException();
-        }
+  async verifyOtp(dto: VerifyOtpDto, meta?: AuthRequestMeta) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (!user) {
+      throw new NotFoundException('User');
+    }
 
-        const attemptsKey = `otp_attempts:${otp.id}`;
-        const currentAttempts = await this.redisService.get(attemptsKey);
-        
-        if (currentAttempts && parseInt(currentAttempts) >= 5) {
-            throw new TooManyAttemptsException();
-        }
+    const otp = await this.prisma.oTP.findFirst({
+      where: {
+        userId: user.id,
+        type: dto.type,
+        isUsed: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
 
-        if (otp.code !== dto.code) {
-            const newAttempts = await this.redisService.incr(attemptsKey);
-            if (newAttempts === 1) {
-                await this.redisService.expire(attemptsKey, 600); // Expires after 10 minutes (max validity of OTP)
-            }
-            throw new OtpInvalidException();
-        }
+    if (!otp) {
+      throw new OtpInvalidException();
+    }
 
-        await this.redisService.del(attemptsKey);
+    const attemptsKey = `otp_attempts:${otp.id}`;
+    const currentAttempts = await this.redisService.get(attemptsKey);
 
-        await this.prisma.oTP.update({
-            where: { id: otp.id },
-            data: { isUsed: true },
-        });
+    if (currentAttempts && parseInt(currentAttempts) >= 5) {
+      throw new TooManyAttemptsException();
+    }
 
-        if (dto.type === OtpType.ACCOUNT_VERIFY) {
-            const updatedUser = await this.prisma.user.update({
-                where: { id: user.id },
-                data: { status: 'ACTIVE' },
-            });
+    if (otp.code !== dto.code) {
+      const newAttempts = await this.redisService.incr(attemptsKey);
+      if (newAttempts === 1) {
+        await this.redisService.expire(attemptsKey, 600); // Expires after 10 minutes (max validity of OTP)
+      }
+      throw new OtpInvalidException();
+    }
 
-            if ((updatedUser.role as any) === 'CUSTOMER') {
-                try {
-                    const defaultTenant = await this.prisma.tenant.findFirst({
-                        where: { deletedAt: null },
-                        orderBy: { createdAt: 'asc' },
-                        select: { id: true },
-                    });
-                    if (defaultTenant) {
-                        await this.prisma.customerLoginLog.create({
-                            data: {
-                                tenantId: defaultTenant.id,
-                                userId: updatedUser.id,
-                                email: updatedUser.email,
-                            },
-                        });
-                    }
-                } catch {
-                    // Non-blocking
-                }
-            }
+    await this.redisService.del(attemptsKey);
 
-            const payload = {
-                sub: updatedUser.id,
+    await this.prisma.oTP.update({
+      where: { id: otp.id },
+      data: { isUsed: true },
+    });
+
+    if (dto.type === OtpType.ACCOUNT_VERIFY) {
+      const updatedUser = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'ACTIVE' },
+      });
+
+      if (String(updatedUser.role) === 'CUSTOMER') {
+        try {
+          const defaultTenant = await this.prisma.tenant.findFirst({
+            where: { deletedAt: null },
+            orderBy: { createdAt: 'asc' },
+            select: { id: true },
+          });
+          if (defaultTenant) {
+            await this.prisma.customerLoginLog.create({
+              data: {
+                tenantId: defaultTenant.id,
+                userId: updatedUser.id,
                 email: updatedUser.email,
-                name: updatedUser.name || 'User',
-                role: updatedUser.role,
-            };
-            const { accessToken, refreshToken } =
-                await this.sessionService.issueTokens(payload, meta);
-
-            return ResponseHelper.success(
-                {
-                    accessToken,
-                    refreshToken,
-                    user: {
-                        id: updatedUser.id,
-                        name: updatedUser.name || 'User',
-                        email: updatedUser.email,
-                        phone: updatedUser.phone || undefined,
-                        role: updatedUser.role,
-                    },
-                },
-                'Account verified successfully. You are now logged in.',
-            );
-        } else if (dto.type === OtpType.PASSWORD_RESET) {
-            const resetToken = this.jwtService.sign(
-                { sub: user.id, purpose: 'reset-password' },
-                { expiresIn: '15m' },
-            );
-            return ResponseHelper.success(
-                { resetToken },
-                'OTP verified. Proceed to reset password.',
-            );
+              },
+            });
+          }
+        } catch {
+          // Non-blocking
         }
+      }
 
-        return ResponseHelper.success(null, 'OTP verified successfully');
+      const payload = {
+        sub: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name || 'User',
+        role: updatedUser.role,
+      };
+      const { accessToken, refreshToken } =
+        await this.sessionService.issueTokens(payload, meta);
+
+      return ResponseHelper.success(
+        {
+          accessToken,
+          refreshToken,
+          user: {
+            id: updatedUser.id,
+            name: updatedUser.name || 'User',
+            email: updatedUser.email,
+            phone: updatedUser.phone || undefined,
+            role: updatedUser.role,
+          },
+        },
+        'Account verified successfully. You are now logged in.',
+      );
+    } else if (dto.type === OtpType.PASSWORD_RESET) {
+      const resetToken = this.jwtService.sign(
+        { sub: user.id, purpose: 'reset-password' },
+        { expiresIn: '15m' },
+      );
+      return ResponseHelper.success(
+        { resetToken },
+        'OTP verified. Proceed to reset password.',
+      );
     }
+
+    return ResponseHelper.success(null, 'OTP verified successfully');
+  }
 }

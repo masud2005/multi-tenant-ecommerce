@@ -30,7 +30,10 @@ import { UpdateMediaDto } from './dto/update-media.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Media Library')
@@ -43,11 +46,16 @@ export class MediaController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List store media assets with filtering and pagination' })
-  @ApiResponse({ status: 200, description: 'Media assets retrieved successfully' })
+  @ApiOperation({
+    summary: 'List store media assets with filtering and pagination',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Media assets retrieved successfully',
+  })
   async getMedia(
     @Query() query: QueryMediaDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -80,7 +88,7 @@ export class MediaController {
   async uploadMediaFile(
     @UploadedFile() file: Express.Multer.File,
     @Body('alt') alt?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -93,7 +101,7 @@ export class MediaController {
   @ApiResponse({ status: 201, description: 'Media asset created successfully' })
   async createMedia(
     @Body() dto: CreateMediaDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -107,7 +115,7 @@ export class MediaController {
   async updateMedia(
     @Param('id') id: string,
     @Body() dto: UpdateMediaDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -120,11 +128,10 @@ export class MediaController {
   @ApiResponse({ status: 200, description: 'Media asset deleted successfully' })
   async deleteMedia(
     @Param('id') id: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
     return this.mediaService.deleteMedia(id, tenantId);
   }
 }
-

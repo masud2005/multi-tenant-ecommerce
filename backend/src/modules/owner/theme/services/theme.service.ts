@@ -1,3 +1,4 @@
+import type { AuthUser } from '../../../../common/decorators/current-user.decorator';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { ResponseHelper } from '../../../../common/helpers/response.helper';
@@ -11,11 +12,48 @@ import { ReorderSectionsDto } from '../dto/reorder-sections.dto';
 import { CreateSectionDto } from '../dto/create-section.dto';
 import { UpdateSectionDto } from '../dto/update-section.dto';
 import { PublishThemeDto } from '../dto/publish-theme.dto';
-import { ThemeStatus, TenantStatus } from '../../../../../prisma/generated/client';
+import { toInputJson } from '../../../../common/helpers/json.helper';
+import {
+  ThemeStatus,
+  TenantStatus,
+  Prisma,
+} from '../../../../../prisma/generated/client';
 import {
   DEFAULT_THEME_TOKENS,
   DEFAULT_LANDING_SECTIONS,
 } from '../constants/theme.constants';
+
+interface ThemeSnapshotToken {
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  canvasColor?: string;
+  surfaceColor?: string;
+  inkColor?: string;
+  fontHeading?: string;
+  fontBody?: string;
+  borderRadius?: string;
+  cardStyle?: string;
+  customCss?: string;
+}
+
+interface ThemeSnapshotSection {
+  sectionType: string;
+  label: string;
+  orderIndex?: number;
+  isVisible?: boolean;
+  settings?: Prisma.InputJsonValue;
+}
+
+interface ThemeSnapshot {
+  tokens?: ThemeSnapshotToken;
+  sections?: ThemeSnapshotSection[];
+}
+
+function readThemeSnapshot(value: Prisma.JsonValue): ThemeSnapshot | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as ThemeSnapshot;
+}
 
 @Injectable()
 export class ThemeService {
@@ -24,9 +62,11 @@ export class ThemeService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Validates that tenantId is present from current session
-  private requireTenantId(tenantId: string): string {
+  private requireTenantId(tenantId?: string): string {
     if (!tenantId) {
-      throw new ConflictException('Tenant ID could not be resolved from the current session.');
+      throw new ConflictException(
+        'Tenant ID could not be resolved from the current session.',
+      );
     }
     return tenantId;
   }
@@ -47,9 +87,10 @@ export class ThemeService {
   // ─── Internal helpers ────────────────────────────────────────────────────────
 
   // Ensures tenant always has a live theme with default section layout
-  async ensureTenantLiveTheme(tenantId: string) {
+  async ensureTenantLiveTheme(tenantId?: string) {
+    const tid = this.requireTenantId(tenantId);
     let liveTheme = await this.prisma.tenantTheme.findFirst({
-      where: { tenantId, isLive: true },
+      where: { tenantId: tid, isLive: true },
       include: {
         sections: { orderBy: { orderIndex: 'asc' } },
         versions: { orderBy: { createdAt: 'desc' }, take: 10 },
@@ -59,7 +100,7 @@ export class ThemeService {
     if (!liveTheme) {
       liveTheme = await this.prisma.tenantTheme.create({
         data: {
-          tenantId,
+          tenantId: tid,
           name: 'Store Theme',
           status: ThemeStatus.PUBLISHED,
           isLive: true,
@@ -96,7 +137,7 @@ export class ThemeService {
   // ─── Theme CRUD ──────────────────────────────────────────────────────────────
 
   // Returns live theme and all themes for owner tenant
-  async findAll(tenantId: string) {
+  async findAll(tenantId?: string) {
     const tid = this.requireTenantId(tenantId);
     const liveTheme = await this.ensureTenantLiveTheme(tid);
 
@@ -164,7 +205,7 @@ export class ThemeService {
   }
 
   // Returns single theme by ID scoped to tenant
-  async findOne(id: string, tenantId: string) {
+  async findOne(id: string, tenantId?: string) {
     const tid = this.requireTenantId(tenantId);
 
     const theme = await this.prisma.tenantTheme.findFirst({
@@ -183,7 +224,7 @@ export class ThemeService {
   }
 
   // Creates a new draft theme for tenant
-  async create(dto: CreateThemeDto, tenantId: string) {
+  async create(dto: CreateThemeDto, tenantId?: string) {
     const tid = this.requireTenantId(tenantId);
 
     const createdTheme = await this.prisma.tenantTheme.create({
@@ -193,7 +234,8 @@ export class ThemeService {
         status: ThemeStatus.DRAFT,
         isLive: false,
         primaryColor: dto.primaryColor || DEFAULT_THEME_TOKENS.primaryColor,
-        secondaryColor: dto.secondaryColor || DEFAULT_THEME_TOKENS.secondaryColor,
+        secondaryColor:
+          dto.secondaryColor || DEFAULT_THEME_TOKENS.secondaryColor,
         accentColor: dto.accentColor || DEFAULT_THEME_TOKENS.accentColor,
         canvasColor: dto.canvasColor || DEFAULT_THEME_TOKENS.canvasColor,
         surfaceColor: dto.surfaceColor || DEFAULT_THEME_TOKENS.surfaceColor,
@@ -221,7 +263,7 @@ export class ThemeService {
   }
 
   // Saves draft changes to theme tokens and brand settings
-  async update(id: string, dto: UpdateThemeDto, tenantId: string) {
+  async update(id: string, dto: UpdateThemeDto, tenantId?: string) {
     const tid = this.requireTenantId(tenantId);
 
     const theme = await this.prisma.tenantTheme.findFirst({
@@ -243,7 +285,12 @@ export class ThemeService {
   }
 
   // Publishes theme draft live and snapshots version
-  async publish(id: string, dto: PublishThemeDto, tenantId: string, user?: any) {
+  async publish(
+    id: string,
+    dto: PublishThemeDto,
+    tenantId?: string,
+    user?: AuthUser,
+  ) {
     const tid = this.requireTenantId(tenantId);
 
     const targetTheme = await this.prisma.tenantTheme.findFirst({
@@ -276,7 +323,9 @@ export class ThemeService {
       });
 
       // 3. Count past versions for numbering
-      const versionCount = await tx.themeVersion.count({ where: { themeId: id } });
+      const versionCount = await tx.themeVersion.count({
+        where: { themeId: id },
+      });
       const nextVersionTag = `v1.${versionCount + 1}`;
 
       const snapshotData = {
@@ -301,7 +350,9 @@ export class ThemeService {
         data: {
           themeId: id,
           version: nextVersionTag,
-          label: dto?.label || `Published by ${user?.name || user?.email || 'Store Owner'}`,
+          label:
+            dto?.label ||
+            `Published by ${user?.name || user?.email || 'Store Owner'}`,
           snapshot: snapshotData,
           publishedBy: user?.name || user?.email || 'Store Owner',
         },
@@ -321,14 +372,21 @@ export class ThemeService {
         },
       });
 
-      return ResponseHelper.success(published, 'Theme published live to storefront');
+      return ResponseHelper.success(
+        published,
+        'Theme published live to storefront',
+      );
     });
   }
 
   // ─── Section Management ───────────────────────────────────────────────────────
 
   // Batch-reorders sections and toggles visibility
-  async reorderSections(themeId: string, dto: ReorderSectionsDto, tenantId: string) {
+  async reorderSections(
+    themeId: string,
+    dto: ReorderSectionsDto,
+    tenantId?: string,
+  ) {
     const tid = this.requireTenantId(tenantId);
 
     const theme = await this.prisma.tenantTheme.findFirst({
@@ -344,10 +402,12 @@ export class ThemeService {
           where: { id: item.id, themeId },
           data: {
             orderIndex: item.orderIndex,
-            ...(item.isVisible !== undefined ? { isVisible: item.isVisible } : {}),
+            ...(item.isVisible !== undefined
+              ? { isVisible: item.isVisible }
+              : {}),
           },
-        })
-      )
+        }),
+      ),
     );
 
     const updatedSections = await this.prisma.themeSection.findMany({
@@ -355,11 +415,14 @@ export class ThemeService {
       orderBy: { orderIndex: 'asc' },
     });
 
-    return ResponseHelper.success(updatedSections, 'Sections reordered successfully');
+    return ResponseHelper.success(
+      updatedSections,
+      'Sections reordered successfully',
+    );
   }
 
   // Adds a new section to theme
-  async addSection(themeId: string, dto: CreateSectionDto, tenantId: string) {
+  async addSection(themeId: string, dto: CreateSectionDto, tenantId?: string) {
     const tid = this.requireTenantId(tenantId);
 
     const theme = await this.prisma.tenantTheme.findFirst({
@@ -377,7 +440,7 @@ export class ThemeService {
         label: dto.label,
         orderIndex: dto.orderIndex ?? count,
         isVisible: dto.isVisible ?? true,
-        settings: dto.settings,
+        settings: toInputJson(dto.settings),
       },
     });
 
@@ -389,7 +452,7 @@ export class ThemeService {
     themeId: string,
     sectionId: string,
     dto: UpdateSectionDto,
-    tenantId: string,
+    tenantId?: string,
   ) {
     const tid = this.requireTenantId(tenantId);
 
@@ -402,14 +465,18 @@ export class ThemeService {
 
     const updated = await this.prisma.themeSection.update({
       where: { id: sectionId },
-      data: dto,
+      data: {
+        ...dto,
+        settings:
+          dto.settings === undefined ? undefined : toInputJson(dto.settings),
+      },
     });
 
     return ResponseHelper.success(updated, 'Section updated successfully');
   }
 
   // Removes a section from theme permanently
-  async deleteSection(themeId: string, sectionId: string, tenantId: string) {
+  async deleteSection(themeId: string, sectionId: string, tenantId?: string) {
     const tid = this.requireTenantId(tenantId);
 
     const section = await this.prisma.themeSection.findFirst({
@@ -426,7 +493,7 @@ export class ThemeService {
   // ─── Version History ──────────────────────────────────────────────────────────
 
   // Restores theme tokens and section layout from past version snapshot
-  async restoreVersion(themeId: string, versionId: string, tenantId: string) {
+  async restoreVersion(themeId: string, versionId: string, tenantId?: string) {
     const tid = this.requireTenantId(tenantId);
 
     const version = await this.prisma.themeVersion.findFirst({
@@ -436,8 +503,9 @@ export class ThemeService {
       throw new NotFoundException('ThemeVersion');
     }
 
-    const snapshot = version.snapshot as any;
-    if (!snapshot || !snapshot.tokens) {
+    const snapshot = readThemeSnapshot(version.snapshot);
+    const tokens = snapshot?.tokens;
+    if (!tokens) {
       throw new BadRequestException('Corrupted or invalid snapshot data');
     }
 
@@ -446,17 +514,17 @@ export class ThemeService {
       await tx.tenantTheme.update({
         where: { id: themeId },
         data: {
-          primaryColor: snapshot.tokens.primaryColor,
-          secondaryColor: snapshot.tokens.secondaryColor,
-          accentColor: snapshot.tokens.accentColor,
-          canvasColor: snapshot.tokens.canvasColor,
-          surfaceColor: snapshot.tokens.surfaceColor,
-          inkColor: snapshot.tokens.inkColor,
-          fontHeading: snapshot.tokens.fontHeading,
-          fontBody: snapshot.tokens.fontBody,
-          borderRadius: snapshot.tokens.borderRadius,
-          cardStyle: snapshot.tokens.cardStyle,
-          customCss: snapshot.tokens.customCss,
+          primaryColor: tokens.primaryColor,
+          secondaryColor: tokens.secondaryColor,
+          accentColor: tokens.accentColor,
+          canvasColor: tokens.canvasColor,
+          surfaceColor: tokens.surfaceColor,
+          inkColor: tokens.inkColor,
+          fontHeading: tokens.fontHeading,
+          fontBody: tokens.fontBody,
+          borderRadius: tokens.borderRadius,
+          cardStyle: tokens.cardStyle,
+          customCss: tokens.customCss,
         },
       });
 
@@ -464,13 +532,13 @@ export class ThemeService {
       if (Array.isArray(snapshot.sections) && snapshot.sections.length > 0) {
         await tx.themeSection.deleteMany({ where: { themeId } });
         await tx.themeSection.createMany({
-          data: snapshot.sections.map((s: any, idx: number) => ({
+          data: snapshot.sections.map((section, idx: number) => ({
             themeId,
-            sectionType: s.sectionType,
-            label: s.label,
-            orderIndex: s.orderIndex ?? idx,
-            isVisible: s.isVisible !== false,
-            settings: s.settings,
+            sectionType: section.sectionType,
+            label: section.label,
+            orderIndex: section.orderIndex ?? idx,
+            isVisible: section.isVisible !== false,
+            settings: section.settings,
           })),
         });
       }
@@ -483,7 +551,10 @@ export class ThemeService {
         },
       });
 
-      return ResponseHelper.success(freshTheme, `Rolled back to ${version.version}`);
+      return ResponseHelper.success(
+        freshTheme,
+        `Rolled back to ${version.version}`,
+      );
     });
   }
 }

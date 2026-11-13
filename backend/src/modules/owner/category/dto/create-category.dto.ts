@@ -41,7 +41,7 @@ export class CreateCategoryDto {
     description: 'Category image file to upload',
   })
   @IsOptional()
-  image?: any;
+  image?: string | Express.Multer.File;
 
   @ApiProperty({
     example: 'Best Clothing Online Store',
@@ -73,7 +73,7 @@ export class CreateCategoryDto {
     required: false,
     default: true,
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;
@@ -87,7 +87,7 @@ export class CreateCategoryDto {
     required: false,
     default: true,
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;

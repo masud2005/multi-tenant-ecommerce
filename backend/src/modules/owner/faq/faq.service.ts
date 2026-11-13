@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateFaqDto } from './dto/create-faq.dto';
@@ -18,7 +19,9 @@ export class OwnerFaqService {
   // 1. Create a single FAQ item
   async create(dto: CreateFaqDto, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user.',
+      );
     }
 
     const tenant = await this.prisma.tenant.findUnique({
@@ -38,14 +41,18 @@ export class OwnerFaqService {
       },
     });
 
-    this.logger.log(`Created FAQ item [${created.id}] for tenant [${tenantId}]`);
+    this.logger.log(
+      `Created FAQ item [${created.id}] for tenant [${tenantId}]`,
+    );
     return ResponseHelper.created(created, 'FAQ item created successfully');
   }
 
   // 2. Batch save / replace FAQ items
   async batchSave(dto: BatchSaveFaqDto, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user.',
+      );
     }
 
     const tenant = await this.prisma.tenant.findUnique({
@@ -80,17 +87,21 @@ export class OwnerFaqService {
       });
     });
 
-    this.logger.log(`Batch saved ${result.length} FAQ items for tenant [${tenantId}]`);
+    this.logger.log(
+      `Batch saved ${result.length} FAQ items for tenant [${tenantId}]`,
+    );
     return ResponseHelper.success(result, 'FAQ items saved successfully');
   }
 
   // 3. Get all FAQ items for tenant
   async findAll(tenantId?: string, category?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user.',
+      );
     }
 
-    const where: any = { tenantId };
+    const where: Prisma.FaqItemWhereInput = { tenantId };
     if (category) {
       where.category = { equals: category, mode: 'insensitive' };
     }
@@ -106,7 +117,9 @@ export class OwnerFaqService {
   // 4. Get single FAQ item
   async findOne(id: string, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user.',
+      );
     }
 
     const item = await this.prisma.faqItem.findFirst({
@@ -123,7 +136,9 @@ export class OwnerFaqService {
   // 5. Update single FAQ item
   async update(id: string, dto: UpdateFaqDto, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user.',
+      );
     }
 
     const existing = await this.prisma.faqItem.findFirst({
@@ -151,7 +166,9 @@ export class OwnerFaqService {
   // 6. Delete FAQ item
   async remove(id: string, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user.',
+      );
     }
 
     const existing = await this.prisma.faqItem.findFirst({

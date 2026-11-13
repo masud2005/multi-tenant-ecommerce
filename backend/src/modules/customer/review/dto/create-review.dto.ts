@@ -25,7 +25,9 @@ export class CreateReviewDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Author name is required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   author: string;
 
   @ApiProperty({
@@ -45,16 +47,21 @@ export class CreateReviewDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   title?: string;
 
   @ApiProperty({
     description: 'Detailed review comments and feedback',
-    example: 'The fabric is pure cotton and the Jamdani motifs are finely woven. Truly authentic craftsmanship.',
+    example:
+      'The fabric is pure cotton and the Jamdani motifs are finely woven. Truly authentic craftsmanship.',
   })
   @IsString()
   @IsNotEmpty({ message: 'Review body is required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   body: string;
 
   @ApiPropertyOptional({
@@ -73,7 +80,9 @@ export class CreateReviewDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   size?: string;
 
   @ApiPropertyOptional({

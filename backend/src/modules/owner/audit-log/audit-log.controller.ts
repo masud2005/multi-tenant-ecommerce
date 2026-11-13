@@ -18,7 +18,10 @@ import { QueryAuditLogDto } from './dto/query-audit-log.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Audit Logs')
@@ -31,17 +34,21 @@ export class AuditLogController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'List store audit logs with filtering and pagination' })
-  @ApiResponse({ status: 200, description: 'Audit logs retrieved successfully' })
+  @ApiOperation({
+    summary: 'List store audit logs with filtering and pagination',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Audit logs retrieved successfully',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async getAuditLogs(
     @Query() query: QueryAuditLogDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
     return this.auditLogService.getAuditLogs(query, tenantId);
   }
 }
-

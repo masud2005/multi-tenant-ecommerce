@@ -1,13 +1,11 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
   QueryInventoryDto,
   InventoryStockFilter,
 } from './dto/query-inventory.dto';
-import {
-  AdjustStockDto,
-  StockAdjustmentType,
-} from './dto/adjust-stock.dto';
+import { AdjustStockDto, StockAdjustmentType } from './dto/adjust-stock.dto';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import {
   ConflictException,
@@ -21,7 +19,9 @@ export class InventoryService {
   // Fetch inventory stock overview and dashboard metrics
   async getOverview(query?: QueryInventoryDto, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // 1. Tenant validation
@@ -33,24 +33,25 @@ export class InventoryService {
     }
 
     // 2. Build where filter conditions
-    const where: any = {
+    const product: Prisma.ProductWhereInput = {
+      tenantId,
       deletedAt: null,
-      product: {
-        tenantId,
-        deletedAt: null,
-      },
+    };
+    const where: Prisma.ProductVariantWhereInput = {
+      deletedAt: null,
+      product,
     };
 
     // ক্যাটাগরি ফিল্টার
     if (query?.category && query.category !== 'all') {
-      where.product.category = {
+      product.category = {
         OR: [{ id: query.category }, { slug: query.category }],
       };
     }
 
     // ব্র‍্যান্ড ফিল্টার
     if (query?.brand && query.brand !== 'all') {
-      where.product.brand = {
+      product.brand = {
         OR: [{ id: query.brand }, { slug: query.brand }],
       };
     }
@@ -80,7 +81,9 @@ export class InventoryService {
 
     // সর্টিং ডিরেকশন
     const sortOrder = query?.sortOrder === 'asc' ? 'asc' : 'desc';
-    let orderBy: any = { createdAt: sortOrder };
+    let orderBy: Prisma.ProductVariantOrderByWithRelationInput = {
+      createdAt: sortOrder,
+    };
 
     if (query?.sortBy === 'stock') {
       orderBy = { stock: sortOrder };
@@ -241,7 +244,9 @@ export class InventoryService {
         id: m.id,
         at: m.createdAt,
         sku: m.variant?.sku || m.variantId,
-        product: variantLabel ? `${productTitle} · ${variantLabel}` : productTitle,
+        product: variantLabel
+          ? `${productTitle} · ${variantLabel}`
+          : productTitle,
         change: m.change,
         stockBefore: m.stockBefore,
         stockAfter: m.stockAfter,

@@ -3,7 +3,10 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class QueryAuditLogDto {
-  @ApiPropertyOptional({ description: 'Filter by category (e.g. Auth, Order, Product, Staff, Settings)' })
+  @ApiPropertyOptional({
+    description:
+      'Filter by category (e.g. Auth, Order, Product, Staff, Settings)',
+  })
   @IsOptional()
   @IsString()
   category?: string;
@@ -32,4 +35,3 @@ export class QueryAuditLogDto {
   @Min(1)
   limit?: number = 20;
 }
-

@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
@@ -37,7 +38,9 @@ export class DiscountService {
   // 1. Create a new discount / coupon
   async create(dto: CreateDiscountDto, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const tenant = await this.prisma.tenant.findUnique({
@@ -60,7 +63,9 @@ export class DiscountService {
     });
 
     if (existing && !existing.deletedAt) {
-      throw new ConflictException(`Discount code '${cleanCode}' already exists for this store.`);
+      throw new ConflictException(
+        `Discount code '${cleanCode}' already exists for this store.`,
+      );
     }
 
     // Validate start and end dates
@@ -88,10 +93,15 @@ export class DiscountService {
         method: dto.method ?? DiscountMethod.CODE,
         status: initialStatus,
         value: dto.value,
-        minSubtotal: dto.minSubtotal !== undefined ? dto.minSubtotal : undefined,
-        maxDiscountAmount: dto.maxDiscountAmount !== undefined ? dto.maxDiscountAmount : undefined,
+        minSubtotal:
+          dto.minSubtotal !== undefined ? dto.minSubtotal : undefined,
+        maxDiscountAmount:
+          dto.maxDiscountAmount !== undefined
+            ? dto.maxDiscountAmount
+            : undefined,
         usageLimit: dto.usageLimit !== undefined ? dto.usageLimit : undefined,
-        usageLimitPerUser: dto.usageLimitPerUser !== undefined ? dto.usageLimitPerUser : 1,
+        usageLimitPerUser:
+          dto.usageLimitPerUser !== undefined ? dto.usageLimitPerUser : 1,
         startsAt,
         endsAt,
       },
@@ -108,7 +118,7 @@ export class DiscountService {
     const limit = Number(query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where: Prisma.DiscountWhereInput = {
       tenantId: targetTenantId,
       deletedAt: null,
     };
@@ -145,7 +155,11 @@ export class DiscountService {
     ]);
 
     const meta = ResponseHelper.buildPaginationMeta(total, page, limit);
-    return ResponseHelper.paginated(items, meta, 'Discounts retrieved successfully');
+    return ResponseHelper.paginated(
+      items,
+      meta,
+      'Discounts retrieved successfully',
+    );
   }
 
   // 3. Get single discount details by ID or Code
@@ -173,11 +187,18 @@ export class DiscountService {
       throw new NotFoundException('Discount');
     }
 
-    return ResponseHelper.success(discount, 'Discount details retrieved successfully');
+    return ResponseHelper.success(
+      discount,
+      'Discount details retrieved successfully',
+    );
   }
 
   // 4. Apply discount in cart/checkout (Validation & Calculation Engine)
-  async applyDiscount(dto: ApplyDiscountDto, userId?: string, tenantId?: string) {
+  async applyDiscount(
+    dto: ApplyDiscountDto,
+    userId?: string,
+    tenantId?: string,
+  ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
     const cleanCode = dto.code.trim().toUpperCase();
 
@@ -197,14 +218,16 @@ export class DiscountService {
 
     // ২. স্ট্যাটাস ভেরিফিকেশন
     if (discount.status !== DiscountStatus.ACTIVE) {
-      throw new BadRequestException(`Coupon '${cleanCode}' is currently inactive.`);
+      throw new BadRequestException(
+        `Coupon '${cleanCode}' is currently inactive.`,
+      );
     }
 
     // ৩. ডেট ও টাইম শিডিউল চেক (startsAt ও endsAt)
     const now = new Date();
     if (discount.startsAt > now) {
       throw new BadRequestException(
-        `Coupon '${cleanCode}' is not active yet. Starts on ${discount.startsAt.toLocaleDateString()}.`
+        `Coupon '${cleanCode}' is not active yet. Starts on ${discount.startsAt.toLocaleDateString()}.`,
       );
     }
     if (discount.endsAt && discount.endsAt < now) {
@@ -217,7 +240,9 @@ export class DiscountService {
       discount.usageLimit !== undefined &&
       discount.usedCount >= discount.usageLimit
     ) {
-      throw new BadRequestException(`Coupon '${cleanCode}' has reached its total usage limit.`);
+      throw new BadRequestException(
+        `Coupon '${cleanCode}' has reached its total usage limit.`,
+      );
     }
 
     // ৫. পার-ইউজার লিমিট চেক (DiscountRedemption টেবিল থেকে)
@@ -232,7 +257,7 @@ export class DiscountService {
       });
       if (userRedemptions >= userLimit) {
         throw new BadRequestException(
-          `You have already used coupon '${cleanCode}' the maximum allowed number of times (${userLimit}x).`
+          `You have already used coupon '${cleanCode}' the maximum allowed number of times (${userLimit}x).`,
         );
       }
     } else if (dto.customerEmail) {
@@ -245,7 +270,7 @@ export class DiscountService {
       });
       if (emailRedemptions >= userLimit) {
         throw new BadRequestException(
-          `Email '${dto.customerEmail}' has already used coupon '${cleanCode}' (${userLimit}x).`
+          `Email '${dto.customerEmail}' has already used coupon '${cleanCode}' (${userLimit}x).`,
         );
       }
     }
@@ -254,7 +279,7 @@ export class DiscountService {
     const subtotal = Number(dto.subtotal);
     if (discount.minSubtotal && subtotal < Number(discount.minSubtotal)) {
       throw new BadRequestException(
-        `Minimum order subtotal of ৳${discount.minSubtotal} required to use coupon '${cleanCode}'. Current cart subtotal is ৳${subtotal}.`
+        `Minimum order subtotal of ৳${Number(discount.minSubtotal)} required to use coupon '${cleanCode}'. Current cart subtotal is ৳${subtotal}.`,
       );
     }
 
@@ -264,7 +289,10 @@ export class DiscountService {
 
     if (discount.type === DiscountType.PERCENTAGE) {
       discountAmount = (subtotal * val) / 100;
-      if (discount.maxDiscountAmount && discountAmount > Number(discount.maxDiscountAmount)) {
+      if (
+        discount.maxDiscountAmount &&
+        discountAmount > Number(discount.maxDiscountAmount)
+      ) {
         discountAmount = Number(discount.maxDiscountAmount);
       }
       discountAmount = Math.min(discountAmount, subtotal);
@@ -288,14 +316,16 @@ export class DiscountService {
         newSubtotal: Number(newSubtotal.toFixed(2)),
         isFreeShipping: discount.type === DiscountType.FREE_SHIPPING,
       },
-      `Coupon '${cleanCode}' applied successfully!`
+      `Coupon '${cleanCode}' applied successfully!`,
     );
   }
 
   // 5. Update an existing discount
   async update(id: string, dto: UpdateDiscountDto, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const discount = await this.prisma.discount.findFirst({
@@ -324,12 +354,19 @@ export class DiscountService {
       });
 
       if (duplicate) {
-        throw new ConflictException(`Discount code '${updatedCode}' is already in use.`);
+        throw new ConflictException(
+          `Discount code '${updatedCode}' is already in use.`,
+        );
       }
     }
 
     const startsAt = dto.startsAt ? new Date(dto.startsAt) : discount.startsAt;
-    const endsAt = dto.endsAt !== undefined ? (dto.endsAt ? new Date(dto.endsAt) : null) : discount.endsAt;
+    const endsAt =
+      dto.endsAt !== undefined
+        ? dto.endsAt
+          ? new Date(dto.endsAt)
+          : null
+        : discount.endsAt;
 
     if (endsAt && endsAt <= startsAt) {
       throw new BadRequestException('End date must be after start date.');
@@ -344,10 +381,17 @@ export class DiscountService {
         method: dto.method !== undefined ? dto.method : undefined,
         status: dto.status !== undefined ? dto.status : undefined,
         value: dto.value !== undefined ? dto.value : undefined,
-        minSubtotal: dto.minSubtotal !== undefined ? dto.minSubtotal : undefined,
-        maxDiscountAmount: dto.maxDiscountAmount !== undefined ? dto.maxDiscountAmount : undefined,
+        minSubtotal:
+          dto.minSubtotal !== undefined ? dto.minSubtotal : undefined,
+        maxDiscountAmount:
+          dto.maxDiscountAmount !== undefined
+            ? dto.maxDiscountAmount
+            : undefined,
         usageLimit: dto.usageLimit !== undefined ? dto.usageLimit : undefined,
-        usageLimitPerUser: dto.usageLimitPerUser !== undefined ? dto.usageLimitPerUser : undefined,
+        usageLimitPerUser:
+          dto.usageLimitPerUser !== undefined
+            ? dto.usageLimitPerUser
+            : undefined,
         startsAt,
         endsAt,
       },
@@ -359,7 +403,9 @@ export class DiscountService {
   // 6. Delete discount (Soft delete)
   async remove(id: string, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const discount = await this.prisma.discount.findFirst({

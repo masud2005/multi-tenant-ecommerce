@@ -26,7 +26,10 @@ import { UpdateBrandDto } from './dto/update-brand.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Brands')
@@ -51,7 +54,7 @@ export class BrandController {
   async create(
     @Body() dto: CreateBrandDto,
     @UploadedFile() file?: Express.Multer.File,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.brandService.create(dto, file, user?.tenantId);
   }
@@ -62,20 +65,23 @@ export class BrandController {
   @ApiResponse({ status: 200, description: 'Brands retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
-  async findAll(@CurrentUser() user?: any) {
+  async findAll(@CurrentUser() user?: AuthUser) {
     return this.brandService.findAll(user?.tenantId);
   }
 
   @Get(':idOrSlug')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get single brand details by ID or Slug' })
-  @ApiResponse({ status: 200, description: 'Brand details retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Brand details retrieved successfully',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   @ApiResponse({ status: 404, description: 'Brand not found' })
   async findOne(
     @Param('idOrSlug') idOrSlug: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.brandService.findOne(idOrSlug, user?.tenantId);
   }
@@ -95,7 +101,7 @@ export class BrandController {
     @Param('idOrSlug') idOrSlug: string,
     @Body() dto: UpdateBrandDto,
     @UploadedFile() file?: Express.Multer.File,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.brandService.update(idOrSlug, dto, file, user?.tenantId);
   }
@@ -109,7 +115,7 @@ export class BrandController {
   @ApiResponse({ status: 404, description: 'Brand not found' })
   async remove(
     @Param('idOrSlug') idOrSlug: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.brandService.remove(idOrSlug, user?.tenantId);
   }
