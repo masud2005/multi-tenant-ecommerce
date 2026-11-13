@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui/Modal';
@@ -131,9 +133,9 @@ export function CreateBrandModal({
       }
 
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to save brand:', error);
-      toast.error(error?.message || 'Failed to save brand');
+      toast.error(asApiError(error).message || 'Failed to save brand');
     } finally {
       setIsSubmitting(false);
     }

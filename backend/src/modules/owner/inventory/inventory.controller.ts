@@ -20,7 +20,10 @@ import { AdjustStockDto } from './dto/adjust-stock.dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Inventory')
@@ -54,7 +57,7 @@ export class InventoryController {
   })
   async getOverview(
     @Query() query: QueryInventoryDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.inventoryService.getOverview(query, user?.tenantId);
   }
@@ -68,7 +71,7 @@ export class InventoryController {
   })
   async getMovements(
     @Query('limit') limit?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.inventoryService.getMovements(
       user?.tenantId,
@@ -103,7 +106,7 @@ export class InventoryController {
   })
   async adjustStock(
     @Body() dto: AdjustStockDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const actorName = user?.name || user?.email || 'Store Owner';
     return this.inventoryService.adjustStock(dto, user?.tenantId, actorName);

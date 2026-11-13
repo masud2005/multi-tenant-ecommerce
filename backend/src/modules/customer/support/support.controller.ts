@@ -12,9 +12,11 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CustomerSupportService } from './support.service';
 import { CreateContactMessageDto } from './dto/create-contact-message.dto';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @ApiTags('(Customer) Support & Contact')
 @Controller('customer/contact')
@@ -34,7 +36,7 @@ export class CustomerSupportController {
   @ApiResponse({ status: 400, description: 'Invalid form input' })
   async createContactMessage(
     @Body() dto: CreateContactMessageDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -46,9 +48,12 @@ export class CustomerSupportController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get all support tickets for current customer' })
-  @ApiResponse({ status: 200, description: 'Customer tickets retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Customer tickets retrieved successfully',
+  })
   async getCustomerTickets(
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -63,10 +68,15 @@ export class CustomerSupportController {
   async replyCustomerTicket(
     @Param('id') id: string,
     @Body() body: { text: string },
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
-    return this.supportService.replyCustomerTicket(id, body.text, tenantId, user);
+    return this.supportService.replyCustomerTicket(
+      id,
+      body.text,
+      tenantId,
+      user,
+    );
   }
 }

@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class CreateContactMessageDto {
   @ApiProperty({
@@ -44,7 +50,8 @@ export class CreateContactMessageDto {
 
   @ApiProperty({
     description: 'Inquiry message content',
-    example: 'Hello, I want to know if size exchange is available for this product?',
+    example:
+      'Hello, I want to know if size exchange is available for this product?',
   })
   @IsString()
   @MinLength(5, { message: 'Message must be at least 5 characters long' })

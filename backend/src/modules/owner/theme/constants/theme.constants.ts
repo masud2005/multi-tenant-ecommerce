@@ -17,9 +17,17 @@ export const DEFAULT_LANDING_SECTIONS = [
   { sectionType: 'HERO_BANNER', label: 'Hero banner', isVisible: true },
   { sectionType: 'CATEGORY_GRID', label: 'Shop by category', isVisible: true },
   { sectionType: 'BESTSELLERS', label: 'Best sellers', isVisible: true },
-  { sectionType: 'SUMMER_SPOTLIGHT', label: 'Spotlight banner', isVisible: true },
+  {
+    sectionType: 'SUMMER_SPOTLIGHT',
+    label: 'Spotlight banner',
+    isVisible: true,
+  },
   { sectionType: 'NEW_ARRIVALS', label: 'New arrivals', isVisible: true },
   { sectionType: 'TRUST_POINTS', label: 'Brand trust points', isVisible: true },
   { sectionType: 'TESTIMONIALS', label: 'Customer reviews', isVisible: true },
-  { sectionType: 'RECOMMENDED', label: 'Recommended products', isVisible: true },
+  {
+    sectionType: 'RECOMMENDED',
+    label: 'Recommended products',
+    isVisible: true,
+  },
 ];

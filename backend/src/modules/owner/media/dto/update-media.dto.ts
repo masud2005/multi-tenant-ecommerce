@@ -12,4 +12,3 @@ export class UpdateMediaDto {
   @IsOptional()
   alt?: string;
 }
-

@@ -3,7 +3,7 @@ export interface UploadOptions {
   publicId?: string;
   tags?: string[];
   resourceType?: 'image' | 'video' | 'raw' | 'auto';
-  transformation?: any;
+  transformation?: Record<string, unknown> | Array<Record<string, unknown>>;
   overwrite?: boolean;
 }
 
@@ -22,5 +22,5 @@ export interface UploadResult {
 
 export interface DeleteResult {
   publicId: string;
-  result: 'ok' | 'not found' | string;
+  result: string;
 }

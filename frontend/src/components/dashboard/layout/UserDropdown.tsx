@@ -31,7 +31,7 @@ export function UserDropdown({ user: propUser }: UserDropdownProps) {
         id: u.id,
         name,
         email: u.email,
-        role: (u.role as any) || 'OWNER',
+        role: u.role || 'OWNER',
         initials,
         phone: u.phone,
       });

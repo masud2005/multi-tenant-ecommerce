@@ -34,5 +34,5 @@ export interface UpdateBrandPayload {
 }
 
 export interface BrandResponseData extends BrandItem {
-  products?: any[];
+  products?: Array<{ id: string; slug?: string; title?: string }>;
 }

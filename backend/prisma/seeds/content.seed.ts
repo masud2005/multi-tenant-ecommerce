@@ -219,6 +219,9 @@ export async function seedContent(prisma: PrismaClient) {
     return;
   }
 
+  const existingSettings =
+    (tenant.settings as Record<string, unknown> | null) || {};
+
   // Announcement + contact (contact also seeds in admin; keep content-complete here)
   await prisma.tenant.update({
     where: { id: tenant.id },
@@ -226,6 +229,17 @@ export async function seedContent(prisma: PrismaClient) {
       announcement:
         'Free delivery inside Dhaka on orders over ৳2,500 · Easy 7-day returns',
       announcementEnabled: true,
+      settings: {
+        ...existingSettings,
+        authPage: {
+          signInTitle: 'Sign in',
+          signInSubtitle: 'Welcome back to Tanti.',
+          signUpTitle: 'Create your account',
+          signUpSubtitle: 'Get 10% off your first order and faster checkout.',
+          imageUrl: HERO_IMAGE,
+          caption: 'Track orders, save addresses and return in one tap.',
+        },
+      },
       contact: {
         email: 'care@tanti.com.bd',
         phone: '09612-826842',

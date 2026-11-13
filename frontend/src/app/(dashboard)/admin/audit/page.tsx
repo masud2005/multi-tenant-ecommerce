@@ -42,7 +42,7 @@ export default function AdminAuditPage() {
           setActors(uniqueActors);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Could not fetch audit logs:', err);
     } finally {
       setIsLoading(false);

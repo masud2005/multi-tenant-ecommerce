@@ -1,7 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { DiscountStatus, DiscountType } from '../../../../../prisma/generated/client';
+import {
+  DiscountStatus,
+  DiscountType,
+} from '../../../../../prisma/generated/client';
 
 export class DiscountQueryDto {
   @ApiPropertyOptional({
@@ -22,7 +25,8 @@ export class DiscountQueryDto {
 
   @ApiPropertyOptional({
     enum: DiscountType,
-    description: 'Filter discounts by type (PERCENTAGE, FIXED_AMOUNT, FREE_SHIPPING)',
+    description:
+      'Filter discounts by type (PERCENTAGE, FIXED_AMOUNT, FREE_SHIPPING)',
   })
   @IsEnum(DiscountType)
   @IsOptional()

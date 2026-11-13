@@ -12,7 +12,6 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
-  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { OwnerPageService, POLICY_SLUGS } from './page.service';
@@ -24,7 +23,10 @@ import {
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) CMS Pages')
@@ -38,7 +40,7 @@ export class OwnerPageController {
   @Get('about')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get About Us page content for editing' })
-  async getAboutPage(@CurrentUser() user?: any) {
+  async getAboutPage(@CurrentUser() user?: AuthUser) {
     return this.pageService.getAboutPage(user?.tenantId);
   }
 
@@ -47,7 +49,7 @@ export class OwnerPageController {
   @ApiOperation({ summary: 'Update or save About Us page content' })
   async updateAboutPage(
     @Body() dto: UpdateAboutPageDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const authorName = user?.name || user?.email || 'Store Admin';
     return this.pageService.updateAboutPage(dto, user?.tenantId, authorName);
@@ -56,7 +58,7 @@ export class OwnerPageController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all CMS pages for owner dashboard' })
-  async getAllPages(@CurrentUser() user?: any) {
+  async getAllPages(@CurrentUser() user?: AuthUser) {
     return this.pageService.getAllPages(user?.tenantId);
   }
 
@@ -68,7 +70,7 @@ export class OwnerPageController {
   @ApiParam({ name: 'slug', example: 'shipping' })
   async getPolicyPage(
     @Param('slug') slug: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.pageService.getPolicyPage(slug, user?.tenantId);
   }
@@ -82,7 +84,7 @@ export class OwnerPageController {
   async updatePolicyPage(
     @Param('slug') slug: string,
     @Body() dto: UpdatePolicyPageDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const authorName = user?.name || user?.email || 'Store Admin';
     return this.pageService.updatePolicyPage(
@@ -97,7 +99,7 @@ export class OwnerPageController {
   @Get('returns')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get Return page (alias of policies/returns)' })
-  async getReturnsPage(@CurrentUser() user?: any) {
+  async getReturnsPage(@CurrentUser() user?: AuthUser) {
     return this.pageService.getPolicyPage('returns', user?.tenantId);
   }
 
@@ -106,7 +108,7 @@ export class OwnerPageController {
   @ApiOperation({ summary: 'Update Return page (alias of policies/returns)' })
   async updateReturnsPage(
     @Body() dto: UpdateReturnsPageDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const authorName = user?.name || user?.email || 'Store Admin';
     return this.pageService.updatePolicyPage(

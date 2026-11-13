@@ -1,12 +1,16 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { ReturnResolution, ReturnStatus } from '../../../../../prisma/generated/client';
+import {
+  ReturnResolution,
+  ReturnStatus,
+} from '../../../../../prisma/generated/client';
 
 export class QueryReturnDto {
   @ApiPropertyOptional({
     example: 'Awaiting Review',
-    description: 'Tab filter: all, open, requested, awaiting_review, in_progress, closed',
+    description:
+      'Tab filter: all, open, requested, awaiting_review, in_progress, closed',
   })
   @IsString()
   @IsOptional()
@@ -14,19 +18,29 @@ export class QueryReturnDto {
 
   @ApiPropertyOptional({
     enum: ReturnStatus,
-    description: 'Filter by specific return status (REQUESTED, APPROVED, REJECTED, IN_TRANSIT, RECEIVED, REFUNDED, EXCHANGED)',
+    description:
+      'Filter by specific return status (REQUESTED, APPROVED, REJECTED, IN_TRANSIT, RECEIVED, REFUNDED, EXCHANGED)',
   })
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
   @IsEnum(ReturnStatus)
   status?: ReturnStatus;
 
   @ApiPropertyOptional({
     enum: ReturnResolution,
-    description: 'Filter by resolution preference (REFUND, STORE_CREDIT, EXCHANGE)',
+    description:
+      'Filter by resolution preference (REFUND, STORE_CREDIT, EXCHANGE)',
   })
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
   @IsEnum(ReturnResolution)
   resolution?: ReturnResolution;
 
@@ -40,7 +54,8 @@ export class QueryReturnDto {
 
   @ApiPropertyOptional({
     example: '2026-10-01',
-    description: 'Filter return requests created on or after this date (YYYY-MM-DD or ISO)',
+    description:
+      'Filter return requests created on or after this date (YYYY-MM-DD or ISO)',
   })
   @IsString()
   @IsOptional()
@@ -48,7 +63,8 @@ export class QueryReturnDto {
 
   @ApiPropertyOptional({
     example: '2026-10-31',
-    description: 'Filter return requests created on or before this date (YYYY-MM-DD or ISO)',
+    description:
+      'Filter return requests created on or before this date (YYYY-MM-DD or ISO)',
   })
   @IsString()
   @IsOptional()

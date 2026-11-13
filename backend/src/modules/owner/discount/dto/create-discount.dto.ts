@@ -20,11 +20,14 @@ import {
 export class CreateDiscountDto {
   @ApiProperty({
     example: 'EID500',
-    description: 'Unique coupon code for the store (automatically uppercased and trimmed)',
+    description:
+      'Unique coupon code for the store (automatically uppercased and trimmed)',
   })
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
   code: string;
 
   @ApiProperty({
@@ -48,7 +51,8 @@ export class CreateDiscountDto {
     enum: DiscountMethod,
     default: DiscountMethod.CODE,
     example: DiscountMethod.CODE,
-    description: 'Application method: CODE (coupon input) or AUTOMATIC (applied at cart)',
+    description:
+      'Application method: CODE (coupon input) or AUTOMATIC (applied at cart)',
   })
   @IsEnum(DiscountMethod)
   @IsOptional()
@@ -85,7 +89,8 @@ export class CreateDiscountDto {
 
   @ApiPropertyOptional({
     example: 1000,
-    description: 'Maximum discount limit in currency (Cap limit for PERCENTAGE type discounts)',
+    description:
+      'Maximum discount limit in currency (Cap limit for PERCENTAGE type discounts)',
   })
   @IsNumber()
   @Min(0)

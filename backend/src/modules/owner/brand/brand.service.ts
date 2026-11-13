@@ -26,9 +26,15 @@ export class BrandService {
   }
 
   // Create a new brand for authenticated owner's tenant
-  async create(dto: CreateBrandDto, file?: Express.Multer.File, tenantId?: string) {
+  async create(
+    dto: CreateBrandDto,
+    file?: Express.Multer.File,
+    tenantId?: string,
+  ) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // Verify tenant exists
@@ -77,7 +83,9 @@ export class BrandService {
           name: dto.name,
           slug,
           description: dto.description,
-          logo: uploadedLogoUrl || (typeof dto.logo === 'string' ? dto.logo : undefined),
+          logo:
+            uploadedLogoUrl ||
+            (typeof dto.logo === 'string' ? dto.logo : undefined),
           isActive: dto.isActive ?? true,
         },
       });
@@ -100,7 +108,9 @@ export class BrandService {
     tenantId?: string,
   ) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // Find brand by id or slug
@@ -157,8 +167,14 @@ export class BrandService {
         data: {
           name: dto.name ?? undefined,
           slug: slug !== brand.slug ? slug : undefined,
-          description: dto.description !== undefined ? dto.description : undefined,
-          logo: newLogoUrl !== undefined ? newLogoUrl : (typeof dto.logo === 'string' ? dto.logo : undefined),
+          description:
+            dto.description !== undefined ? dto.description : undefined,
+          logo:
+            newLogoUrl !== undefined
+              ? newLogoUrl
+              : typeof dto.logo === 'string'
+                ? dto.logo
+                : undefined,
           isActive: dto.isActive !== undefined ? dto.isActive : undefined,
         },
       });
@@ -181,7 +197,9 @@ export class BrandService {
   // Get all brands for the authenticated owner tenant
   async findAll(tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const brands = await this.prisma.brand.findMany({
@@ -197,16 +215,15 @@ export class BrandService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return ResponseHelper.success(
-      brands,
-      'Brands retrieved successfully',
-    );
+    return ResponseHelper.success(brands, 'Brands retrieved successfully');
   }
 
   // Get single brand details by ID or Slug for the owner tenant
   async findOne(idOrSlug: string, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const brand = await this.prisma.brand.findFirst({
@@ -244,7 +261,9 @@ export class BrandService {
   // Delete a brand (soft delete) and clean up logo from storage
   async remove(idOrSlug: string, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const brand = await this.prisma.brand.findFirst({

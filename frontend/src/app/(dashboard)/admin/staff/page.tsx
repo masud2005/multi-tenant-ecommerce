@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { UserPlus, ShieldCheck, Check, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
@@ -157,7 +159,7 @@ export default function AdminStaffPage() {
           members: r.membersCount ?? 0,
           system: r.isSystem,
           description: r.description || '',
-          permissions: r.permissions as any,
+          permissions: r.permissions as Record<string, string[]>,
         }));
 
         setRoleList(liveRoles);
@@ -202,7 +204,7 @@ export default function AdminStaffPage() {
           email: m.email,
           role: m.roleName || (m.isOwner ? 'Owner' : 'Store Manager'),
           roleId: m.roleId,
-          status: m.status as any,
+          status: m.status,
           lastActive: m.lastActive || m.joinedAt || '',
           twoFactor: m.twoFactorEnabled,
           avatar: m.avatar || undefined,
@@ -227,8 +229,8 @@ export default function AdminStaffPage() {
         setMembers([]);
         setCounters(EMPTY_COUNTERS);
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to load staff data');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to load staff data');
       setMembers([]);
       setRoleList([]);
       setRoleMatrices({});
@@ -280,7 +282,7 @@ export default function AdminStaffPage() {
           members: 0,
           system: res.data.isSystem ?? false,
           description: res.data.description || newRoleDesc.trim() || 'Custom staff role.',
-          permissions: (res.data.permissions as any) || newRoleMatrix,
+          permissions: res.data.permissions || newRoleMatrix,
         };
 
         setRoleList((prev) => [...prev, createdRole]);
@@ -294,8 +296,8 @@ export default function AdminStaffPage() {
       } else {
         throw new Error(res?.message || 'Failed to create role');
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to create role');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to create role');
     } finally {
       setIsCreatingRole(false);
     }
@@ -357,8 +359,8 @@ export default function AdminStaffPage() {
 
       toast.success(`Role "${trimmedName}" updated successfully`);
       setIsEditRoleOpen(false);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update role');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to update role');
     } finally {
       setIsUpdatingRole(false);
     }
@@ -404,8 +406,8 @@ export default function AdminStaffPage() {
 
       toast.success(`Role "${deletingRole.name}" deleted successfully`);
       setIsDeleteRoleOpen(false);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to delete role');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to delete role');
     } finally {
       setIsDeletingRole(false);
     }
@@ -452,8 +454,8 @@ export default function AdminStaffPage() {
       } else {
         toast.success(`Permissions saved for ${activeRole}`);
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to save permissions');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to save permissions');
     } finally {
       setIsSavingPermissions(false);
     }
@@ -468,8 +470,8 @@ export default function AdminStaffPage() {
           await staffService.resendInvite(s.id);
         }
         toast.success(`Invitation email resent to ${s.email}`);
-      } catch (err: any) {
-        toast.error(err?.message || 'Failed to resend invitation email');
+      } catch (err: unknown) {
+        toast.error(asApiError(err).message || 'Failed to resend invitation email');
       }
       return;
     }
@@ -489,11 +491,11 @@ export default function AdminStaffPage() {
           ? `${s.name} deactivated — access revoked`
           : `${s.name} reactivated`
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMembers((prev) =>
         prev.map((m) => (m.id === s.id ? { ...m, status: s.status } : m))
       );
-      toast.error(err?.message || 'Failed to update member status');
+      toast.error(asApiError(err).message || 'Failed to update member status');
     }
   };
 
@@ -513,8 +515,8 @@ export default function AdminStaffPage() {
         deactivated: s.status === 'deactivated' ? Math.max(0, prev.deactivated - 1) : prev.deactivated,
       }));
       toast.success(`Staff member "${s.name}" removed from store`);
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to remove member');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to remove member');
     }
   };
 
@@ -542,7 +544,7 @@ export default function AdminStaffPage() {
           email: res.data.email,
           role: res.data.roleName || inviteRole,
           roleId: res.data.roleId || roleId,
-          status: (res.data.status as any) || 'invited',
+          status: res.data.status || 'invited',
           lastActive: '',
           twoFactor: false,
           isOwner: false,
@@ -570,8 +572,8 @@ export default function AdminStaffPage() {
       } else {
         throw new Error(res?.message || 'Failed to send invitation');
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to send invitation');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to send invitation');
     } finally {
       setIsInviting(false);
     }

@@ -34,13 +34,13 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
 
       if (res.status === 'fulfilled' && res.value?.data && Array.isArray(res.value.data)) {
         // Map backend categories (top-level categories with subcategories from children)
-        const topLevel = res.value.data.filter((c: any) => !c.parentId);
-        const mapped: CategoryItemData[] = (topLevel.length > 0 ? topLevel : res.value.data).map((c: any) => {
+        const topLevel = res.value.data.filter((c) => !c.parentId);
+        const mapped: CategoryItemData[] = (topLevel.length > 0 ? topLevel : res.value.data).map((c) => {
           const subs: string[] = Array.isArray(c.children) && c.children.length > 0
-            ? c.children.map((ch: any) => ch.name)
+            ? c.children.map((ch) => ch.name)
             : res.value.data
-                .filter((other: any) => other.parentId === c.id)
-                .map((other: any) => other.name);
+                .filter((other) => other.parentId === c.id)
+                .map((other) => other.name);
 
           return {
             key: c.slug || c.id,
@@ -49,7 +49,9 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
             blurb: c.description || '',
             subcategories: subs,
             parentKey: c.parentId || undefined,
-            status: c.status || 'published',
+            status: c.status === 'draft' || c.status === 'hidden' || c.status === 'published'
+              ? c.status
+              : 'published',
           };
         });
 

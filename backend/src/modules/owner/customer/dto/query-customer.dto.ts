@@ -22,12 +22,19 @@ export class QueryCustomerDto {
   @Min(1)
   limit?: number = 50;
 
-  @ApiPropertyOptional({ description: 'Field to sort by', default: 'createdAt' })
+  @ApiPropertyOptional({
+    description: 'Field to sort by',
+    default: 'createdAt',
+  })
   @IsOptional()
   @IsString()
   sortBy?: string = 'createdAt';
 
-  @ApiPropertyOptional({ enum: ['asc', 'desc'], description: 'Sort direction', default: 'desc' })
+  @ApiPropertyOptional({
+    enum: ['asc', 'desc'],
+    description: 'Sort direction',
+    default: 'desc',
+  })
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc' = 'desc';

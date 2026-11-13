@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import {
   BadRequestException,
   Injectable,
@@ -53,7 +54,7 @@ export class MediaService {
   async getMedia(query: QueryMediaDto, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
-    const where: any = {
+    const where: Prisma.MediaAssetWhereInput = {
       tenantId: targetTenantId,
     };
 
@@ -178,7 +179,8 @@ export class MediaService {
       uploadResult.width && uploadResult.height
         ? `${uploadResult.width}×${uploadResult.height}`
         : undefined;
-    const displayName = file.originalname || `${baseName}.${uploadResult.format}`;
+    const displayName =
+      file.originalname || `${baseName}.${uploadResult.format}`;
 
     try {
       const asset = await this.prisma.mediaAsset.create({
@@ -244,14 +246,18 @@ export class MediaService {
       where: { id: existing.id },
     });
 
-    if (existing.url?.includes('cloudinary.com') || existing.url?.includes('/upload/')) {
+    if (
+      existing.url?.includes('cloudinary.com') ||
+      existing.url?.includes('/upload/')
+    ) {
       const resourceType =
         this.storageService.inferResourceType(existing.url) || 'image';
       this.storageService
         .deleteFile(existing.url, resourceType)
-        .catch((err) => {
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : 'cleanup failed';
           this.logger.warn(
-            `Media DB deleted but Cloudinary cleanup failed for ${existing.id}: ${err?.message || err}`,
+            `Media DB deleted but Cloudinary cleanup failed for ${existing.id}: ${message}`,
           );
         });
     }
@@ -259,4 +265,3 @@ export class MediaService {
     return ResponseHelper.success(null, 'Media asset deleted successfully');
   }
 }
-

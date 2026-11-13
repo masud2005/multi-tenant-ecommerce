@@ -19,7 +19,7 @@ export interface IPaginationMeta {
   hasPreviousPage: boolean;
 }
 
-export interface IApiResponse<T = any> {
+export interface IApiResponse<T = unknown> {
   success: boolean;
   statusCode: number;
   message: string;
@@ -48,15 +48,29 @@ export class ResponseInterceptor<T> implements NestInterceptor<
     );
 
     return next.handle().pipe(
-      map((data: any) => {
-        const statusCode = data?.statusCode ?? httpCode ?? 200;
+      map((data: T) => {
+        const body =
+          data && typeof data === 'object'
+            ? (data as {
+                statusCode?: unknown;
+                message?: unknown;
+                data?: unknown;
+                meta?: IPaginationMeta;
+              })
+            : {};
+        const statusCode =
+          typeof body.statusCode === 'number'
+            ? body.statusCode
+            : (httpCode ?? 200);
+        const message =
+          typeof body.message === 'string' ? body.message : 'Success';
 
         return {
           success: true,
           statusCode,
-          message: data?.message ?? 'Success',
-          data: data?.data !== undefined ? data.data : data,
-          ...(data?.meta && { meta: data.meta }),
+          message,
+          data: (body.data !== undefined ? body.data : data) as T,
+          ...(body.meta && { meta: body.meta }),
           timestamp: new Date().toISOString(),
           path: request.url,
         };

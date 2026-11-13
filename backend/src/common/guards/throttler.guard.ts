@@ -1,24 +1,36 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerLimitDetail } from '@nestjs/throttler';
 import { TooManyAttemptsException } from '../exceptions/business.exception';
+
+type TrackerRequest = {
+  headers?: Record<string, string | string[] | undefined>;
+  ip?: string;
+  connection?: { remoteAddress?: string };
+};
 
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
-  protected async throwThrottlingException(
-    context: ExecutionContext,
-    throttlerLimitDetail: any,
+  protected throwThrottlingException(
+    _context: ExecutionContext,
+    throttlerLimitDetail: ThrottlerLimitDetail,
   ): Promise<void> {
-    const ttl = throttlerLimitDetail?.timeToExpire;
+    const ttl = throttlerLimitDetail.timeToExpire;
     const minutesLeft = ttl ? Math.ceil(ttl / 60) : undefined;
-    throw new TooManyAttemptsException(minutesLeft);
+    return Promise.reject(new TooManyAttemptsException(minutesLeft));
   }
 
-  protected getTracker(req: Record<string, any>): Promise<string> {
+  protected getTracker(req: Record<string, unknown>): Promise<string> {
+    const request = req as TrackerRequest;
+    const forwarded = request.headers?.['x-forwarded-for'];
+    const realIp = request.headers?.['x-real-ip'];
+    const forwardedIp = Array.isArray(forwarded)
+      ? forwarded[0]
+      : forwarded?.split(',')[0]?.trim();
     const ip =
-      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ??
-      req.headers['x-real-ip'] ??
-      req.ip ??
-      req.connection?.remoteAddress ??
+      forwardedIp ||
+      (Array.isArray(realIp) ? realIp[0] : realIp) ||
+      request.ip ||
+      request.connection?.remoteAddress ||
       'unknown';
     return Promise.resolve(ip);
   }

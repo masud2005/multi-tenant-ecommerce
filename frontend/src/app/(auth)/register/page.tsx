@@ -11,8 +11,7 @@ export const metadata: Metadata = {
 export default function RegisterPage() {
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Get 10% off your first order and faster checkout."
+      mode="sign-up"
       footer={
         <>
           Already have an account?{' '}

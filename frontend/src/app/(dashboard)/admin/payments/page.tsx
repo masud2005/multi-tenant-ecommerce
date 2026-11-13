@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -141,9 +143,9 @@ export default function PaymentsPage() {
         if (page > 50) break;
       }
       setOrders(all);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setOrders([]);
-      toast.error(err?.message || 'Could not load payment records');
+      toast.error(asApiError(err).message || 'Could not load payment records');
     } finally {
       setLoading(false);
     }

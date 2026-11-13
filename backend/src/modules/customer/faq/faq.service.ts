@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
@@ -21,7 +22,7 @@ export class CustomerFaqService {
       resolvedTenantId = firstTenant.id;
     }
 
-    const where: any = { tenantId: resolvedTenantId };
+    const where: Prisma.FaqItemWhereInput = { tenantId: resolvedTenantId };
     if (category && category !== 'all') {
       where.category = { equals: category, mode: 'insensitive' };
     }

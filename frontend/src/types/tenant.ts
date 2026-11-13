@@ -53,6 +53,14 @@ export interface Tenant {
   contact: TenantContact;
   announcement?: string;
   announcementEnabled?: boolean;
+  authPage?: {
+    signInTitle: string;
+    signInSubtitle: string;
+    signUpTitle: string;
+    signUpSubtitle: string;
+    imageUrl: string;
+    caption: string;
+  };
   socials?: {
     facebook?: string;
     instagram?: string;
@@ -60,7 +68,22 @@ export interface Tenant {
     youtube?: string;
     tiktok?: string;
   };
-  /** Admin → Shipping rates (from tenant.settings.shipping) */
+  settings?: {
+    trustPoints?: { title: string; body: string }[];
+    authPage?: unknown;
+    shipping?: unknown;
+    orderNumberFormat?: string;
+    pm?: { bkash?: boolean; nagad?: boolean; cod?: boolean };
+    payment?: {
+      bkashNumber?: string;
+      bkashType?: string;
+      bkashEnabled?: boolean;
+      nagadNumber?: string;
+      nagadType?: string;
+      nagadEnabled?: boolean;
+      codEnabled?: boolean;
+    };
+  };
   shipping?: {
     insideDhaka: number;
     outsideDhaka: number;

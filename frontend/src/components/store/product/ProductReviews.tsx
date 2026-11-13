@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -226,7 +228,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
           ),
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setReviews((prev) =>
         prev.map((r) =>
           r.id === reviewId
@@ -234,7 +236,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
             : r,
         ),
       );
-      toast.error(err?.message || 'Failed to update helpful vote');
+      toast.error(asApiError(err).message || 'Failed to update helpful vote');
     }
   };
 
@@ -370,9 +372,9 @@ export function ProductReviews({ product }: ProductReviewsProps) {
         setFormErrors({});
         await fetchReviews();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to submit review:', err);
-      toast.error(err.message || 'Failed to submit review. Please try again.');
+      toast.error(asApiError(err).message || 'Failed to submit review. Please try again.');
     } finally {
       setSubmitting(false);
     }

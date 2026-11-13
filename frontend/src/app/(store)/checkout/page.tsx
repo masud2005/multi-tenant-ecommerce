@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -164,7 +166,7 @@ export default function CheckoutPage() {
       .getPublicStoreInfo(slug)
       .then((res) => {
         if (!mounted) return;
-        const s = (res?.data as any)?.settings || {};
+        const s = res?.data?.settings || {};
         const pay = s.payment || {};
         const pm = s.pm || {};
 
@@ -416,9 +418,9 @@ export default function CheckoutPage() {
       }
       setAppliedDiscount(null);
       setCodeError('Invalid or expired coupon code');
-    } catch (err: any) {
+    } catch (err: unknown) {
       setAppliedDiscount(null);
-      setCodeError(err?.message || 'Invalid or expired coupon code');
+      setCodeError(asApiError(err).message || 'Invalid or expired coupon code');
     } finally {
       setIsValidatingCoupon(false);
     }
@@ -458,8 +460,8 @@ export default function CheckoutPage() {
         isDefaultShipping: addresses.length === 0,
       };
 
-      const res: any = await saveAddress(payload);
-      const savedId = res && typeof res === 'object' && res.id ? res.id : payload.id;
+      const res = await saveAddress(payload);
+      const savedId = res?.id || payload.id;
       setAddressId(savedId);
 
       setNewAddr({
@@ -509,12 +511,12 @@ export default function CheckoutPage() {
       let finalAddress = address;
       if (addressId === 'new') {
         try {
-          const savedResult: any = await saveAddress({
+          const savedResult = await saveAddress({
             ...address,
             label: newAddr.label || 'Home',
             isDefaultShipping: addresses.length === 0,
           });
-          if (savedResult && typeof savedResult === 'object' && savedResult.id) {
+          if (savedResult?.id) {
             finalAddress = {
               ...address,
               id: savedResult.id,
@@ -558,9 +560,9 @@ export default function CheckoutPage() {
       const targetId = order.number || order.id;
       // Keep placing/submitting true so empty-cart guard does not bounce to /cart
       router.replace(`/order-confirmation/${encodeURIComponent(targetId)}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Place order failed:', err);
-      toast.error(err?.message || 'Could not place order. Please try again.');
+      toast.error(asApiError(err).message || 'Could not place order. Please try again.');
       submitting.current = false;
       setPlacing(false);
     }

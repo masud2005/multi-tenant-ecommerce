@@ -16,8 +16,15 @@ export class CartService {
   /**
    * Helper to dynamically resolve target tenant for customer or guest
    */
-  private async resolveTenantId(tenantId?: string, customerId?: string): Promise<string> {
-    if (tenantId && tenantId.length > 10 && tenantId !== 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2') {
+  private async resolveTenantId(
+    tenantId?: string,
+    customerId?: string,
+  ): Promise<string> {
+    if (
+      tenantId &&
+      tenantId.length > 10 &&
+      tenantId !== 'e0f8bdb1-da0a-4907-9d82-08ef1be77ac2'
+    ) {
       const exists = await this.prisma.tenant.findUnique({
         where: { id: tenantId },
       });
@@ -88,7 +95,8 @@ export class CartService {
       });
       if (user) {
         const userEmail = user.email || `${user.id}@customer.store`;
-        const profileName = user.name || (user.email ? user.email.split('@')[0] : 'Customer');
+        const profileName =
+          user.name || (user.email ? user.email.split('@')[0] : 'Customer');
         const newProfile = await this.prisma.customerProfile.upsert({
           where: {
             tenantId_email: {
@@ -289,10 +297,7 @@ export class CartService {
       updatedAt: cart.updatedAt,
     };
 
-    return ResponseHelper.success(
-      result,
-      'Cart retrieved successfully',
-    );
+    return ResponseHelper.success(result, 'Cart retrieved successfully');
   }
 
   /**
@@ -303,7 +308,10 @@ export class CartService {
     customerId?: string,
     sessionTokenHeader?: string,
   ) {
-    const targetTenantId = await this.resolveTenantId(dto?.tenantId, customerId);
+    const targetTenantId = await this.resolveTenantId(
+      dto?.tenantId,
+      customerId,
+    );
 
     const activeSessionToken = dto.sessionToken || sessionTokenHeader;
 
@@ -377,7 +385,10 @@ export class CartService {
 
     // আপডেটেড কার্ট ডাটা রিটার্ন
     return this.getCart(
-      { tenantId: targetTenantId, sessionToken: cart.sessionToken || undefined },
+      {
+        tenantId: targetTenantId,
+        sessionToken: cart.sessionToken || undefined,
+      },
       customerId,
       activeSessionToken,
     );
@@ -392,7 +403,10 @@ export class CartService {
     customerId?: string,
     sessionTokenHeader?: string,
   ) {
-    const targetTenantId = await this.resolveTenantId(dto?.tenantId, customerId);
+    const targetTenantId = await this.resolveTenantId(
+      dto?.tenantId,
+      customerId,
+    );
 
     const activeSessionToken = dto.sessionToken || sessionTokenHeader;
 
@@ -407,10 +421,7 @@ export class CartService {
     const existingItem = await this.prisma.cartItem.findFirst({
       where: {
         cartId: cart.id,
-        OR: [
-          { id: itemIdOrVariantId },
-          { variantId: itemIdOrVariantId },
-        ],
+        OR: [{ id: itemIdOrVariantId }, { variantId: itemIdOrVariantId }],
       },
       include: {
         variant: true,
@@ -422,7 +433,8 @@ export class CartService {
       throw new NotFoundException('Cart item not found');
     }
 
-    const newQty = dto.qty !== undefined ? Math.max(0, dto.qty) : existingItem.qty;
+    const newQty =
+      dto.qty !== undefined ? Math.max(0, dto.qty) : existingItem.qty;
 
     // ৩. কোয়ান্টিটি ০ হলে আইটেম ডিলিট করা, অন্যথায় স্টক চেক ও আপডেট করা
     if (newQty === 0) {
@@ -433,7 +445,8 @@ export class CartService {
       const isPreorder = existingItem.product?.preorder || false;
       const availableStock = Math.max(
         0,
-        (existingItem.variant?.stock ?? 0) - (existingItem.variant?.reserved ?? 0),
+        (existingItem.variant?.stock ?? 0) -
+          (existingItem.variant?.reserved ?? 0),
       );
 
       if (!isPreorder && newQty > availableStock) {
@@ -456,7 +469,10 @@ export class CartService {
 
     // ৪. সর্বশেষ ফ্রেশ কার্ট ডাটা রিটার্ন করা
     return this.getCart(
-      { tenantId: targetTenantId, sessionToken: cart.sessionToken || undefined },
+      {
+        tenantId: targetTenantId,
+        sessionToken: cart.sessionToken || undefined,
+      },
       customerId,
       activeSessionToken,
     );
@@ -482,10 +498,7 @@ export class CartService {
     const existingItem = await this.prisma.cartItem.findFirst({
       where: {
         cartId: cart.id,
-        OR: [
-          { id: itemIdOrVariantId },
-          { variantId: itemIdOrVariantId },
-        ],
+        OR: [{ id: itemIdOrVariantId }, { variantId: itemIdOrVariantId }],
       },
     });
 
@@ -496,7 +509,10 @@ export class CartService {
     }
 
     return this.getCart(
-      { tenantId: targetTenantId, sessionToken: cart.sessionToken || undefined },
+      {
+        tenantId: targetTenantId,
+        sessionToken: cart.sessionToken || undefined,
+      },
       customerId,
       sessionTokenHeader,
     );

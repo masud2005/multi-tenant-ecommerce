@@ -30,10 +30,77 @@ export interface OwnerCustomersResponseData {
   meta: PaginatedMeta;
 }
 
+interface BackendCustomerAddress {
+  isDefaultShipping?: boolean;
+  phone?: string;
+  district?: string;
+  id?: string;
+  label?: string;
+  name?: string;
+  line1?: string;
+  area?: string;
+}
+
+interface CustomerOrderItem {
+  id?: string;
+  productId?: string;
+  variantId?: string;
+  title?: string;
+  image?: string;
+  color?: string;
+  size?: string;
+  sku?: string;
+  price?: number | string;
+  qty?: number | string;
+  product?: {
+    title?: string;
+    slug?: string;
+    images?: Array<{ url?: string }>;
+  };
+  variant?: {
+    color?: string;
+    colorHex?: string;
+    size?: string;
+    sku?: string;
+  };
+}
+
+interface CustomerOrder {
+  id: string;
+  number?: string;
+  status?: string;
+  total?: number | string;
+  createdAt?: string;
+  items?: CustomerOrderItem[];
+}
+
+export interface CustomerDetailRecord extends BackendCustomer {
+  orders?: CustomerOrder[];
+}
+
+interface BackendCustomer {
+  id: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  district?: string;
+  addresses?: BackendCustomerAddress[];
+  ordersCount?: number | string;
+  _count?: { orders?: number };
+  totalSpent?: number | string;
+  orders?: Array<{ createdAt?: string }>;
+  createdAt?: string;
+  tags?: string[];
+  segment?: string;
+  isActive?: boolean;
+  marketingConsent?: boolean;
+  avatar?: string;
+}
+
 // Helper to transform backend customer profile data to frontend Customer interface
-export function mapBackendCustomerToFrontend(item: any): Customer {
+export function mapBackendCustomerToFrontend(item: BackendCustomer): Customer {
   const defaultAddr = Array.isArray(item.addresses)
-    ? item.addresses.find((a: any) => a.isDefaultShipping) || item.addresses[0]
+    ? item.addresses.find((a) => a.isDefaultShipping) || item.addresses[0]
     : null;
 
   return {
@@ -51,7 +118,7 @@ export function mapBackendCustomerToFrontend(item: any): Customer {
       ? new Date(item.createdAt).toISOString().split('T')[0]
       : '',
     tags: Array.isArray(item.tags) ? item.tags : [],
-    segment: (item.segment || 'New') as any,
+    segment: (item.segment || 'New') as Customer['segment'],
     status: item.isActive === false ? 'inactive' : 'active',
     marketingConsent: !!item.marketingConsent,
     avatar: item.avatar || undefined,
@@ -77,7 +144,7 @@ export const customerService = {
 
     const qs = query.toString();
     const endpoint = `/owner/customers${qs ? `?${qs}` : ''}`;
-    const res = await apiClient.get<PaginatedResponse<any>>(endpoint);
+    const res = await apiClient.get<PaginatedResponse<BackendCustomer>>(endpoint);
 
     if (res?.data) {
       const rawList = Array.isArray(res.data) ? res.data : [];
@@ -98,15 +165,29 @@ export const customerService = {
       };
     }
 
-    return res as any;
+    return {
+      success: Boolean(res?.success),
+      message: res?.message,
+      data: {
+        customers: [],
+        meta: {
+          page: 1,
+          limit: 50,
+          total: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      },
+    };
   },
 
   // 2. GET /api/v1/owner/customers/:id - Fetch single customer details with order history & addresses
-  async getOwnerCustomerDetail(id: string, tenantId?: string): Promise<ApiResponse<any>> {
+  async getOwnerCustomerDetail(id: string, tenantId?: string): Promise<ApiResponse<CustomerDetailRecord>> {
     const endpoint = tenantId
       ? `/owner/customers/${encodeURIComponent(id)}?tenantId=${encodeURIComponent(tenantId)}`
       : `/owner/customers/${encodeURIComponent(id)}`;
-    return await apiClient.get<ApiResponse<any>>(endpoint);
+    return await apiClient.get<ApiResponse<CustomerDetailRecord>>(endpoint);
   },
 
   // 3. PATCH /api/v1/owner/customers/:id/status - Toggle or set customer active/inactive status
@@ -114,11 +195,11 @@ export const customerService = {
     id: string,
     payload?: UpdateCustomerStatusPayload,
     tenantId?: string,
-  ): Promise<ApiResponse<any>> {
+  ): Promise<ApiResponse<CustomerDetailRecord>> {
     const endpoint = tenantId
       ? `/owner/customers/${encodeURIComponent(id)}/status?tenantId=${encodeURIComponent(tenantId)}`
       : `/owner/customers/${encodeURIComponent(id)}/status`;
-    return await apiClient.patch<ApiResponse<any>>(endpoint, payload || {});
+    return await apiClient.patch<ApiResponse<CustomerDetailRecord>>(endpoint, payload || {});
   },
 
   // 4. PATCH /api/v1/owner/customers/:id - Update tags, name, or phone
@@ -126,11 +207,11 @@ export const customerService = {
     id: string,
     payload: UpdateCustomerPayload,
     tenantId?: string,
-  ): Promise<ApiResponse<any>> {
+  ): Promise<ApiResponse<CustomerDetailRecord>> {
     const endpoint = tenantId
       ? `/owner/customers/${encodeURIComponent(id)}?tenantId=${encodeURIComponent(tenantId)}`
       : `/owner/customers/${encodeURIComponent(id)}`;
-    return await apiClient.patch<ApiResponse<any>>(endpoint, payload);
+    return await apiClient.patch<ApiResponse<CustomerDetailRecord>>(endpoint, payload);
   },
 
   // ----------------------------------------------------
@@ -140,7 +221,7 @@ export const customerService = {
   // Fetch customer list
   async getCustomers(): Promise<Customer[]> {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>('/owner/customers');
+      const res = await apiClient.get<ApiResponse<BackendCustomer[]>>('/owner/customers');
       if (Array.isArray(res?.data)) {
         return res.data.map(mapBackendCustomerToFrontend);
       }
@@ -153,7 +234,7 @@ export const customerService = {
   // Fetch single customer by ID
   async getCustomerById(id: string): Promise<Customer | undefined> {
     try {
-      const res = await apiClient.get<ApiResponse<any>>(`/owner/customers/${id}`);
+      const res = await apiClient.get<ApiResponse<CustomerDetailRecord>>(`/owner/customers/${id}`);
       if (res?.data) {
         return mapBackendCustomerToFrontend(res.data);
       }

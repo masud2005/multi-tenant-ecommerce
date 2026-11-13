@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import {
   BadRequestException,
   Injectable,
@@ -7,11 +8,16 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { UpdateStoreSettingsDto } from './dto';
+import { toInputJson } from '../../../common/helpers/json.helper';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import {
   DEFAULT_STORE_SHIPPING,
   mergeStoreShippingDefaults,
 } from '../../../common/constants/shipping.constant';
+
+function jsonText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
 
 @Injectable()
 export class SettingsService {
@@ -81,36 +87,36 @@ export class SettingsService {
     }
 
     // No mock contact/social fallbacks — empty if not configured
-    const contactObj = (tenant.contact as Record<string, any>) || {};
+    const contactObj = (tenant.contact as Record<string, unknown>) || {};
     const defaultContact = {
-      email: contactObj.email || '',
-      phone: contactObj.phone || '',
-      whatsapp: contactObj.whatsapp || '',
-      address: contactObj.address || '',
-      workingHours: contactObj.workingHours || '',
-      responseTime: contactObj.responseTime || '',
-      supportTeam: contactObj.supportTeam || '',
+      email: jsonText(contactObj.email),
+      phone: jsonText(contactObj.phone),
+      whatsapp: jsonText(contactObj.whatsapp),
+      address: jsonText(contactObj.address),
+      workingHours: jsonText(contactObj.workingHours),
+      responseTime: jsonText(contactObj.responseTime),
+      supportTeam: jsonText(contactObj.supportTeam),
     };
 
-    const socialsObj = (tenant.socials as Record<string, any>) || {};
+    const socialsObj = (tenant.socials as Record<string, unknown>) || {};
     const defaultSocials = {
-      facebook: socialsObj.facebook || '',
-      instagram: socialsObj.instagram || '',
-      twitter: socialsObj.twitter || '',
-      youtube: socialsObj.youtube || '',
-      tiktok: socialsObj.tiktok || '',
+      facebook: jsonText(socialsObj.facebook),
+      instagram: jsonText(socialsObj.instagram),
+      twitter: jsonText(socialsObj.twitter),
+      youtube: jsonText(socialsObj.youtube),
+      tiktok: jsonText(socialsObj.tiktok),
     };
 
     // Ensure shipping defaults exist in DB (Inside Dhaka ৳70 / Outside ৳150)
-    const existingSettings = (tenant.settings as Record<string, any>) || {};
+    const existingSettings = (tenant.settings as Record<string, unknown>) || {};
     const existingShipping =
-      (existingSettings.shipping as Record<string, any>) || {};
+      (existingSettings.shipping as Record<string, unknown>) || {};
     const shipping = mergeStoreShippingDefaults(existingShipping);
     const shippingIncomplete =
       typeof existingShipping.insideDhaka !== 'number' ||
       typeof existingShipping.outsideDhaka !== 'number';
 
-    let settings = {
+    const settings = {
       ...existingSettings,
       shipping,
     };
@@ -153,7 +159,7 @@ export class SettingsService {
       throw new NotFoundException('Store not found');
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.TenantUpdateInput = {};
 
     if (dto.name !== undefined) updateData.name = dto.name.trim();
     if (dto.tagline !== undefined) updateData.tagline = dto.tagline.trim();
@@ -175,38 +181,41 @@ export class SettingsService {
 
     // Merge Contact JSON safely
     if (dto.contact !== undefined) {
-      const existingContact = (existing.contact as Record<string, any>) || {};
-      updateData.contact = {
+      const existingContact =
+        (existing.contact as Record<string, unknown>) || {};
+      updateData.contact = toInputJson({
         ...existingContact,
         ...dto.contact,
-      };
+      });
     }
 
     // Merge Socials JSON safely
     if (dto.socials !== undefined) {
-      const existingSocials = (existing.socials as Record<string, any>) || {};
-      updateData.socials = {
+      const existingSocials =
+        (existing.socials as Record<string, unknown>) || {};
+      updateData.socials = toInputJson({
         ...existingSocials,
         ...dto.socials,
-      };
+      });
     }
 
     // Merge Settings JSON safely (deep-merge nested payment/shipping so toggles never get wiped)
     if (dto.settings !== undefined) {
-      const existingSettings = (existing.settings as Record<string, any>) || {};
-      const incoming = dto.settings as Record<string, any>;
-      updateData.settings = {
+      const existingSettings =
+        (existing.settings as Record<string, unknown>) || {};
+      const incoming = dto.settings;
+      updateData.settings = toInputJson({
         ...existingSettings,
         ...incoming,
         payment: {
-          ...((existingSettings.payment as Record<string, any>) || {}),
-          ...((incoming.payment as Record<string, any>) || {}),
+          ...((existingSettings.payment as Record<string, unknown>) || {}),
+          ...((incoming.payment as Record<string, unknown>) || {}),
         },
         shipping: (() => {
-          const mergedShipping: Record<string, any> = {
+          const mergedShipping: Record<string, unknown> = {
             ...DEFAULT_STORE_SHIPPING,
-            ...((existingSettings.shipping as Record<string, any>) || {}),
-            ...((incoming.shipping as Record<string, any>) || {}),
+            ...((existingSettings.shipping as Record<string, unknown>) || {}),
+            ...((incoming.shipping as Record<string, unknown>) || {}),
           };
           // Drop retired mock/RTO toggles — restock is always automatic on return RECEIVED
           delete mergedShipping.rto;
@@ -217,14 +226,18 @@ export class SettingsService {
           return mergeStoreShippingDefaults(mergedShipping);
         })(),
         pm: {
-          ...((existingSettings.pm as Record<string, any>) || {}),
-          ...((incoming.pm as Record<string, any>) || {}),
+          ...((existingSettings.pm as Record<string, unknown>) || {}),
+          ...((incoming.pm as Record<string, unknown>) || {}),
         },
         flags: {
-          ...((existingSettings.flags as Record<string, any>) || {}),
-          ...((incoming.flags as Record<string, any>) || {}),
+          ...((existingSettings.flags as Record<string, unknown>) || {}),
+          ...((incoming.flags as Record<string, unknown>) || {}),
         },
-      };
+        authPage: {
+          ...((existingSettings.authPage as Record<string, unknown>) || {}),
+          ...((incoming.authPage as Record<string, unknown>) || {}),
+        },
+      });
     }
 
     const updated = await this.prisma.tenant.update({
@@ -296,7 +309,10 @@ export class SettingsService {
         `Store logo uploaded for tenant: ${updated.name} (${updated.slug})`,
       );
 
-      return ResponseHelper.success(updated, 'Store logo uploaded successfully');
+      return ResponseHelper.success(
+        updated,
+        'Store logo uploaded successfully',
+      );
     } catch (error) {
       await this.storageService.deleteFile(uploadResult.url).catch(() => {});
       throw error;

@@ -1,11 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsBoolean,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateBrandDto {
   @ApiProperty({
@@ -41,14 +36,14 @@ export class CreateBrandDto {
     description: 'Brand logo image file to upload',
   })
   @IsOptional()
-  logo?: any;
+  logo?: string | Express.Multer.File;
 
   @ApiProperty({
     example: true,
     required: false,
     default: true,
   })
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === 'true' || value === true) return true;
     if (value === 'false' || value === false) return false;
     return value;

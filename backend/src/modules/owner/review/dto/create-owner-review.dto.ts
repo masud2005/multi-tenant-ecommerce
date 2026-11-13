@@ -13,7 +13,10 @@ import {
 import { ReviewStatus } from '../../../../../prisma/generated/client';
 
 export class CreateOwnerReviewDto {
-  @ApiProperty({ description: 'Author / customer name', example: 'Ayesha Siddiqua' })
+  @ApiProperty({
+    description: 'Author / customer name',
+    example: 'Ayesha Siddiqua',
+  })
   @IsString()
   @IsNotEmpty({ message: 'Author name is required' })
   @MaxLength(100)
@@ -25,13 +28,19 @@ export class CreateOwnerReviewDto {
   @Max(5)
   rating: number;
 
-  @ApiPropertyOptional({ description: 'Review title', example: 'Exceptional Quality' })
+  @ApiPropertyOptional({
+    description: 'Review title',
+    example: 'Exceptional Quality',
+  })
   @IsString()
   @IsOptional()
   @MaxLength(150)
   title?: string;
 
-  @ApiProperty({ description: 'Review body text', example: 'The product arrived on time and exceeded expectations.' })
+  @ApiProperty({
+    description: 'Review body text',
+    example: 'The product arrived on time and exceeded expectations.',
+  })
   @IsString()
   @IsNotEmpty({ message: 'Review body text is required' })
   @MaxLength(2000)
@@ -50,7 +59,10 @@ export class CreateOwnerReviewDto {
   @IsOptional()
   verified?: boolean;
 
-  @ApiPropertyOptional({ description: 'Customer location or note', example: 'Gulshan, Dhaka' })
+  @ApiPropertyOptional({
+    description: 'Customer location or note',
+    example: 'Gulshan, Dhaka',
+  })
   @IsString()
   @IsOptional()
   size?: string;

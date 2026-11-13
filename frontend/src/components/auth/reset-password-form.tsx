@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
@@ -53,8 +55,8 @@ function ResetPasswordFormContent() {
       }
 
       window.location.href = targetUrl;
-    } catch (err: any) {
-      setError(err?.message || 'Failed to reset password. Please request a new code.');
+    } catch (err: unknown) {
+      setError(asApiError(err).message || 'Failed to reset password. Please request a new code.');
     } finally {
       setLoading(false);
     }

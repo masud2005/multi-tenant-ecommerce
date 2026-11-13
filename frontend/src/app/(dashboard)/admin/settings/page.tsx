@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -30,7 +32,7 @@ import {
 import { paymentMethods } from '@/data/shipping';
 import { useAdmin } from '@/contexts/AdminContext';
 import { useTenant } from '@/contexts/TenantContext';
-import { storeService } from '@/services/store-service';
+import { storeService, type UpdateStoreSettingsPayload } from '@/services/store-service';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
@@ -164,24 +166,26 @@ export default function AdminSettingsPage() {
           }));
 
           if (d.contact) {
+            const contact = d.contact;
             setContactForm((prev) => ({
               ...prev,
-              email: d.contact.email || prev.email,
-              phone: d.contact.phone || prev.phone,
-              whatsapp: d.contact.whatsapp || prev.whatsapp,
-              address: d.contact.address || prev.address,
-              workingHours: d.contact.workingHours || prev.workingHours,
-              responseTime: d.contact.responseTime || prev.responseTime,
+              email: contact.email || prev.email,
+              phone: contact.phone || prev.phone,
+              whatsapp: contact.whatsapp || prev.whatsapp,
+              address: contact.address || prev.address,
+              workingHours: contact.workingHours || prev.workingHours,
+              responseTime: contact.responseTime || prev.responseTime,
               supportTeam:
-                d.contact.supportTeam || `${d.name || 'Store'} Care team`,
+                contact.supportTeam || `${d.name || 'Store'} Care team`,
             }));
           }
 
           if (d.socials) {
+            const socials = d.socials;
             setSocialsForm((prev) => ({
               ...prev,
-              facebook: d.socials.facebook || prev.facebook,
-              instagram: d.socials.instagram || prev.instagram,
+              facebook: socials.facebook || prev.facebook,
+              instagram: socials.instagram || prev.instagram,
             }));
           }
 
@@ -231,15 +235,16 @@ export default function AdminSettingsPage() {
                     : prev.cod,
             }));
           } else if (d.settings?.pm) {
-            setPm((prev) => ({ ...prev, ...d.settings.pm }));
+            const savedPm = d.settings.pm;
+            setPm((prev) => ({ ...prev, ...savedPm }));
             setPaymentConfig((prev) => ({
               ...prev,
               bkashEnabled:
-                typeof d.settings.pm.bkash === 'boolean' ? d.settings.pm.bkash : prev.bkashEnabled,
+                typeof savedPm.bkash === 'boolean' ? savedPm.bkash : prev.bkashEnabled,
               nagadEnabled:
-                typeof d.settings.pm.nagad === 'boolean' ? d.settings.pm.nagad : prev.nagadEnabled,
+                typeof savedPm.nagad === 'boolean' ? savedPm.nagad : prev.nagadEnabled,
               codEnabled:
-                typeof d.settings.pm.cod === 'boolean' ? d.settings.pm.cod : prev.codEnabled,
+                typeof savedPm.cod === 'boolean' ? savedPm.cod : prev.codEnabled,
             }));
           }
         }
@@ -258,7 +263,7 @@ export default function AdminSettingsPage() {
       setIsSaving(true);
 
       const contactEmail = contactForm.email.trim();
-      const payload: any = {
+      const payload: UpdateStoreSettingsPayload = {
         name: storeForm.name || undefined,
         tagline: storeForm.tagline || undefined,
         logo: storeForm.logo || undefined,
@@ -299,15 +304,15 @@ export default function AdminSettingsPage() {
       };
 
       const res = await storeService.updateOwnerSettings(payload);
-      const savedPayment = (res as any)?.data?.settings?.payment;
+      const savedPayment = res?.data?.settings?.payment;
       if (section === 'Payments' && !savedPayment) {
         throw new Error('Payment settings were not saved. Please try again.');
       }
       await refetchTenant();
       toast.success(`${section} settings saved & published successfully!`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Settings save failed:', err);
-      toast.error(err?.message || 'Failed to save settings');
+      toast.error(asApiError(err).message || 'Failed to save settings');
     } finally {
       setIsSaving(false);
     }
@@ -333,8 +338,8 @@ export default function AdminSettingsPage() {
       setStoreForm((prev) => ({ ...prev, logo: logoUrl }));
       await refetchTenant();
       toast.success('Store logo uploaded — live on the storefront');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to upload store logo');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to upload store logo');
     } finally {
       setIsLogoUploading(false);
       if (logoInputRef.current) logoInputRef.current.value = '';
@@ -352,8 +357,8 @@ export default function AdminSettingsPage() {
           ? 'Logo removed — store name will show on the storefront'
           : 'Logo removed'
       );
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to remove store logo');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to remove store logo');
     } finally {
       setIsLogoRemoving(false);
       if (logoInputRef.current) logoInputRef.current.value = '';

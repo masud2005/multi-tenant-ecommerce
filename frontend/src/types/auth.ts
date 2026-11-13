@@ -11,7 +11,8 @@ export interface RegisterInput {
 }
 
 export interface LoginInput {
-  email: string;
+  email?: string;
+  phone?: string;
   password: string;
 }
 
@@ -48,13 +49,14 @@ export interface AuthTokens {
 export interface AuthSessionData extends AuthTokens {
   user?: StoredUser;
   resetToken?: string;
+  redirectUrl?: string;
 }
 
 export interface JwtPayload {
   sub: string;
   email: string;
   name?: string;
-  role: UserRole;
+  role: string;
   tenantId?: string;
   isOwner?: boolean;
   staffRole?: string;

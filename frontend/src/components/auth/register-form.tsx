@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -29,7 +31,6 @@ export function RegisterForm() {
     phone: '',
     password: '',
   });
-  const [marketing, setMarketing] = useState(true);
   const [terms, setTerms] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -70,8 +71,8 @@ export function RegisterForm() {
 
       // Redirect to verification OTP page
       router.push(`/verify?type=otp&to=${encodeURIComponent(form.email)}&next=/account`);
-    } catch (err: any) {
-      setErrors({ email: err?.message || 'Registration failed. Please try again.' });
+    } catch (err: unknown) {
+      setErrors({ email: asApiError(err).message || 'Registration failed. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -96,6 +97,7 @@ export function RegisterForm() {
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
         error={errors.email}
+        hint="We’ll verify this with a one-time code"
       />
 
       <Input
@@ -105,7 +107,6 @@ export function RegisterForm() {
         onChange={(e) => setForm({ ...form, phone: e.target.value })}
         error={errors.phone}
         placeholder="01XXXXXXXXX"
-        hint="We’ll verify this with a one-time code"
       />
 
       <div>
@@ -143,12 +144,6 @@ export function RegisterForm() {
           </div>
         )}
       </div>
-
-      <Checkbox
-        checked={marketing}
-        onChange={setMarketing}
-        label="Email me about new collections and offers"
-      />
 
       <div>
         <Checkbox

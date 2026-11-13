@@ -69,10 +69,13 @@ class NotificationService {
       const res = await apiClient.get<ApiResponse<NotificationListResponse> | NotificationListResponse>(endpoint);
       
       // Handle ApiResponse wrapper if present
-      if (res && 'data' in res && (res as any).data?.items) {
-        return (res as any).data;
+      if (res && typeof res === 'object' && 'data' in res && res.data && typeof res.data === 'object' && 'items' in res.data) {
+        return res.data;
       }
-      return (res as NotificationListResponse) || { items: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0, unreadCount: 0 } };
+      if (res && typeof res === 'object' && 'items' in res && Array.isArray(res.items)) {
+        return res;
+      }
+      return { items: [], meta: { total: 0, page: 1, limit: 20, totalPages: 0, unreadCount: 0 } };
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
       return {
@@ -88,10 +91,13 @@ class NotificationService {
   async markAsRead(id: string): Promise<NotificationItem | null> {
     try {
       const res = await apiClient.patch<ApiResponse<NotificationItem> | NotificationItem>(`/notifications/${id}/read`, {});
-      if (res && 'data' in res) {
-        return (res as any).data;
+      if (res && typeof res === 'object' && 'data' in res) {
+        return res.data ?? null;
       }
-      return (res as NotificationItem) || null;
+      if (res && typeof res === 'object' && 'id' in res) {
+        return res;
+      }
+      return null;
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
       return null;

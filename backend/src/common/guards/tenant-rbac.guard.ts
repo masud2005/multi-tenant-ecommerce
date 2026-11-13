@@ -12,6 +12,18 @@ import {
   RbacAction,
 } from '../decorators/rbac.decorator';
 import { UserRole } from '../../../prisma/generated/client';
+import type { AuthUser } from '../decorators/current-user.decorator';
+
+type RbacRequest = {
+  user?: AuthUser & {
+    tenantMemberships?: Array<{ tenantId?: string | null }>;
+  };
+  tenantId?: string;
+  headers: Record<string, string | string[] | undefined>;
+  method?: string;
+  originalUrl?: string;
+  url?: string;
+};
 
 @Injectable()
 export class TenantRbacGuard implements CanActivate {
@@ -21,7 +33,7 @@ export class TenantRbacGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RbacRequest>();
     const user = request.user;
 
     if (!user) {
@@ -34,11 +46,17 @@ export class TenantRbacGuard implements CanActivate {
     }
 
     // 2. Resolve current store context
-    const currentTenantId =
-      request.tenantId ||
-      request.headers['x-tenant-id'] ||
-      user.tenantId ||
-      user.tenantMemberships?.[0]?.tenantId;
+    const currentTenantId = [
+      request.tenantId,
+      request.headers['x-tenant-id'],
+      user.tenantId,
+      user.tenantMemberships?.[0]?.tenantId,
+    ]
+      .flat()
+      .find(
+        (value): value is string =>
+          typeof value === 'string' && value.length > 0,
+      );
 
     if (!currentTenantId) {
       throw new ForbiddenException('Store context not found in request');
@@ -63,7 +81,7 @@ export class TenantRbacGuard implements CanActivate {
 
     if (membership.status !== 'active') {
       throw new ForbiddenException(
-        `Your store access is currently ${membership.status}`
+        `Your store access is currently ${membership.status}`,
       );
     }
 
@@ -75,18 +93,19 @@ export class TenantRbacGuard implements CanActivate {
     // 5. Staff permissions validation
     if (!membership.role || !membership.role.permissions) {
       throw new ForbiddenException(
-        'No role or permissions assigned to this staff account'
+        'No role or permissions assigned to this staff account',
       );
     }
 
     // 6. Resolve module and action (auto-detect or metadata override)
     const override = this.reflector.getAllAndOverride<RbacPermissionOverride>(
       RBAC_OVERRIDE_KEY,
-      [context.getHandler(), context.getClass()]
+      [context.getHandler(), context.getClass()],
     );
 
     const moduleName = override?.module || this.detectModule(request);
-    const actionName = override?.action || this.detectAction(request.method);
+    const actionName =
+      override?.action || this.detectAction(request.method || '');
 
     if (!moduleName || !actionName) {
       return true;
@@ -97,7 +116,7 @@ export class TenantRbacGuard implements CanActivate {
 
     if (!allowedActions.includes(actionName)) {
       throw new ForbiddenException(
-        `Permission denied: Requires '${actionName}' permission on '${moduleName}'`
+        `Permission denied: Requires '${actionName}' permission on '${moduleName}'`,
       );
     }
 
@@ -105,7 +124,10 @@ export class TenantRbacGuard implements CanActivate {
   }
 
   // Auto-detect module name from URL path (/owner/:module/...)
-  private detectModule(request: any): string | null {
+  private detectModule(request: {
+    originalUrl?: string;
+    url?: string;
+  }): string | null {
     const rawUrl = request.originalUrl || request.url || '';
     const cleanPath = rawUrl.split('?')[0];
 

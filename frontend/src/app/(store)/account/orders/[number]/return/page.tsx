@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { use, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -167,9 +169,9 @@ export default function ReturnRequestWizardPage({ params }: ReturnWizardPageProp
         ),
       );
       setPhotoUrls((prev) => [...prev, ...reads.filter(Boolean)].slice(0, MAX_RETURN_PHOTOS));
-    } catch (err: any) {
-      setError(err?.message || 'Could not add photo');
-      toast.error(err?.message || 'Could not add photo');
+    } catch (err: unknown) {
+      setError(asApiError(err).message || 'Could not add photo');
+      toast.error(asApiError(err).message || 'Could not add photo');
     } finally {
       setPhotoUploading(false);
       if (photoInputRef.current) photoInputRef.current.value = '';
@@ -230,9 +232,9 @@ export default function ReturnRequestWizardPage({ params }: ReturnWizardPageProp
         } else {
           throw new Error(res?.message || 'Could not submit request');
         }
-      } catch (err: any) {
-        toast.error(err?.message || 'Failed to submit request. Please try again.');
-        setError(err?.message || 'Failed to submit request');
+      } catch (err: unknown) {
+        toast.error(asApiError(err).message || 'Failed to submit request. Please try again.');
+        setError(asApiError(err).message || 'Failed to submit request');
       } finally {
         setIsSubmitting(false);
       }

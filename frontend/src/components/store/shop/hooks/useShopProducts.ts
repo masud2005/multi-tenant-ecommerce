@@ -74,7 +74,7 @@ export function useShopProducts(mode: ShopMode = 'shop', slug?: string) {
               name: d.name,
               image: d.image || images.kurta,
               blurb: d.description || '',
-              subcategories: (d.children || []).map((ch: any) => ch.name),
+              subcategories: (d.children || []).map((ch) => ch.name),
               seoTitle: d.seoTitle || undefined,
               seoDescription: d.seoDescription || undefined,
             });
@@ -94,8 +94,8 @@ export function useShopProducts(mode: ShopMode = 'shop', slug?: string) {
               name: d.name,
               description: d.description || '',
               image: d.image || images.hero,
-              type: (d.type?.toLowerCase() === 'rule' ? 'rule' : 'manual') as any,
-              ruleDetails: d.rule || undefined,
+              type: d.type?.toLowerCase() === 'rule' ? 'rule' : 'manual',
+              ruleDetails: d.rule && typeof d.rule === 'object' ? d.rule : undefined,
               rule:
                 d.rule && typeof d.rule === 'object'
                   ? `${d.rule.field || 'Tag'} ${d.rule.op || 'contains'} "${d.rule.value || ''}"`
@@ -251,11 +251,11 @@ export function useShopProducts(mode: ShopMode = 'shop', slug?: string) {
     });
 
     const categoryFacets = categories
-      .filter((c) => catCountMap.has(c.key) || catCountMap.has(c.name as any))
+      .filter((c) => catCountMap.has(c.key) || catCountMap.has(c.name))
       .map((c) => ({
         key: c.key,
         label: c.name,
-        count: catCountMap.get(c.key) ?? catCountMap.get(c.name as any) ?? 0,
+        count: catCountMap.get(c.key) ?? catCountMap.get(c.name) ?? 0,
       }));
 
     // 4. Brand Counts (contextualized by active category filter)

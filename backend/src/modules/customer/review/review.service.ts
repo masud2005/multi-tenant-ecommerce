@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import {
   BadRequestException,
   ConflictException,
@@ -104,7 +105,10 @@ export class ReviewService {
     return null;
   }
 
-  private async resolveProduct(productIdOrSlugOrTitle: string, tenantId: string) {
+  private async resolveProduct(
+    productIdOrSlugOrTitle: string,
+    tenantId: string,
+  ) {
     if (!productIdOrSlugOrTitle) {
       throw new BadRequestException('Product identifier is required');
     }
@@ -150,7 +154,7 @@ export class ReviewService {
     productId: string,
     orderId?: string,
   ): Promise<boolean> {
-    const orderWhere: any = {
+    const orderWhere: Prisma.OrderWhereInput = {
       customerId,
       deletedAt: null,
       status: OrderStatus.DELIVERED,
@@ -238,8 +242,7 @@ export class ReviewService {
     const trimmedBody = dto.body.trim();
     const trimmedTitle = dto.title?.trim() || '';
     const resolvedTitle =
-      trimmedTitle &&
-      trimmedTitle.toLowerCase() !== trimmedBody.toLowerCase()
+      trimmedTitle && trimmedTitle.toLowerCase() !== trimmedBody.toLowerCase()
         ? trimmedTitle
         : '';
 
@@ -275,7 +278,7 @@ export class ReviewService {
       `New review created for product "${product.title}" (${review.id}) - Status: PUBLISHED`,
     );
 
-    (async () => {
+    void (async () => {
       try {
         const staffWithUsers = await this.prisma.tenantMember.findMany({
           where: {
@@ -414,18 +417,27 @@ export class ReviewService {
     userId?: string | null,
   ) {
     const resolvedTenantId = await this.resolveTenantId(tenantId);
-    const product = await this.resolveProduct(productIdOrSlug, resolvedTenantId);
+    const product = await this.resolveProduct(
+      productIdOrSlug,
+      resolvedTenantId,
+    );
 
     const page = query.page && query.page > 0 ? query.page : 1;
     const limit = query.limit && query.limit > 0 ? query.limit : 50;
     const skip = (page - 1) * limit;
 
-    let orderBy: any = { createdAt: 'desc' };
+    let orderBy: Prisma.ReviewOrderByWithRelationInput = { createdAt: 'desc' };
     const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
 
-    if (query.sortBy === 'rating_high' || (query.sortBy === 'rating' && sortOrder === 'desc')) {
+    if (
+      query.sortBy === 'rating_high' ||
+      (query.sortBy === 'rating' && sortOrder === 'desc')
+    ) {
       orderBy = { rating: 'desc' };
-    } else if (query.sortBy === 'rating_low' || (query.sortBy === 'rating' && sortOrder === 'asc')) {
+    } else if (
+      query.sortBy === 'rating_low' ||
+      (query.sortBy === 'rating' && sortOrder === 'asc')
+    ) {
       orderBy = { rating: 'asc' };
     } else if (query.sortBy === 'helpful') {
       orderBy = { helpful: sortOrder };
@@ -435,7 +447,7 @@ export class ReviewService {
       orderBy = { createdAt: 'desc' };
     }
 
-    const where: any = {
+    const where: Prisma.ReviewWhereInput = {
       productId: product.id,
       status: ReviewStatus.PUBLISHED,
       deletedAt: null,
@@ -470,7 +482,13 @@ export class ReviewService {
       }),
     ]);
 
-    const distribution: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const distribution: Record<number, number> = {
+      5: 0,
+      4: 0,
+      3: 0,
+      2: 0,
+      1: 0,
+    };
     let totalScore = 0;
     let withPhotosCount = 0;
 
@@ -528,7 +546,9 @@ export class ReviewService {
     userId: string | null | undefined,
   ) {
     if (!userId) {
-      throw new UnauthorizedException('Please sign in to mark a review as helpful');
+      throw new UnauthorizedException(
+        'Please sign in to mark a review as helpful',
+      );
     }
 
     const resolvedTenantId = await this.resolveTenantId(tenantId);
@@ -610,10 +630,11 @@ export class ReviewService {
     const resolvedTenantId = await this.resolveTenantId(tenantId);
 
     const page = query.page && Number(query.page) > 0 ? Number(query.page) : 1;
-    const limit = query.limit && Number(query.limit) > 0 ? Number(query.limit) : 15;
+    const limit =
+      query.limit && Number(query.limit) > 0 ? Number(query.limit) : 15;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where: Prisma.ReviewWhereInput = {
       tenantId: resolvedTenantId,
       status: ReviewStatus.PUBLISHED,
       deletedAt: null,

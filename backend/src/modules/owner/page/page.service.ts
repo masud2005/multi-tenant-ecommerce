@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { UpdateAboutPageDto, UpdatePolicyPageDto, UpdateReturnsPageDto } from './dto';
+import {
+  UpdateAboutPageDto,
+  UpdatePolicyPageDto,
+  UpdateReturnsPageDto,
+} from './dto';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import {
   ConflictException,
@@ -16,6 +20,25 @@ export const POLICY_SLUGS = [
 ] as const;
 
 export type PolicySlug = (typeof POLICY_SLUGS)[number];
+
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as JsonRecord;
+}
+
+function text(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return '';
+}
+
+function parseContent(raw: string): JsonRecord {
+  return asRecord(JSON.parse(raw));
+}
 
 const POLICY_TITLES: Record<PolicySlug, string> = {
   returns: 'Return Policy',
@@ -88,20 +111,19 @@ export class OwnerPageService {
     }
 
     try {
-      const parsed = JSON.parse(page.content);
+      const parsed = parseContent(page.content);
       const storyParagraphs = Array.isArray(parsed.storyParagraphs)
-        ? parsed.storyParagraphs.filter((p: string) => String(p || '').trim())
+        ? parsed.storyParagraphs.filter((paragraph) => text(paragraph).trim())
         : [];
       const isEmpty =
-        !String(parsed.heading || page.title || '').trim() &&
-        storyParagraphs.length === 0;
+        !text(parsed.heading).trim() && storyParagraphs.length === 0;
 
       return ResponseHelper.success(
         {
           ...EMPTY_ABOUT,
           ...parsed,
-          title: page.title || parsed.title || '',
-          status: page.status || parsed.status || 'draft',
+          title: page.title || text(parsed.title),
+          status: page.status || text(parsed.status) || 'draft',
           id: page.id,
           isEmpty,
           updatedAt: page.updatedAt,
@@ -201,24 +223,24 @@ export class OwnerPageService {
     }
 
     try {
-      const parsed = JSON.parse(page.content);
+      const parsed = parseContent(page.content);
       const sections = Array.isArray(parsed.sections)
-        ? parsed.sections.filter(
-            (s: any) =>
-              String(s?.heading || '').trim() || String(s?.body || '').trim(),
-          )
+        ? parsed.sections.filter((section) => {
+            const row = asRecord(section);
+            return text(row.heading).trim() || text(row.body).trim();
+          })
         : [];
       const isEmpty =
         sections.length === 0 &&
-        !String(parsed.heading || '').trim() &&
-        !String(page.title || parsed.title || '').trim();
+        !text(parsed.heading).trim() &&
+        !text(page.title || text(parsed.title)).trim();
 
       return ResponseHelper.success(
         {
           ...EMPTY_POLICY,
           ...parsed,
-          title: page.title || parsed.title || POLICY_TITLES[clean],
-          status: page.status || parsed.status || 'draft',
+          title: page.title || text(parsed.title) || POLICY_TITLES[clean],
+          status: page.status || text(parsed.status) || 'draft',
           slug: clean,
           id: page.id,
           isEmpty,

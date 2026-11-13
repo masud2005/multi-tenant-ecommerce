@@ -1,4 +1,11 @@
-import { Controller, Get, Headers, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { StoreService } from './store.service';
 
@@ -11,7 +18,8 @@ export class StoreController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get public store information, contact details, address, hours, and branding',
+    summary:
+      'Get public store information, contact details, address, hours, and branding',
   })
   @ApiResponse({
     status: 200,

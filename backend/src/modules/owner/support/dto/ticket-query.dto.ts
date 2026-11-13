@@ -18,7 +18,10 @@ export class TicketQueryDto {
   @IsOptional()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Page number for pagination', default: 1 })
+  @ApiPropertyOptional({
+    description: 'Page number for pagination',
+    default: 1,
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)

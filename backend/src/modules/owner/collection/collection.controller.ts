@@ -27,7 +27,10 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Collections')
@@ -52,7 +55,7 @@ export class CollectionController {
   async create(
     @Body() dto: CreateCollectionDto,
     @UploadedFile() file?: Express.Multer.File,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.collectionService.create(dto, file, user?.tenantId);
   }
@@ -60,9 +63,14 @@ export class CollectionController {
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all collections for owner tenant or public storefront' })
-  @ApiResponse({ status: 200, description: 'Collections retrieved successfully' })
-  async findAll(@CurrentUser() user?: any) {
+  @ApiOperation({
+    summary: 'Get all collections for owner tenant or public storefront',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Collections retrieved successfully',
+  })
+  async findAll(@CurrentUser() user?: AuthUser) {
     return this.collectionService.findAll(user?.tenantId);
   }
 
@@ -70,11 +78,14 @@ export class CollectionController {
   @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get single collection details by ID or Slug' })
-  @ApiResponse({ status: 200, description: 'Collection details retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Collection details retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Collection not found' })
   async findOne(
     @Param('idOrSlug') idOrSlug: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.collectionService.findOne(idOrSlug, user?.tenantId);
   }
@@ -97,7 +108,7 @@ export class CollectionController {
     @Param('id') id: string,
     @Body() dto: UpdateCollectionDto,
     @UploadedFile() file?: Express.Multer.File,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.collectionService.update(id, dto, file, user?.tenantId);
   }
@@ -114,7 +125,7 @@ export class CollectionController {
   @ApiResponse({ status: 404, description: 'Collection not found' })
   async remove(
     @Param('idOrSlug') idOrSlug: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.collectionService.remove(idOrSlug, user?.tenantId);
   }

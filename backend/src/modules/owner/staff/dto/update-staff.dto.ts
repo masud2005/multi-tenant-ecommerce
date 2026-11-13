@@ -8,7 +8,8 @@ export class UpdateStaffDto {
   roleId?: string;
 
   @ApiPropertyOptional({
-    description: 'New role name (e.g. Store Manager, Fulfillment Staff, Customer Care, Content Editor)',
+    description:
+      'New role name (e.g. Store Manager, Fulfillment Staff, Customer Care, Content Editor)',
     example: 'Store Manager',
   })
   @IsOptional()
@@ -27,17 +28,25 @@ export class UpdateStaffDto {
   })
   status?: string;
 
-  @ApiPropertyOptional({ description: 'Staff full name', example: 'Rahim Ahmed' })
+  @ApiPropertyOptional({
+    description: 'Staff full name',
+    example: 'Rahim Ahmed',
+  })
   @IsOptional()
   @IsString()
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Staff phone number', example: '01712345678' })
+  @ApiPropertyOptional({
+    description: 'Staff phone number',
+    example: '01712345678',
+  })
   @IsOptional()
   @IsString()
   phone?: string;
 
-  @ApiPropertyOptional({ description: 'Two-factor authentication enabled flag' })
+  @ApiPropertyOptional({
+    description: 'Two-factor authentication enabled flag',
+  })
   @IsOptional()
   @IsBoolean()
   twoFactor?: boolean;

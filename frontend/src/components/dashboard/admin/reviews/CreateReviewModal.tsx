@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Star, X, Plus, Sparkles } from 'lucide-react';
@@ -104,9 +106,9 @@ export function CreateReviewModal({
       } else {
         toast.error('Failed to create review.');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating review:', err);
-      toast.error(err?.message || 'Failed to create review.');
+      toast.error(asApiError(err).message || 'Failed to create review.');
     } finally {
       setSubmitting(false);
     }
@@ -245,7 +247,10 @@ export function CreateReviewModal({
               <span className="text-xs font-medium text-ink">Status:</span>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === 'PUBLISHED' || value === 'HIDDEN') setStatus(value);
+                }}
                 className="rounded-lg border border-line bg-surface px-2 py-1 text-xs font-semibold text-ink focus:border-ink focus:outline-none"
               >
                 <option value="PUBLISHED">Published</option>

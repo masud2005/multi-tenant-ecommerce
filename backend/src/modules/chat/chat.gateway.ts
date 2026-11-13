@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { readTokenClaims, textField } from '../auth/utils/token.util';
 
 interface AuthenticatedSocket extends Socket {
   user?: {
@@ -41,7 +42,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // In-Memory Presence Registry: TenantId -> Map<UserIdOrGuestId, { socketIds: Set<string>, role: string, name: string, email?: string }>
   private readonly onlineUsers = new Map<
     string,
-    Map<string, { socketIds: Set<string>; role: string; name: string; email?: string }>
+    Map<
+      string,
+      { socketIds: Set<string>; role: string; name: string; email?: string }
+    >
   >();
 
   // Conversation Presence Registry: RoomName -> Set<string> (userIds/socketIds)
@@ -58,15 +62,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    */
   async handleConnection(client: AuthenticatedSocket) {
     try {
+      const bearer = textField(client.handshake.headers, 'authorization');
       const token =
-        client.handshake.auth?.token ||
-        client.handshake.headers?.authorization?.replace('Bearer ', '') ||
-        (client.handshake.query?.token as string);
+        textField(client.handshake.auth, 'token') ||
+        (bearer ? bearer.replace(/^Bearer\s+/i, '') : undefined) ||
+        textField(client.handshake.query, 'token');
 
       const tenantId =
-        (client.handshake.auth?.tenantId as string) ||
-        (client.handshake.headers['x-tenant-id'] as string) ||
-        (client.handshake.query?.tenantId as string);
+        textField(client.handshake.auth, 'tenantId') ||
+        textField(client.handshake.headers, 'x-tenant-id') ||
+        textField(client.handshake.query, 'tenantId');
 
       client.tenantId = tenantId;
 
@@ -76,27 +81,41 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.configService.get<string>('jwt.accessSecret') ||
             this.configService.get<string>('app.jwtSecret') ||
             'jwt-secret';
-          const payload = await this.jwtService.verifyAsync(token, { secret });
+          const payload = readTokenClaims(
+            await this.jwtService.verifyAsync(token, { secret }),
+          );
+          const role =
+            payload.role === 'OWNER' ||
+            payload.role === 'STAFF' ||
+            payload.role === 'CUSTOMER'
+              ? payload.role
+              : 'CUSTOMER';
           client.user = {
             id: payload.sub || payload.id,
             email: payload.email,
             name: payload.name,
-            role: payload.role,
+            role,
             tenantId: payload.tenantId || tenantId,
           };
-          this.logger.log(`Authenticated client connected: ${client.user?.name} (${client.id})`);
+          this.logger.log(
+            `Authenticated client connected: ${client.user?.name} (${client.id})`,
+          );
 
           if (client.user?.role === 'OWNER' || client.user?.role === 'STAFF') {
             await client.join('admins');
-            this.logger.log(`Staff/Owner client joined admins room: ${client.id}`);
+            this.logger.log(
+              `Staff/Owner client joined admins room: ${client.id}`,
+            );
             // Broadcast live support presence to all storefront visitors
             client.broadcast.emit('presence_status', {
               role: 'OWNER',
               isOnline: true,
             });
           }
-        } catch (err) {
-          this.logger.warn(`Guest or expired token client connected: ${client.id}`);
+        } catch {
+          this.logger.warn(
+            `Guest or expired token client connected: ${client.id}`,
+          );
         }
       } else {
         this.logger.log(`Guest customer connected: ${client.id}`);
@@ -109,7 +128,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Track Presence (🟢 Online)
       this.trackUserOnline(client);
     } catch (error) {
-      this.logger.error(`Socket connection error for client ${client.id}`, error);
+      this.logger.error(
+        `Socket connection error for client ${client.id}`,
+        error,
+      );
     }
   }
 
@@ -133,7 +155,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
       }
     } catch (error) {
-      this.logger.error(`Socket disconnect error for client ${client.id}`, error);
+      this.logger.error(
+        `Socket disconnect error for client ${client.id}`,
+        error,
+      );
     }
   }
 
@@ -168,7 +193,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.to(roomName).emit('presence_status', {
       conversationId: data.conversationId,
       userId: client.user?.id || client.id,
-      name: client.user?.name || (clientRole === 'CUSTOMER' ? 'Customer' : 'Store Support'),
+      name:
+        client.user?.name ||
+        (clientRole === 'CUSTOMER' ? 'Customer' : 'Store Support'),
       role: clientRole,
       isOnline: true,
     });
@@ -188,7 +215,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let isOtherPartyOnline = this.roomPresence.get(roomName)!.size > 1;
     if (clientRole === 'CUSTOMER') {
       const adminRoom = client.nsp?.adapter?.rooms?.get('admins');
-      isOtherPartyOnline = isOtherPartyOnline || (adminRoom ? adminRoom.size > 0 : false);
+      isOtherPartyOnline =
+        isOtherPartyOnline || (adminRoom ? adminRoom.size > 0 : false);
     }
 
     return {
@@ -262,9 +290,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const user = client.user;
 
       const senderRole =
-        user?.role === 'OWNER' ? 'OWNER' : user?.role === 'STAFF' ? 'STAFF' : 'CUSTOMER';
+        user?.role === 'OWNER'
+          ? 'OWNER'
+          : user?.role === 'STAFF'
+            ? 'STAFF'
+            : 'CUSTOMER';
       const resolvedName =
-        senderName || user?.name || (senderRole === 'CUSTOMER' ? 'Customer' : 'Store Support');
+        senderName ||
+        user?.name ||
+        (senderRole === 'CUSTOMER' ? 'Customer' : 'Store Support');
 
       // 🔒 AES-256 এনক্রিপ্ট করে ডাটাবেজে সেভ এবং ডিক্রিপ্ট করা মেসেজ রেসপন্স তৈরি
       const response = await this.chatService.saveMessage(
@@ -278,16 +312,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.broadcastMessage(conversationId, messagePayload);
 
       return { success: true, data: messagePayload };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to send message';
       this.logger.error('Failed to process socket message', error);
-      return { success: false, message: error.message || 'Failed to send message' };
+      return {
+        success: false,
+        message,
+      };
     }
   }
 
   /**
    * Broadcast message to conversation room and admins
    */
-  broadcastMessage(conversationId: string, messagePayload: any) {
+  broadcastMessage(conversationId: string, messagePayload: unknown) {
     if (!this.server) return;
     const roomName = `chat_${conversationId}`;
     this.server.to(roomName).emit('new_message', messagePayload);
@@ -307,7 +346,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomName = `chat_${data.conversationId}`;
     client.to(roomName).emit('user_typing', {
       userId: client.user?.id || client.id,
-      name: client.user?.name || (client.user?.role === 'CUSTOMER' ? 'Customer' : 'Store Support'),
+      name:
+        client.user?.name ||
+        (client.user?.role === 'CUSTOMER' ? 'Customer' : 'Store Support'),
       isTyping: true,
     });
   }
@@ -321,7 +362,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomName = `chat_${data.conversationId}`;
     client.to(roomName).emit('user_typing', {
       userId: client.user?.id || client.id,
-      name: client.user?.name || (client.user?.role === 'CUSTOMER' ? 'Customer' : 'Store Support'),
+      name:
+        client.user?.name ||
+        (client.user?.role === 'CUSTOMER' ? 'Customer' : 'Store Support'),
       isTyping: false,
     });
   }
@@ -346,7 +389,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { isOnline: true };
       }
       try {
-        const conv = await this.chatService.getConversationCustomer(data.conversationId);
+        const conv = await this.chatService.getConversationCustomer(
+          data.conversationId,
+        );
         if (conv) {
           const tenantId = client.tenantId || 'global';
           const tenantMap = this.onlineUsers.get(tenantId);
@@ -359,7 +404,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 if (
                   userEntry.email &&
                   conv.customerEmail &&
-                  userEntry.email.toLowerCase() === conv.customerEmail.toLowerCase()
+                  userEntry.email.toLowerCase() ===
+                    conv.customerEmail.toLowerCase()
                 ) {
                   return { isOnline: true };
                 }
@@ -367,7 +413,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
           }
         }
-      } catch (err) {
+      } catch {
         // Fallback
       }
       return { isOnline: false };
@@ -386,7 +432,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const tenantId = client.tenantId || 'global';
     const userId = client.user?.id || client.id;
     const role = client.user?.role || 'CUSTOMER';
-    const name = client.user?.name || (role === 'CUSTOMER' ? 'Customer' : 'Store Support');
+    const name =
+      client.user?.name || (role === 'CUSTOMER' ? 'Customer' : 'Store Support');
     const email = client.user?.email;
 
     if (!this.onlineUsers.has(tenantId)) {

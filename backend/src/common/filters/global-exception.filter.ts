@@ -12,6 +12,31 @@ import { ThrottlerException } from '@nestjs/throttler';
 import { BaseException } from '../exceptions/base.exception';
 import { ExceptionCode } from '../exceptions/codes.exception';
 
+function readExceptionBody(value: string | object): {
+  message?: string | string[];
+  code?: string;
+  error?: string;
+  errors?: unknown[];
+} {
+  if (typeof value === 'string') return { message: value };
+  if (!value || typeof value !== 'object') return {};
+  const body = value as Record<string, unknown>;
+  const message = body.message;
+  const errors = body.errors;
+  return {
+    message:
+      typeof message === 'string'
+        ? message
+        : Array.isArray(message) &&
+            message.every((item) => typeof item === 'string')
+          ? message
+          : undefined,
+    code: typeof body.code === 'string' ? body.code : undefined,
+    error: typeof body.error === 'string' ? body.error : undefined,
+    errors: Array.isArray(errors) ? errors : undefined,
+  };
+}
+
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(GlobalExceptionFilter.name);
@@ -43,7 +68,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const isDev = process.env.NODE_ENV === 'development';
 
     if (exception instanceof BaseException) {
-      const body = exception.getResponse() as any;
+      const body = readExceptionBody(exception.getResponse());
       return {
         success: false,
         statusCode: exception.getStatus(),
@@ -67,7 +92,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     if (exception instanceof HttpException) {
-      const body = exception.getResponse() as any;
+      const body = readExceptionBody(exception.getResponse());
 
       if (body.errors?.length) {
         return {

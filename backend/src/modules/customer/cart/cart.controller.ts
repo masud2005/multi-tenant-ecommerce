@@ -23,7 +23,10 @@ import { CartService } from './cart.service';
 import { QueryCartDto } from './dto/query-cart.dto';
 import { AddToCartDto } from './dto/add-to-cart.dto';
 import { UpdateCartItemDto } from './dto/update-cart-item.dto';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 
 @ApiTags('(Customer) Cart')
@@ -45,17 +48,13 @@ export class CartController {
   async getCart(
     @Query() query: QueryCartDto,
     @Headers('x-session-token') sessionHeader?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
       throw new UnauthorizedException('Please log in to view your cart');
     }
-    return this.cartService.getCart(
-      query,
-      userId,
-      sessionHeader,
-    );
+    return this.cartService.getCart(query, userId, sessionHeader);
   }
 
   @Post('items')
@@ -70,17 +69,15 @@ export class CartController {
   async addToCart(
     @Body() dto: AddToCartDto,
     @Headers('x-session-token') sessionHeader?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Please log in to add items to your cart');
+      throw new UnauthorizedException(
+        'Please log in to add items to your cart',
+      );
     }
-    return this.cartService.addToCart(
-      dto,
-      userId,
-      sessionHeader,
-    );
+    return this.cartService.addToCart(dto, userId, sessionHeader);
   }
 
   @Patch('items/:id')
@@ -96,7 +93,7 @@ export class CartController {
     @Param('id') itemId: string,
     @Body() dto: UpdateCartItemDto,
     @Headers('x-session-token') sessionHeader?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
@@ -122,16 +119,12 @@ export class CartController {
   async removeFromCart(
     @Param('id') itemId: string,
     @Headers('x-session-token') sessionHeader?: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
       throw new UnauthorizedException('Please log in to update your cart');
     }
-    return this.cartService.removeFromCart(
-      itemId,
-      userId,
-      sessionHeader,
-    );
+    return this.cartService.removeFromCart(itemId, userId, sessionHeader);
   }
 }

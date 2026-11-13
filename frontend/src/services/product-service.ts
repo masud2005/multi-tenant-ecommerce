@@ -6,19 +6,67 @@ import type {
   ProductResponseData,
 } from '@/types';
 
+interface BackendProductImage {
+  url?: string;
+  order?: number;
+}
+
+interface BackendProductVariant {
+  id?: string;
+  sku?: string;
+  color?: string;
+  colorHex?: string | null;
+  size?: string;
+  price?: number | string;
+  salePrice?: number | string | null;
+  stock?: number | string;
+  reserved?: number | string;
+  enabled?: boolean;
+}
+
+interface BackendProduct {
+  id: string;
+  slug?: string;
+  title?: string;
+  images?: BackendProductImage[];
+  variants?: BackendProductVariant[];
+  specs?: Record<string, string | number | boolean | null> | null;
+  collections?: Array<{ collection?: { slug?: string }; collectionId?: string }>;
+  status?: string;
+  brand?: { name?: string } | null;
+  category?: { slug?: string } | null;
+  categoryId?: string;
+  subcategory?: { name?: string; slug?: string } | null;
+  tags?: string[];
+  price?: number | string;
+  salePrice?: number | string | null;
+  cost?: number | string;
+  rating?: number | string;
+  reviewCount?: number | string;
+  sold?: number | string;
+  createdAt?: string;
+  shortDescription?: string | null;
+  description?: string | null;
+  isNew?: boolean;
+  isBestseller?: boolean;
+  preorder?: boolean;
+  weightGrams?: number | string;
+  barcode?: string | null;
+}
+
 /**
  * Adapter helper to transform backend Product response into frontend domain model
  */
-export function mapBackendProductToFrontend(item: any): Product {
+export function mapBackendProductToFrontend(item: BackendProduct): Product {
   const images =
     item.images && item.images.length > 0
       ? item.images
-          .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
-          .map((img: any) => img.url)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+          .map((img) => img.url || '')
       : [];
 
-  const variants = (item.variants || []).map((v: any) => ({
-    id: v.id,
+  const variants = (item.variants || []).map((v) => ({
+    id: v.id || '',
     sku: v.sku || '',
     color: v.color || 'Standard',
     size: v.size || 'Free Size',
@@ -32,7 +80,7 @@ export function mapBackendProductToFrontend(item: any): Product {
   // Extract unique colors and sizes from variants
   const colorsMap = new Map<string, string>();
   const sizesSet = new Set<string>();
-  (item.variants || []).forEach((v: any) => {
+  (item.variants || []).forEach((v) => {
     if (v.color) colorsMap.set(v.color, v.colorHex || '#000000');
     if (v.size) sizesSet.add(v.size);
   });
@@ -52,7 +100,7 @@ export function mapBackendProductToFrontend(item: any): Product {
       : [];
 
   const collections = (item.collections || []).map(
-    (c: any) => c.collection?.slug || c.collectionId || '',
+    (c) => c.collection?.slug || c.collectionId || '',
   );
 
   const rawStatus = (item.status || 'DRAFT').toLowerCase();
@@ -65,8 +113,8 @@ export function mapBackendProductToFrontend(item: any): Product {
 
   return {
     id: item.id,
-    slug: item.slug,
-    title: item.title,
+    slug: item.slug || '',
+    title: item.title || '',
     brand: item.brand?.name || 'Tanti Studio',
     category: item.category?.slug || item.categoryId || 'women',
     subcategory: item.subcategory?.name || item.subcategory?.slug || '',
@@ -121,7 +169,7 @@ export const productService = {
     subcategory?: string;
     brand?: string;
     collection?: string;
-    status?: ProductStatus;
+    status?: ProductStatus | 'all';
     search?: string;
   }): Promise<Product[]> {
     try {
@@ -138,7 +186,7 @@ export const productService = {
       if (params?.collection && params.collection !== 'all') {
         searchParams.append('collection', params.collection);
       }
-      if (params?.status && params.status !== ('all' as any)) {
+      if (params?.status && params.status !== 'all') {
         searchParams.append('status', params.status.toUpperCase());
       }
       if (params?.search) {
@@ -147,8 +195,8 @@ export const productService = {
 
       const queryString = searchParams.toString();
       const endpoint = queryString ? `/owner/products?${queryString}` : '/owner/products';
-      const res = await apiClient.get<any>(endpoint);
-      const rawList = res?.data || res;
+      const res = await apiClient.get<ApiResponse<BackendProduct[]> | BackendProduct[]>(endpoint);
+      const rawList = Array.isArray(res) ? res : res?.data;
 
       if (Array.isArray(rawList)) {
         return rawList.map((item) => mapBackendProductToFrontend(item));
@@ -166,8 +214,8 @@ export const productService = {
   async getProductById(idOrSlug: string): Promise<Product | undefined> {
     try {
       const endpoint = `/owner/products/${idOrSlug}`;
-      const res = await apiClient.get<any>(endpoint);
-      const rawProduct = res?.data || res;
+      const res = await apiClient.get<ApiResponse<BackendProduct> | BackendProduct>(endpoint);
+      const rawProduct = res && typeof res === 'object' && 'data' in res ? res.data : res;
       if (rawProduct && rawProduct.id) {
         return mapBackendProductToFrontend(rawProduct);
       }
@@ -196,10 +244,10 @@ export const productService = {
   async saveProduct(product: Product): Promise<Product> {
     try {
       if (product.id) {
-        const res = await apiClient.patch<any>(`/owner/products/${product.id}`, product);
+        const res = await apiClient.patch<ApiResponse<BackendProduct>>(`/owner/products/${product.id}`, product);
         return res?.data ? mapBackendProductToFrontend(res.data) : product;
       }
-      const res = await apiClient.post<any>('/owner/products', product);
+      const res = await apiClient.post<ApiResponse<BackendProduct>>('/owner/products', product);
       return res?.data ? mapBackendProductToFrontend(res.data) : product;
     } catch {
       return product;

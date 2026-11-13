@@ -6,13 +6,24 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary, UploadApiResponse, UploadApiOptions } from 'cloudinary';
+import {
+  v2 as cloudinary,
+  UploadApiResponse,
+  UploadApiOptions,
+} from 'cloudinary';
 import { Readable } from 'stream';
 import {
   DeleteResult,
   UploadOptions,
   UploadResult,
 } from './interfaces/storage.interface';
+
+function cloudinaryDestroyResult(value: unknown): string {
+  if (!value || typeof value !== 'object' || !('result' in value)) {
+    return 'error';
+  }
+  return typeof value.result === 'string' ? value.result : 'error';
+}
 
 @Injectable()
 export class StorageService implements OnModuleInit {
@@ -41,7 +52,9 @@ export class StorageService implements OnModuleInit {
     });
 
     this.isConfigured = true;
-    this.logger.log(`Cloudinary storage service initialized for cloud: ${cloudName}`);
+    this.logger.log(
+      `Cloudinary storage service initialized for cloud: ${cloudName}`,
+    );
   }
 
   async uploadFile(
@@ -109,23 +122,28 @@ export class StorageService implements OnModuleInit {
     }
 
     try {
-      const response = await cloudinary.uploader.destroy(publicId, {
-        resource_type: resourceType,
-        invalidate: true,
-      });
+      const result = cloudinaryDestroyResult(
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: resourceType,
+          invalidate: true,
+        }),
+      );
 
       return {
         publicId,
-        result: response.result,
+        result,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Cloudinary file deletion failed';
+      const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(
         `Failed to delete file from Cloudinary: ${publicId}`,
-        error.stack,
+        stack,
       );
-      throw new InternalServerErrorException(
-        error.message || 'Cloudinary file deletion failed',
-      );
+      throw new InternalServerErrorException(message);
     }
   }
 
@@ -158,7 +176,8 @@ export class StorageService implements OnModuleInit {
       quality: transformations?.quality || 'auto',
       width: transformations?.width,
       height: transformations?.height,
-      crop: transformations?.crop || (transformations?.width ? 'limit' : undefined),
+      crop:
+        transformations?.crop || (transformations?.width ? 'limit' : undefined),
     });
   }
 
@@ -177,7 +196,10 @@ export class StorageService implements OnModuleInit {
     if (!publicIdOrUrl) return '';
 
     // If it's not a URL, return directly
-    if (!publicIdOrUrl.startsWith('http://') && !publicIdOrUrl.startsWith('https://')) {
+    if (
+      !publicIdOrUrl.startsWith('http://') &&
+      !publicIdOrUrl.startsWith('https://')
+    ) {
       return publicIdOrUrl;
     }
 
@@ -200,7 +222,9 @@ export class StorageService implements OnModuleInit {
       const fullPathWithExt = publicIdParts.join('/');
       // Remove file extension
       const lastDot = fullPathWithExt.lastIndexOf('.');
-      return lastDot !== -1 ? fullPathWithExt.substring(0, lastDot) : fullPathWithExt;
+      return lastDot !== -1
+        ? fullPathWithExt.substring(0, lastDot)
+        : fullPathWithExt;
     } catch {
       return publicIdOrUrl;
     }
@@ -245,14 +269,11 @@ export class StorageService implements OnModuleInit {
     try {
       const result = await cloudinary.uploader.upload(fileStr, uploadOptions);
       return this.mapUploadResponse(result);
-    } catch (error: any) {
-      this.logger.error(
-        'Cloudinary string/url upload error',
-        error.message || error,
-      );
-      throw new InternalServerErrorException(
-        error.message || 'Cloudinary upload failed',
-      );
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'Cloudinary upload failed';
+      this.logger.error('Cloudinary string/url upload error', message);
+      throw new InternalServerErrorException(message);
     }
   }
 
@@ -274,8 +295,8 @@ export class StorageService implements OnModuleInit {
     };
   }
 
-  private isMulterFile(file: any): file is Express.Multer.File {
-    return file && typeof file === 'object' && 'buffer' in file;
+  private isMulterFile(file: unknown): file is Express.Multer.File {
+    return file != null && typeof file === 'object' && 'buffer' in file;
   }
 
   private ensureConfigured() {

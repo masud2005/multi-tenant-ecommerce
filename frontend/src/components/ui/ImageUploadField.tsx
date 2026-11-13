@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useRef, useState } from 'react';
 import { ImagePlus, Loader2, Trash2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
@@ -65,9 +67,9 @@ export function ImageUploadField({
         if (fromName) onAltChange(fromName);
       }
       toast.success('Image uploaded');
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(
-        err?.response?.data?.message || err?.message || 'Failed to upload image',
+        asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to upload image',
       );
     } finally {
       setUploading(false);

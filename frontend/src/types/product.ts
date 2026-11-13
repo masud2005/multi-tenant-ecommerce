@@ -93,7 +93,7 @@ export interface CreateProductPayload {
   isNew?: boolean;
   isBestseller?: boolean;
   tags?: string[];
-  specs?: Record<string, any>;
+  specs?: Record<string, string | number | boolean | null>;
   seoTitle?: string;
   seoDescription?: string;
   categoryId: string;
@@ -126,7 +126,7 @@ export interface ProductResponseData {
   reviewCount: number;
   sold: number;
   tags: string[];
-  specs: Record<string, any> | null;
+  specs: Record<string, string | number | boolean | null> | null;
   categoryId: string;
   subcategoryId: string | null;
   brandId: string | null;

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
@@ -109,8 +111,8 @@ export function DiscountsManager() {
       toast.success(
         `Discount "${discount.code}" is now ${newStatus === 'ACTIVE' ? 'Active' : 'Disabled'}`
       );
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to update discount status');
+    } catch (error: unknown) {
+      toast.error(asApiError(error).message || 'Failed to update discount status');
       fetchDiscounts();
     }
   };
@@ -125,9 +127,9 @@ export function DiscountsManager() {
       setDiscountsList((prev) => prev.filter((d) => d.id !== id));
       setDeletingDiscount(null);
       toast.success(`Discount "${code}" deleted successfully`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete discount:', error);
-      toast.error(error?.message || 'Failed to delete discount');
+      toast.error(asApiError(error).message || 'Failed to delete discount');
     } finally {
       setIsDeleting(false);
     }

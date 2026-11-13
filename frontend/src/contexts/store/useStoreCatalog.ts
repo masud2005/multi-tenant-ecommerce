@@ -41,7 +41,7 @@ export function useStoreCatalog() {
             const targetList = parentCategories.length > 0 ? parentCategories : catRes.data;
 
             const mapped: CategoryItemData[] = targetList.map((c: CategoryResponseData) => {
-              const childrenNames = (c.children || []).map((ch: any) => ch.name);
+              const childrenNames = (c.children || []).map((ch) => ch.name);
               return {
                 key: c.slug || c.id,
                 name: c.name,
@@ -94,8 +94,8 @@ export function useStoreCatalog() {
               name: c.name,
               description: c.description || '',
               image: c.image || '',
-              type: (c.type?.toLowerCase() === 'rule' ? 'rule' : 'manual') as any,
-              ruleDetails: c.rule || undefined,
+              type: c.type?.toLowerCase() === 'rule' ? 'rule' : 'manual',
+              ruleDetails: c.rule && typeof c.rule === 'object' ? c.rule : undefined,
               rule:
                 c.rule && typeof c.rule === 'object'
                   ? `${c.rule.field || 'Tag'} ${c.rule.op || c.rule.condition || 'contains'} "${c.rule.value || ''}"`

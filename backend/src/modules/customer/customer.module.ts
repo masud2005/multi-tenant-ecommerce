@@ -39,5 +39,4 @@ import { CustomerPageModule } from './page/page.module';
     CustomerPageModule,
   ],
 })
-export class CustomerModule { }
-
+export class CustomerModule {}

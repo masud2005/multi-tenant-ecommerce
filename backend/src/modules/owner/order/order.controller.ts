@@ -27,7 +27,10 @@ import {
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Orders')
@@ -47,7 +50,7 @@ export class OrderController {
   @ApiResponse({ status: 403, description: 'Forbidden - Staff role required' })
   async getOrders(
     @Query() query: OrderQueryDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -58,11 +61,14 @@ export class OrderController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get single order details by id or order number' })
-  @ApiResponse({ status: 200, description: 'Order details retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order details retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Order not found' })
   async getOrderById(
     @Param('id') id: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -72,13 +78,18 @@ export class OrderController {
   // Update order status, courier provider, and tracking number
   @Patch(':id/status')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update order status, fulfillment, and courier tracking' })
-  @ApiResponse({ status: 200, description: 'Order status updated successfully' })
+  @ApiOperation({
+    summary: 'Update order status, fulfillment, and courier tracking',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Order status updated successfully',
+  })
   @ApiResponse({ status: 404, description: 'Order not found' })
   async updateOrderStatus(
     @Param('id') id: string,
     @Body() dto: UpdateOrderStatusDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -94,7 +105,7 @@ export class OrderController {
   async addOrderNote(
     @Param('id') id: string,
     @Body() dto: AddOrderNoteDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -105,16 +116,25 @@ export class OrderController {
   @Patch(':id/verify-payment')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify or reject manual bKash/Nagad payment' })
-  @ApiResponse({ status: 200, description: 'Payment verification status updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment verification status updated successfully',
+  })
   @ApiResponse({ status: 404, description: 'Order not found' })
   async verifyPayment(
     @Param('id') id: string,
     @Body() dto: { approved: boolean; note?: string },
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
-    return this.orderService.verifyManualPayment(id, dto.approved, dto.note, tenantId, user);
+    return this.orderService.verifyManualPayment(
+      id,
+      dto.approved,
+      dto.note,
+      tenantId,
+      user,
+    );
   }
 
   // Record manual refund (owner pays customer via bKash/Nagad outside the app)
@@ -129,7 +149,7 @@ export class OrderController {
   async refundOrder(
     @Param('id') id: string,
     @Body() dto: RefundOrderDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;

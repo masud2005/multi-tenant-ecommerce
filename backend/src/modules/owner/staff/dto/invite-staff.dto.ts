@@ -1,18 +1,33 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class InviteStaffDto {
-  @ApiProperty({ description: 'Staff email address', example: 'staff@example.com' })
+  @ApiProperty({
+    description: 'Staff email address',
+    example: 'staff@example.com',
+  })
   @IsNotEmpty()
   @IsEmail()
   email: string;
 
-  @ApiPropertyOptional({ description: 'Staff full name', example: 'Rahim Ahmed' })
+  @ApiPropertyOptional({
+    description: 'Staff full name',
+    example: 'Rahim Ahmed',
+  })
   @IsOptional()
   @IsString()
   name?: string;
 
-  @ApiPropertyOptional({ description: 'Staff phone number', example: '01712345678' })
+  @ApiPropertyOptional({
+    description: 'Staff phone number',
+    example: '01712345678',
+  })
   @IsOptional()
   @IsString()
   phone?: string;
@@ -23,7 +38,8 @@ export class InviteStaffDto {
   roleId?: string;
 
   @ApiPropertyOptional({
-    description: 'Role name if roleId is not known (e.g., Store Manager, Fulfillment Staff)',
+    description:
+      'Role name if roleId is not known (e.g., Store Manager, Fulfillment Staff)',
     example: 'Store Manager',
   })
   @IsOptional()

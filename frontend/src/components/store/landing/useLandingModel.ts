@@ -179,10 +179,7 @@ export function useLandingModel(config?: LandingConfig) {
     const testimonials: LandingTestimonial[] = dbReviews;
 
     // Real trust points from tenant settings in DB (zero mock fallback)
-    const trustPoints: { title: string; body: string }[] =
-      Array.isArray((tenant as any)?.settings?.trustPoints)
-        ? (tenant as any).settings.trustPoints
-        : [];
+    const trustPoints = tenant.settings?.trustPoints ?? [];
 
     return {
       picks,

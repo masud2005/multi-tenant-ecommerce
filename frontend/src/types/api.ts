@@ -1,10 +1,22 @@
 // Centralized API response and error contract types
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string;
   errors?: Record<string, string[]>;
+}
+
+/** Keeps a success/message envelope when the payload itself is absent. */
+export function unchangedEnvelope<T>(
+  res: { success?: boolean; message?: string; errors?: Record<string, string[]> } | null | undefined,
+): ApiResponse<T> {
+  return {
+    success: Boolean(res?.success),
+    message: res?.message,
+    errors: res?.errors,
+    data: undefined as T,
+  };
 }
 
 export interface PaginatedMeta {
@@ -16,7 +28,7 @@ export interface PaginatedMeta {
   hasPrevPage: boolean;
 }
 
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   success: boolean;
   data: T[];
   meta: PaginatedMeta;

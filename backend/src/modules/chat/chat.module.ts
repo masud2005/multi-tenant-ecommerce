@@ -13,4 +13,3 @@ import { StorageModule } from '../../shared/storage/storage.module';
   exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}
-

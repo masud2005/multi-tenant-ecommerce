@@ -240,7 +240,7 @@ export function NotificationBell({}: NotificationBellProps = {}) {
                 <Bell className="h-8 w-8 text-ink-muted/40 mb-2" />
                 <p className="text-sm font-medium text-ink">No notifications yet</p>
                 <p className="text-xs text-ink-muted mt-1">
-                  When new orders or updates arrive, you'll see them here.
+                  When new orders or updates arrive, you&apos;ll see them here.
                 </p>
               </li>
             ) : (

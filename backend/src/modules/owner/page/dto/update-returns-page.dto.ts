@@ -1,6 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsIn, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { ReturnSectionDto } from './return-section.dto';
 
 export class UpdateReturnsPageDto {
@@ -22,7 +28,8 @@ export class UpdateReturnsPageDto {
 
   @ApiPropertyOptional({
     type: [ReturnSectionDto],
-    description: 'List of return policy sections (e.g. Return window, Non-returnable items, Exchanges)',
+    description:
+      'List of return policy sections (e.g. Return window, Non-returnable items, Exchanges)',
   })
   @IsArray()
   @ValidateNested({ each: true })
@@ -39,4 +46,3 @@ export class UpdateReturnsPageDto {
   @IsOptional()
   status?: string;
 }
-

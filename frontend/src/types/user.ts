@@ -11,6 +11,7 @@ export interface UserInfo {
   avatar?: string;
   initials?: string;
   phone?: string;
+  district?: string;
   title?: string;
   tenantId?: string;
   isOwner?: boolean;
@@ -23,6 +24,7 @@ export interface StoredUser {
   name: string;
   email: string;
   phone?: string;
+  district?: string;
   role: UserRole;
   tenantId?: string;
   initials?: string;
