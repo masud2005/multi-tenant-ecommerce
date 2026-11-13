@@ -9,6 +9,7 @@
     "build": "npx prisma generate && nest build",
     "format": "prettier --ignore-path .gitignore --check \"**/*.+(js|ts|json)\"",
     "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "lint:fix": "eslint . --ext .ts,.js,.jsx,.tsx --fix",
     "start": "npx prisma generate && npx prisma migrate deploy && node dist/src/main",
     "dev": "npx prisma generate && nest start --watch",
