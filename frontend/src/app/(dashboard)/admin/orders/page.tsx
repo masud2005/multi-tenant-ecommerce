@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useMemo, useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -92,10 +94,10 @@ function OrdersContent() {
         setLiveOrders([]);
         toast.error('Could not load orders');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Could not fetch owner orders from backend:', err);
       setLiveOrders([]);
-      toast.error(err?.message || 'Could not load orders');
+      toast.error(asApiError(err).message || 'Could not load orders');
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +140,7 @@ function OrdersContent() {
       toast.success(`${selected.length} orders marked as ${orderStatusMeta[status].label.toLowerCase()}`);
       setSelected([]);
       fetchOrders();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error('Some orders could not be updated on the server');
     } finally {
       setIsBulkUpdating(false);

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -83,9 +85,9 @@ export default function AccountSecurityPage() {
       });
       setPw({ current: '', next: '', confirm: '' });
       toast.success('Password updated');
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(
-        err?.message ||
+        asApiError(err).message ||
           'Could not change password. Check your current password and try again.',
       );
     } finally {
@@ -106,8 +108,8 @@ export default function AccountSecurityPage() {
       }
       toast.success('Device signed out');
       await loadSessions();
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not sign out that device');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Could not sign out that device');
     } finally {
       setRevokingId(null);
     }
@@ -124,8 +126,8 @@ export default function AccountSecurityPage() {
       );
       setConfirmOthers(false);
       await loadSessions();
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not sign out other devices');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Could not sign out other devices');
     } finally {
       setRevokingOthers(false);
     }

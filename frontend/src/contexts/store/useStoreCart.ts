@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { CartItem } from '@/types/commerce';
@@ -103,11 +105,11 @@ export function useStoreCart(user?: User | null) {
       // Persist in backend database Cart and CartItem table
       cartService
         .addToCart({ productId, variantId, qty })
-        .catch((err: any) => {
+        .catch((err: unknown) => {
           console.error('Failed to persist cart in backend:', err);
           const errorMsg =
-            err?.response?.data?.message ||
-            err?.message ||
+            asApiError(err).response?.data?.message ||
+            asApiError(err).message ||
             'Could not add item to bag. Please check stock.';
           toast.error(errorMsg);
 
@@ -148,11 +150,11 @@ export function useStoreCart(user?: User | null) {
     if (targetVariantId) {
       cartService
         .updateQuantity(targetVariantId, validQty)
-        .catch((err: any) => {
+        .catch((err: unknown) => {
           console.error('Failed to sync updated quantity to backend:', err);
           const errorMsg =
-            err?.response?.data?.message ||
-            err?.message ||
+            asApiError(err).response?.data?.message ||
+            asApiError(err).message ||
             'Requested quantity exceeds available stock.';
           toast.error(errorMsg);
 

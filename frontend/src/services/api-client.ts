@@ -163,7 +163,7 @@ class ApiClient {
       }
 
       return await response.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`API Error on [${options.method || 'GET'}] ${endpoint}:`, error);
       throw error;
     }
@@ -173,7 +173,7 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'GET', headers });
   }
 
-  post<T>(endpoint: string, body?: any, headers?: HeadersInit) {
+  post<T>(endpoint: string, body?: unknown, headers?: HeadersInit) {
     const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'POST',
@@ -182,7 +182,7 @@ class ApiClient {
     });
   }
 
-  put<T>(endpoint: string, body?: any, headers?: HeadersInit) {
+  put<T>(endpoint: string, body?: unknown, headers?: HeadersInit) {
     const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PUT',
@@ -191,7 +191,7 @@ class ApiClient {
     });
   }
 
-  patch<T>(endpoint: string, body?: any, headers?: HeadersInit) {
+  patch<T>(endpoint: string, body?: unknown, headers?: HeadersInit) {
     const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PATCH',
@@ -200,7 +200,7 @@ class ApiClient {
     });
   }
 
-  delete<T>(endpoint: string, body?: any, headers?: HeadersInit) {
+  delete<T>(endpoint: string, body?: unknown, headers?: HeadersInit) {
     return this.request<T>(endpoint, {
       method: 'DELETE',
       headers,

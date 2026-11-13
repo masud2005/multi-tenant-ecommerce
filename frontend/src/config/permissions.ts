@@ -54,6 +54,30 @@ export const ROLE_PERMISSIONS: Record<UserRole, PermissionAction[]> = {
   USER: [
     'view_orders',
   ],
+  STAFF: [
+    'view_dashboard',
+    'manage_products',
+    'view_products',
+    'manage_categories',
+    'manage_orders',
+    'view_orders',
+    'manage_customers',
+  ],
+  SUPER_ADMIN: [
+    'view_dashboard',
+    'manage_products',
+    'view_products',
+    'manage_categories',
+    'manage_orders',
+    'view_orders',
+    'manage_customers',
+    'manage_discounts',
+    'manage_staff',
+    'manage_settings',
+    'view_analytics',
+    'manage_storefront',
+  ],
+  CUSTOMER: [],
 };
 
 /**

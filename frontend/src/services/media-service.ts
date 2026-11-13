@@ -96,8 +96,8 @@ export const mediaService = {
   },
 
   // Delete media asset
-  async deleteMedia(id: string): Promise<ApiResponse<any>> {
-    return await apiClient.delete<ApiResponse<any>>(`/owner/media/${encodeURIComponent(id)}`);
+  async deleteMedia(id: string): Promise<ApiResponse<{ id?: string }>> {
+    return await apiClient.delete<ApiResponse<{ id?: string }>>(`/owner/media/${encodeURIComponent(id)}`);
   },
 };
 

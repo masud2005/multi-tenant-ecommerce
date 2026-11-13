@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Trash2, ExternalLink } from 'lucide-react';
@@ -156,8 +158,8 @@ export function PolicyEditorDrawer({
       toast.success(`${meta.label} saved`);
       onSaved?.();
       onClose();
-    } catch (err: any) {
-      toast.error(err?.message || `Failed to save ${meta.label}`);
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || `Failed to save ${meta.label}`);
     } finally {
       setSaving(false);
     }

@@ -112,7 +112,7 @@ export default function WishlistPage() {
         <ul className="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
           {items.map((p) => {
             const stock = productStock(p);
-            const imageSrc = p.images?.[0] || (p as any).coverImage || '/placeholder.png';
+            const imageSrc = p.images?.[0] || '/placeholder.png';
             return (
               <li key={p.id} className="flex flex-col">
                 <Link

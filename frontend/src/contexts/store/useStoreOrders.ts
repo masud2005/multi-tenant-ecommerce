@@ -17,22 +17,22 @@ import type {
 import { variantPrice } from '@/utils/pricing';
 import { now, returnEventLabel } from './utils';
 import type { PlaceOrderInput, User } from './types';
-import { orderService, CreateOrderPayload } from '@/services/order-service';
+import { orderService, CreateOrderPayload, type BackendOrder } from '@/services/order-service';
 
 // Helper to transform backend order response to frontend Order interface
-function mapBackendOrderToFrontend(item: any): Order {
+function mapBackendOrderToFrontend(item: BackendOrder): Order {
   return {
     id: item.id,
-    number: item.number,
+    number: item.number || '',
     customerId: item.customerId || '',
     customerName: item.customerName || '',
     email: item.email || '',
     phone: item.phone || '',
     createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
-    items: (item.items || []).map((i: any) => ({
-      productId: i.productId,
+    items: (item.items || []).map((i) => ({
+      productId: i.productId || '',
       variantId: i.variantId || '',
-      title: i.title,
+      title: i.title || '',
       image: i.image || '',
       color: i.color || '',
       size: i.size || '',
@@ -55,24 +55,24 @@ function mapBackendOrderToFrontend(item: any): Order {
       ? {
           id: item.shippingAddress.id || `addr-${item.id}`,
           label: 'Delivery Address',
-          name: item.shippingAddress.name,
-          phone: item.shippingAddress.phone,
-          line1: item.shippingAddress.line1,
-          area: item.shippingAddress.area,
-          district: item.shippingAddress.district,
+          name: item.shippingAddress.name || '',
+          phone: item.shippingAddress.phone || '',
+          line1: item.shippingAddress.line1 || '',
+          area: item.shippingAddress.area || '',
+          district: item.shippingAddress.district || '',
         }
       : { id: `addr-${item.id}`, label: 'Delivery Address', name: '', phone: '', line1: '', area: '', district: '' },
     shippingMethod: item.shippingMethod || 'standard',
     courier: item.courier || undefined,
     tracking: item.trackingNumber || undefined,
-    timeline: (item.timeline || []).map((t: any) => ({
+    timeline: (item.timeline || []).map((t) => ({
       at: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
-      label: t.label,
+      label: t.label || '',
       by: t.by || undefined,
       note: t.note || undefined,
     })),
-    attempts: (item.attempts || []).map((a: any) => ({
-      id: a.id,
+    attempts: (item.attempts || []).map((a) => ({
+      id: a.id || '',
       method: (a.method?.toLowerCase() || 'cod') as PaymentMethod,
       amount: Number(a.amount) || 0,
       status: (a.status?.toLowerCase() || 'pending') as PaymentStatus,

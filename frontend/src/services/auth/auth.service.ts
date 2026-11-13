@@ -159,7 +159,7 @@ class AuthService {
     const res = await apiClient.get<ApiResponse<AuthDeviceSession[]>>(
       '/auth/sessions',
     );
-    return (res as any)?.data || [];
+    return res?.data || [];
   }
 
   async revokeSession(
@@ -168,14 +168,14 @@ class AuthService {
     const res = await apiClient.delete<
       ApiResponse<{ signedOutCurrent?: boolean }>
     >(`/auth/sessions/${encodeURIComponent(sessionId)}`);
-    return (res as any)?.data || null;
+    return res?.data || null;
   }
 
   async revokeOtherSessions(): Promise<{ revokedCount?: number } | null> {
     const res = await apiClient.delete<ApiResponse<{ revokedCount?: number }>>(
       '/auth/sessions/others',
     );
-    return (res as any)?.data || null;
+    return res?.data || null;
   }
 }
 

@@ -24,11 +24,22 @@ export interface WishlistProductData {
   totalStock: number;
   inStock: boolean;
   category?: { id: string; name: string; slug: string };
+  subcategory?: { name?: string };
+  barcode?: string;
   brand?: { id: string; name: string; slug: string };
   images: WishlistProductImage[];
   coverImage: string | null;
   variantsCount: number;
-  variants?: any[];
+  variants?: Array<{
+    id?: string;
+    sku?: string;
+    color?: string;
+    size?: string;
+    price?: number | string;
+    salePrice?: number | string | null;
+    stock?: number | string;
+    reserved?: number | string;
+  }>;
   availableSizes: string[];
   availableColors: string[];
 }

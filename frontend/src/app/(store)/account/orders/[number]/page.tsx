@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { use, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -72,9 +74,9 @@ export default function AccountOrderDetailPage({ params }: OrderDetailPageProps)
           ? 'Order cancelled. If you already paid via bKash/Nagad, the store will refund you manually.'
           : 'Order cancelled',
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(
-        err?.response?.data?.message || err?.message || 'Could not cancel this order',
+        asApiError(err).response?.data?.message || asApiError(err).message || 'Could not cancel this order',
       );
     } finally {
       setCancelling(false);

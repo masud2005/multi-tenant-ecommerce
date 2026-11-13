@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Download, RefreshCw } from 'lucide-react';
@@ -93,10 +95,10 @@ export function InventoryManager() {
         } else {
           setInventoryData(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch inventory:', err);
         setInventoryData(null);
-        toast.error(err?.message || 'Failed to load inventory data');
+        toast.error(asApiError(err).message || 'Failed to load inventory data');
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -118,11 +120,11 @@ export function InventoryManager() {
           reason: mapMovementReason(m.reason),
         })),
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch stock movements:', err);
       setLedger([]);
-      setLedgerError(err?.message || 'Failed to load stock movements');
-      toast.error(err?.message || 'Failed to load stock movements');
+      setLedgerError(asApiError(err).message || 'Failed to load stock movements');
+      toast.error(asApiError(err).message || 'Failed to load stock movements');
     } finally {
       setLedgerLoading(false);
     }
@@ -224,9 +226,9 @@ export function InventoryManager() {
       );
       setAdjustTarget(null);
       fetchInventory(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to adjust stock:', err);
-      toast.error(err?.message || 'Failed to adjust stock in database');
+      toast.error(asApiError(err).message || 'Failed to adjust stock in database');
     }
   };
 

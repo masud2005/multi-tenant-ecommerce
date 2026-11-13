@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useRef, useState } from 'react';
 import { ImagePlus, Trash2, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
@@ -112,8 +114,8 @@ export function HeroSlidesEditor({
       }
       commit([...slides, ...created]);
       toast.success(created.length === 1 ? 'Hero image added.' : `${created.length} hero images added.`);
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not add image.');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Could not add image.');
     } finally {
       setBusy(false);
     }
@@ -206,8 +208,8 @@ export function PromoImageEditor({
         promoImageAlt: alt || file.name.replace(/\.[^.]+$/, '') || 'Offer image',
       });
       toast.success('Offer image updated.');
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not add image.');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Could not add image.');
     } finally {
       setBusy(false);
     }

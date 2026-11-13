@@ -5,10 +5,7 @@ import { useTenant } from '@/contexts/TenantContext';
 
 export function TrustPoints() {
   const { tenant } = useTenant();
-  const trustPoints: { title: string; body: string }[] =
-    Array.isArray((tenant as any)?.settings?.trustPoints)
-      ? (tenant as any).settings.trustPoints
-      : [];
+  const trustPoints = tenant.settings?.trustPoints ?? [];
 
   if (trustPoints.length === 0) return null;
 

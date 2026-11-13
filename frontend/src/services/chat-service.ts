@@ -53,6 +53,14 @@ export interface ChatUploadResult {
   resourceType: 'image' | 'raw' | 'video';
 }
 
+function fromEnvelope<T>(res: ApiResponse<T> | T | null | undefined): T | null {
+  if (!res || typeof res !== 'object') return null;
+  if ('success' in res && 'data' in res) {
+    return (res as ApiResponse<T>).data ?? null;
+  }
+  return res as T;
+}
+
 class ChatService {
   /**
    * 🛍️ 1. Start or resume customer live chat conversation
@@ -63,10 +71,10 @@ class ChatService {
         '/customer/chat/init',
         payload,
       );
-      if (res && 'data' in res) {
-        return (res as any).data;
+      if (res && typeof res === 'object') {
+        return fromEnvelope(res);
       }
-      return (res as Conversation) || null;
+      return null;
     } catch (error) {
       console.error('Failed to init customer chat session:', error);
       return null;
@@ -84,10 +92,7 @@ class ChatService {
         ApiResponse<{ conversation: Conversation; messages: ChatMessage[] }>
       >(`/customer/chat/conversations/${conversationId}/messages`);
 
-      if (res && 'data' in res) {
-        return (res as any).data;
-      }
-      return (res as any) || null;
+      return fromEnvelope(res);
     } catch (error) {
       console.error('Failed to get customer chat messages:', error);
       return null;
@@ -106,10 +111,10 @@ class ChatService {
         `/customer/chat/conversations/${conversationId}/messages`,
         payload,
       );
-      if (res && 'data' in res) {
-        return (res as any).data;
+      if (res && typeof res === 'object') {
+        return fromEnvelope(res);
       }
-      return (res as ChatMessage) || null;
+      return null;
     } catch (error) {
       console.error('Failed to send customer chat message:', error);
       return null;
@@ -136,7 +141,7 @@ class ChatService {
     search?: string;
     page?: number;
     limit?: number;
-  } = {}): Promise<{ items: Conversation[]; meta: any }> {
+  } = {}): Promise<{ items: Conversation[]; meta: { totalUnread?: number } }> {
     try {
       const searchParams = new URLSearchParams();
       if (query.status) searchParams.append('status', query.status);
@@ -147,15 +152,17 @@ class ChatService {
       const queryString = searchParams.toString();
       const endpoint = `/owner/chat/conversations${queryString ? `?${queryString}` : ''}`;
 
-      const res = await apiClient.get<ApiResponse<Conversation[]>>(endpoint);
+      const res = await apiClient.get<
+        (ApiResponse<Conversation[]> & { meta?: { totalUnread?: number } }) | Conversation[]
+      >(endpoint);
 
-      if (res && 'data' in res) {
+      if (res && !Array.isArray(res) && 'data' in res) {
         return {
-          items: (res as any).data || [],
-          meta: (res as any).meta || {},
+          items: res.data || [],
+          meta: res.meta || {},
         };
       }
-      return { items: (res as any) || [], meta: {} };
+      return { items: Array.isArray(res) ? res : [], meta: {} };
     } catch (error) {
       console.error('Failed to fetch owner conversations:', error);
       return { items: [], meta: {} };
@@ -173,10 +180,7 @@ class ChatService {
         ApiResponse<{ conversation: Conversation; messages: ChatMessage[] }>
       >(`/owner/chat/conversations/${conversationId}/messages`);
 
-      if (res && 'data' in res) {
-        return (res as any).data;
-      }
-      return (res as any) || null;
+      return fromEnvelope(res);
     } catch (error) {
       console.error('Failed to get owner chat messages:', error);
       return null;
@@ -195,10 +199,10 @@ class ChatService {
         `/owner/chat/conversations/${conversationId}/messages`,
         payload,
       );
-      if (res && 'data' in res) {
-        return (res as any).data;
+      if (res && typeof res === 'object') {
+        return fromEnvelope(res);
       }
-      return (res as ChatMessage) || null;
+      return null;
     } catch (error) {
       console.error('Failed to send owner chat message:', error);
       return null;
@@ -234,10 +238,7 @@ class ChatService {
         endpoint,
         formData,
       );
-      if (res && 'data' in res) {
-        return (res as any).data || null;
-      }
-      return (res as any) || null;
+      return fromEnvelope(res);
     } catch (error) {
       console.error('Failed to upload chat attachment:', error);
       throw error;

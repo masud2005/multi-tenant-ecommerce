@@ -18,6 +18,31 @@ import {
 } from '@/utils/store-shipping';
 import { parseAuthPage } from '@/lib/auth-page';
 
+interface PublicStoreInfo {
+  id?: string;
+  slug?: string;
+  name?: string;
+  tagline?: string;
+  domain?: string;
+  customDomain?: string;
+  logo?: string;
+  logoUrl?: string;
+  favicon?: string;
+  faviconUrl?: string;
+  plan?: Tenant['plan'];
+  planState?: Tenant['planState'];
+  currency?: string;
+  currencySymbol?: string;
+  currencyPosition?: Tenant['currency']['position'];
+  theme?: Tenant['theme'];
+  announcement?: string;
+  announcementEnabled?: boolean;
+  modules?: Tenant['modules'];
+  contact?: Partial<Tenant['contact']>;
+  socials?: Tenant['socials'];
+  settings?: Tenant['settings'];
+}
+
 export interface TenantContextValue {
   tenant: Tenant;
   shipping: StoreShippingSettings;
@@ -53,7 +78,7 @@ export function TenantProvider({
       setIsLoading(true);
       const res = await storeService.getPublicStoreInfo(slug);
       if (res && res.data) {
-        const raw = res.data as any;
+        const raw = res.data as unknown as PublicStoreInfo;
         const mapped: Tenant = {
           id: raw.id || fallbackTenant.id,
           slug: raw.slug || slug,
@@ -74,8 +99,8 @@ export function TenantProvider({
               : typeof raw.faviconUrl === 'string' && raw.faviconUrl.trim()
                 ? raw.faviconUrl.trim()
                 : undefined,
-          plan: (raw.plan as any) || fallbackTenant.plan,
-          planState: (raw.planState as any) || fallbackTenant.planState,
+          plan: raw.plan || fallbackTenant.plan,
+          planState: raw.planState || fallbackTenant.planState,
           currency: {
             code: raw.currency || fallbackTenant.currency.code,
             symbol: raw.currencySymbol || fallbackTenant.currency.symbol,

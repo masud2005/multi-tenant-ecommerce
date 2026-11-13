@@ -2,22 +2,59 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { wishlistService } from '@/services';
+import { wishlistService, type WishlistItemResponse } from '@/services';
 import { getAuthToken } from '@/services/auth/auth.storage';
 import type { Product } from '@/types/commerce';
 import type { User } from './types';
 import { load, loadWishlist } from './utils';
 
-function mapWishlistProductToDomain(item: any): Product {
-  const p = item.product || item;
+interface WishlistVariantRaw {
+  id?: string;
+  sku?: string;
+  color?: string;
+  size?: string;
+  price?: number | string;
+  salePrice?: number | string | null;
+  stock?: number | string;
+  reserved?: number | string;
+}
+
+interface WishlistProductRaw {
+  id?: string;
+  slug?: string;
+  title?: string;
+  brand?: { name?: string } | string;
+  category?: { slug?: string; name?: string } | string;
+  subcategory?: { name?: string };
+  images?: Array<string | { url?: string }>;
+  coverImage?: string;
+  variants?: WishlistVariantRaw[];
+  price?: number | string;
+  salePrice?: number | string | null;
+  totalStock?: number | string;
+  availableColors?: string[];
+  availableSizes?: string[];
+  rating?: number | string;
+  reviewCount?: number | string;
+  shortDescription?: string;
+  preorder?: boolean;
+  isNew?: boolean;
+  isBestseller?: boolean;
+  barcode?: string;
+  savedAt?: string;
+  product?: WishlistProductRaw;
+}
+
+function mapWishlistProductToDomain(item: WishlistItemResponse): Product {
+  const p = item.product;
   const imageUrls =
     Array.isArray(p.images) && p.images.length > 0
-      ? p.images.map((img: any) => (typeof img === 'string' ? img : img.url))
+      ? p.images.map((img) => (typeof img === 'string' ? img : img.url || ''))
       : [p.coverImage || '/placeholder.png'];
 
   const variants =
     Array.isArray(p.variants) && p.variants.length > 0
-      ? p.variants.map((v: any) => ({
+      ? p.variants.map((v) => ({
           id: v.id || `${p.id}-v1`,
           sku: v.sku || '',
           color: v.color || 'Standard',

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
@@ -191,10 +193,10 @@ export default function AdminMessagesPage() {
     socket.on('connect', () => {
       const currentConvId = selectedConvIdRef.current;
       if (currentConvId) {
-        socket.emit('join_conversation', { conversationId: currentConvId }, (res: any) => {
+        socket.emit('join_conversation', { conversationId: currentConvId }, (res: { isOtherPartyOnline?: boolean }) => {
           if (res?.isOtherPartyOnline !== undefined) setIsCustomerOnline(res.isOtherPartyOnline);
         });
-        socket.emit('check_presence', { conversationId: currentConvId }, (res: any) => {
+        socket.emit('check_presence', { conversationId: currentConvId }, (res: { isOnline?: boolean }) => {
           if (res?.isOnline !== undefined) {
             setIsCustomerOnline(res.isOnline);
             if (res.isOnline) setOnlineConvIds((prev) => new Set(prev).add(currentConvId));
@@ -282,10 +284,10 @@ export default function AdminMessagesPage() {
 
     if (selectedConvId) {
       prevConvIdRef.current = selectedConvId;
-      socketRef.current.emit('join_conversation', { conversationId: selectedConvId }, (res: any) => {
+      socketRef.current.emit('join_conversation', { conversationId: selectedConvId }, (res: { isOtherPartyOnline?: boolean }) => {
         if (res?.isOtherPartyOnline !== undefined) setIsCustomerOnline(res.isOtherPartyOnline);
       });
-      socketRef.current.emit('check_presence', { conversationId: selectedConvId }, (res: any) => {
+      socketRef.current.emit('check_presence', { conversationId: selectedConvId }, (res: { isOnline?: boolean }) => {
         if (res?.isOnline !== undefined) {
           setIsCustomerOnline(res.isOnline);
           if (res.isOnline) {
@@ -342,8 +344,8 @@ export default function AdminMessagesPage() {
       } else {
         toast.error('Upload failed');
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not upload file');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Could not upload file');
     } finally {
       setUploadingFile(false);
     }
@@ -385,11 +387,12 @@ export default function AdminMessagesPage() {
             senderName,
             attachments: attachmentUrls.length ? attachmentUrls : undefined,
           },
-          (res: any) => {
-            if (res?.success && res?.data) {
+          (res: { success?: boolean; data?: ChatMessage }) => {
+            if (res?.success && res.data) {
+              const message = res.data;
               setMessages((prev) => {
-                if (prev.some((m) => m.id === res.data.id)) return prev;
-                return [...prev, res.data];
+                if (prev.some((m) => m.id === message.id)) return prev;
+                return [...prev, message];
               });
             }
           }

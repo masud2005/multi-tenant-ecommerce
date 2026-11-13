@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -82,8 +84,8 @@ export default function ContactPage() {
         phone: form.phone,
       });
       toast.success('Your message has been sent to our customer care team!');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to send message. Please try again.');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to send message. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

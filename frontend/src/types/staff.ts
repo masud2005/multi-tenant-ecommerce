@@ -1,6 +1,6 @@
 // Staff & RBAC Role Domain Types
 import type { PaginatedMeta } from './api';
-import type { AdminModule, PermissionAction } from './commerce';
+import type { PermissionAction } from './commerce';
 
 export type StaffStatus = 'active' | 'invited' | 'deactivated';
 

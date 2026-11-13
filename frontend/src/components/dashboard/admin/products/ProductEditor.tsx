@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -333,7 +335,7 @@ export function ProductEditor({ id }: { id?: string }) {
           acc[curr.label.trim()] = curr.value.trim();
         }
         return acc;
-      }, {} as Record<string, any>);
+      }, {} as Record<string, string>);
 
       // Map Variants
       const variantsData =
@@ -367,7 +369,7 @@ export function ProductEditor({ id }: { id?: string }) {
         slug: p.slug?.trim() || slugify(p.title),
         shortDescription: p.shortDescription?.trim() || undefined,
         description: p.description?.trim() || undefined,
-        status: backendStatus as any,
+        status: backendStatus,
         price: Number(p.price),
         salePrice: p.salePrice ? Number(p.salePrice) : undefined,
         cost: Number(p.cost || 0),
@@ -431,9 +433,9 @@ export function ProductEditor({ id }: { id?: string }) {
         );
         router.push('/admin/products');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error saving product:', err);
-      toast.error(err?.message || 'Failed to save product. Please try again.');
+      toast.error(asApiError(err).message || 'Failed to save product. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -453,9 +455,9 @@ export function ProductEditor({ id }: { id?: string }) {
       await productService.deleteProduct(targetId);
       toast.success('Product deleted successfully');
       router.push('/admin/products');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete product:', err);
-      toast.error(err?.message || 'Failed to delete product');
+      toast.error(asApiError(err).message || 'Failed to delete product');
     } finally {
       setIsDeleting(false);
     }

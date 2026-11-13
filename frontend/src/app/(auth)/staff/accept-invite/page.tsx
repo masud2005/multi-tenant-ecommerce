@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
 import { staffService, ValidatedInviteData } from '@/services/staff-service';
+import { resolveUserRole } from '@/constants/roles';
 import { setAuthSession, clearAuthSession } from '@/services/auth/auth.storage';
 
 function AcceptInviteForm() {
@@ -46,8 +49,8 @@ function AcceptInviteForm() {
         } else {
           setError(res?.message || 'Invalid or expired invitation token.');
         }
-      } catch (err: any) {
-        setError(err?.message || 'This invitation link is invalid or has expired.');
+      } catch (err: unknown) {
+        setError(asApiError(err).message || 'This invitation link is invalid or has expired.');
       } finally {
         setLoading(false);
       }
@@ -96,7 +99,7 @@ function AcceptInviteForm() {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: (user.role as any) || 'MANAGER',
+            role: resolveUserRole(user.role, 'MANAGER'),
             tenantId: user.tenantId,
           },
         });
@@ -109,8 +112,8 @@ function AcceptInviteForm() {
       } else {
         toast.error(res?.message || 'Failed to activate staff account');
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to accept invitation');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to accept invitation');
     } finally {
       setSubmitting(false);
     }

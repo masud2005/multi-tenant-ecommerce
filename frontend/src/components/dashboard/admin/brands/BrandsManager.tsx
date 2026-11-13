@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import {
@@ -115,9 +117,9 @@ export function BrandsManager({
       );
       setDeletingBrand(null);
       toast.success(`Brand "${name}" deleted successfully`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete brand:', error);
-      toast.error(error?.message || 'Failed to delete brand');
+      toast.error(asApiError(error).message || 'Failed to delete brand');
     } finally {
       setIsDeleting(false);
     }

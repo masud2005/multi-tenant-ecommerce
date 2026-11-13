@@ -303,7 +303,10 @@ export default function AdminDashboardPage() {
                     width={56}
                   />
                   <Tooltip
-                    formatter={(v: any, n: any) => [formatBDT(Number(v)), n === 'sales' ? 'This period' : 'Previous period']}
+                    formatter={(value, name) => [
+                      formatBDT(Number(Array.isArray(value) ? value[0] : value)),
+                      String(name) === 'sales' ? 'This period' : 'Previous period',
+                    ]}
                     contentStyle={{ borderRadius: 8, border: '1px solid rgb(var(--line))', fontSize: 12, backgroundColor: 'white' }}
                   />
                   <Area

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useRef, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -93,8 +95,8 @@ function VerifyFormContent() {
       }
 
       window.location.href = targetUrl;
-    } catch (err: any) {
-      setError(err?.message || 'Verification failed. Please try again.');
+    } catch (err: unknown) {
+      setError(asApiError(err).message || 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -113,8 +115,8 @@ function VerifyFormContent() {
         setResendMsg('A new verification code has been sent to your email.');
         setSeconds(60);
       }
-    } catch (err: any) {
-      setError(err?.message || 'Failed to resend code. Please try again.');
+    } catch (err: unknown) {
+      setError(asApiError(err).message || 'Failed to resend code. Please try again.');
     }
   };
 

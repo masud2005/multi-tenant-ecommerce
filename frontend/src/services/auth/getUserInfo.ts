@@ -1,6 +1,6 @@
 // Server-side user information retriever decoding real access_token claims
 import { cookies } from 'next/headers';
-import type { UserInfo } from '@/types/user';
+import type { UserInfo, UserRole } from '@/types/user';
 import { parseJwtPayload } from './auth.storage';
 
 export async function getUserInfo(): Promise<UserInfo | undefined> {
@@ -33,7 +33,7 @@ export async function getUserInfo(): Promise<UserInfo | undefined> {
       id: payload.sub,
       name,
       email: payload.email,
-      role: effectiveRole as any,
+      role: effectiveRole as UserRole,
       initials,
       title: payload.staffRole || (isOwner ? 'Owner' : 'Staff'),
       tenantId: payload.tenantId,

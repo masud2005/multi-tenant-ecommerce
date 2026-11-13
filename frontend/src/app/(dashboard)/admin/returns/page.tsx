@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -32,13 +34,11 @@ import { MediaLightbox } from '@/components/ui/MediaLightbox';
 import { returnStatusMeta } from '@/utils/status';
 import { formatBDT, formatDate, formatDateTime } from '@/utils/format';
 import type { ReturnRequest, ReturnStatus } from '@/types/commerce';
+import type { ReturnView } from '@/services/return-service';
 
 type Tab = 'all' | 'open' | 'requested' | 'in_progress' | 'closed';
 
-type ReturnWithExtras = ReturnRequest & {
-  photoUrls?: string[];
-  order?: any;
-};
+type ReturnWithExtras = ReturnView;
 
 function ReturnsContent() {
   const router = useRouter();
@@ -134,8 +134,8 @@ function ReturnsContent() {
       } else {
         throw new Error(res?.message || 'Failed to update return status');
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update return status on server');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to update return status on server');
     } finally {
       setIsActionLoading(false);
     }

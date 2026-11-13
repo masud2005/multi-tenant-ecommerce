@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Edit3, Save } from 'lucide-react';
@@ -131,8 +133,8 @@ export default function AdminContentPage() {
         announcementEnabled: enabled,
       });
       toast.success('Announcement bar saved');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to save announcement bar');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to save announcement bar');
     } finally {
       setAnnouncementSaving(false);
     }

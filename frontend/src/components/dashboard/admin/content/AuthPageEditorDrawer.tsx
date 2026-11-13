@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Eye } from 'lucide-react';
@@ -64,8 +66,8 @@ export function AuthPageEditorDrawer({
       });
       toast.success(mode === 'sign-in' ? 'Sign in page updated' : 'Sign up page updated');
       onClose();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update this page');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to update this page');
     } finally {
       setSaving(false);
     }

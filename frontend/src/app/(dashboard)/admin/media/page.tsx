@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Upload, AlertTriangle, Search, Loader2, RefreshCw, Trash2, CheckCircle2, Image as ImageIcon, Plus } from 'lucide-react';
@@ -53,7 +55,7 @@ export default function AdminMediaPage() {
           setMetrics(res.data.metrics);
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Could not fetch media library:', err);
     } finally {
       setIsLoading(false);
@@ -78,8 +80,8 @@ export default function AdminMediaPage() {
       toast.success('Alt text updated successfully');
       setActiveId(null);
       fetchMedia();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to save alt text');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to save alt text');
     } finally {
       setIsSavingAlt(false);
     }
@@ -99,8 +101,8 @@ export default function AdminMediaPage() {
       toast.success('Media asset removed from library');
       setActiveId(null);
       fetchMedia();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to delete media asset');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to delete media asset');
     } finally {
       setIsDeleting(false);
     }
@@ -244,7 +246,7 @@ export default function AdminMediaPage() {
                       alt={a.alt || a.name}
                       className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
                       onError={(e) => {
-                        (e.target as any).src = '/images/placeholder.svg';
+                        (e.target as HTMLImageElement).src = '/images/placeholder.svg';
                       }}
                     />
                     {!a.alt && (

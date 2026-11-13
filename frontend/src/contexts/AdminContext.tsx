@@ -50,8 +50,8 @@ export function AdminProvider({
     const isOwner = !isStaffMember && Boolean(
       currentUser?.isOwner ||
       currentUser?.role === 'ADMIN' ||
-      (currentUser?.role as any) === 'OWNER' ||
-      (currentUser?.role as any) === 'SUPER_ADMIN' ||
+      currentUser?.role === 'OWNER' ||
+      currentUser?.role === 'SUPER_ADMIN' ||
       (!currentUser && role === 'owner')
     );
 
@@ -105,8 +105,8 @@ export function useAdmin() {
     const isOwner = !isStaffMember && Boolean(
       currentUser?.isOwner ||
       currentUser?.role === 'ADMIN' ||
-      (currentUser?.role as any) === 'OWNER' ||
-      (currentUser?.role as any) === 'SUPER_ADMIN'
+      currentUser?.role === 'OWNER' ||
+      currentUser?.role === 'SUPER_ADMIN'
     );
     const actorName = currentUser?.name || currentUser?.email?.split('@')[0] || 'Owner';
     return {

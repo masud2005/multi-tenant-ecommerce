@@ -59,8 +59,8 @@ export const supportService = {
   // 1. Submit contact message from customer storefront
   async sendContactMessage(
     payload: CreateContactMessagePayload,
-  ): Promise<ApiResponse<any>> {
-    return await apiClient.post<ApiResponse<any>>('/customer/contact', payload);
+  ): Promise<ApiResponse<{ received?: boolean; ticketId?: string }>> {
+    return await apiClient.post<ApiResponse<{ received?: boolean; ticketId?: string }>>('/customer/contact', payload);
   },
 
   // 1b. Fetch all tickets submitted by authenticated customer

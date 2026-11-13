@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { FileBarChart, Search, SearchX, Download, Loader2 } from 'lucide-react';
@@ -306,8 +308,8 @@ export default function AdminReportsPage() {
         toast.success(`Downloaded ${customers.length} customers`);
         return;
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to generate report from database');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to generate report from database');
     } finally {
       setExportingId(null);
     }

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Truck, Save, Loader2, RefreshCw, MapPin } from 'lucide-react';
@@ -48,7 +50,7 @@ export default function AdminShippingPage() {
           pickup: sh.pickup !== undefined ? !!sh.pickup : prev.pickup,
         }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Could not load shipping settings:', err);
     } finally {
       setIsLoading(false);
@@ -75,8 +77,8 @@ export default function AdminShippingPage() {
         },
       });
       toast.success('Shipping delivery charges saved successfully!');
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to save shipping settings');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to save shipping settings');
     } finally {
       setIsSaving(false);
     }

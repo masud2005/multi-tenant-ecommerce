@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
@@ -98,7 +100,7 @@ export function ReviewDetailDrawer({
         const optimistic: Review = { ...review, status: newStatus };
         onReviewUpdated(optimistic);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update status:', err);
       toast.error('Failed to change review status');
     } finally {
@@ -145,7 +147,7 @@ export function ReviewDetailDrawer({
         onReviewUpdated(optimistic);
         setIsEditing(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update review:', err);
       toast.error('Failed to update review');
     } finally {
@@ -161,7 +163,7 @@ export function ReviewDetailDrawer({
       toast.success('Review deleted');
       if (onReviewDeleted) onReviewDeleted(review.id);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete review:', err);
       toast.error('Failed to delete review');
     } finally {
@@ -187,9 +189,9 @@ export function ReviewDetailDrawer({
         toast.success('Public store reply saved!');
         onReviewUpdated(updated);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to post reply:', err);
-      toast.error(err.message || 'Failed to post reply. Please try again.');
+      toast.error(asApiError(err).message || 'Failed to post reply. Please try again.');
     } finally {
       setSubmitting(false);
     }
