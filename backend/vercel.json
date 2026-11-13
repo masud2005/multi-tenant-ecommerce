@@ -1,4 +1,11 @@
 {
   "outputDirectory": "public",
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "functions": {
+    "api/index.js": {
+      "runtime": "nodejs22.x",
+      "maxDuration": 30,
+      "includeFiles": "{dist/**,node_modules/bcrypt/**,node_modules/@prisma/client/**,prisma/generated/**}"
+    }
+  }
 }
