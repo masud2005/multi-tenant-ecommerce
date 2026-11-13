@@ -74,6 +74,7 @@ export type PolicySlug =
 
 export type PolicyPageData = ReturnsPageData & {
   slug?: PolicySlug | string;
+  isEmpty?: boolean;
 };
 
 export type UpdatePolicyPagePayload = UpdateReturnsPagePayload;

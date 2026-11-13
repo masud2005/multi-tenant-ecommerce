@@ -224,6 +224,10 @@ export class SettingsService {
           ...((existingSettings.flags as Record<string, any>) || {}),
           ...((incoming.flags as Record<string, any>) || {}),
         },
+        authPage: {
+          ...((existingSettings.authPage as Record<string, any>) || {}),
+          ...((incoming.authPage as Record<string, any>) || {}),
+        },
       };
     }
 

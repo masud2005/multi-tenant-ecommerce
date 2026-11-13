@@ -17,6 +17,7 @@ import { AboutEditorDrawer } from '@/components/dashboard/admin/content/AboutEdi
 import { PolicyEditorDrawer } from '@/components/dashboard/admin/content/PolicyEditorDrawer';
 import { faqService } from '@/services/faq-service';
 import { storeService } from '@/services/store-service';
+import { AuthPageEditorDrawer } from '@/components/dashboard/admin/content/AuthPageEditorDrawer';
 import type { PolicySlug } from '@/services/page-service';
 import { cn } from '@/utils/cn';
 
@@ -26,10 +27,12 @@ type ContentEntry = {
   key: string;
   title: string;
   path: string;
-  kind: 'about' | 'contact' | 'faq' | PolicySlug;
+  kind: 'about' | 'contact' | 'faq' | 'sign-in' | 'sign-up' | PolicySlug;
 };
 
 const PAGE_ENTRIES: ContentEntry[] = [
+  { key: 'sign-in', title: 'Sign in', path: '/login', kind: 'sign-in' },
+  { key: 'sign-up', title: 'Sign up', path: '/register', kind: 'sign-up' },
   { key: 'about', title: 'About', path: '/about', kind: 'about' },
   { key: 'contact', title: 'Contact', path: '/contact', kind: 'contact' },
   { key: 'faq', title: 'FAQ', path: '/faq', kind: 'faq' },
@@ -47,6 +50,7 @@ export default function AdminContentPage() {
   const [announcementEnabled, setAnnouncementEnabled] = useState(false);
   const [announcementLoading, setAnnouncementLoading] = useState(true);
   const [announcementSaving, setAnnouncementSaving] = useState(false);
+  const [authEditor, setAuthEditor] = useState<'sign-in' | 'sign-up' | null>(null);
 
   const [aboutOpen, setAboutOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -179,7 +183,8 @@ export default function AdminContentPage() {
   };
 
   const openEntry = (entry: ContentEntry) => {
-    if (entry.kind === 'about') setAboutOpen(true);
+    if (entry.kind === 'sign-in' || entry.kind === 'sign-up') setAuthEditor(entry.kind);
+    else if (entry.kind === 'about') setAboutOpen(true);
     else if (entry.kind === 'contact') setContactOpen(true);
     else if (entry.kind === 'faq') {
       setTab('faq');
@@ -387,6 +392,11 @@ export default function AdminContentPage() {
           open={!!policySlug}
           slug={policySlug}
           onClose={() => setPolicySlug(null)}
+        />
+        <AuthPageEditorDrawer
+          open={authEditor !== null}
+          mode={authEditor ?? 'sign-in'}
+          onClose={() => setAuthEditor(null)}
         />
       </div>
     </ModuleGate>

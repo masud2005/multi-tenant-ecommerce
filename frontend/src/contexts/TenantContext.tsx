@@ -16,6 +16,7 @@ import {
   parseStoreShipping,
   type StoreShippingSettings,
 } from '@/utils/store-shipping';
+import { parseAuthPage } from '@/lib/auth-page';
 
 export interface TenantContextValue {
   tenant: Tenant;
@@ -88,6 +89,7 @@ export function TenantProvider({
             typeof raw.announcementEnabled === 'boolean'
               ? raw.announcementEnabled
               : false,
+          authPage: parseAuthPage(raw.settings?.authPage),
           modules: raw.modules || fallbackTenant.modules,
           contact: {
             email: raw.contact?.email || '',

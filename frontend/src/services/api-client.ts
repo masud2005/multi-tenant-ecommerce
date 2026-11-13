@@ -157,7 +157,9 @@ class ApiClient {
             : null) ||
           errorBody.error ||
           `Request failed with status ${response.status}`;
-        throw new Error(errorMessage);
+        const error = new Error(errorMessage) as Error & { body?: unknown };
+        error.body = errorBody;
+        throw error;
       }
 
       return await response.json();

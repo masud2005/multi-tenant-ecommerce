@@ -72,15 +72,16 @@ export function PolicyEditorDrawer({
 
   useEffect(() => {
     if (!open || !slug) return;
+    const policySlug = slug;
     let alive = true;
-    setForm(EMPTY_FORM(slug));
+    setForm(EMPTY_FORM(policySlug));
 
     async function load() {
       try {
         setLoading(true);
-        const data = await pageService.getOwnerPolicyPage(slug!);
+        const data = await pageService.getOwnerPolicyPage(policySlug);
         if (!alive || !data) return;
-        const fallbackTitle = POLICY_META[slug!].emptyTitle;
+        const fallbackTitle = POLICY_META[policySlug].emptyTitle;
         setForm({
           title: data.isEmpty
             ? fallbackTitle
@@ -88,11 +89,11 @@ export function PolicyEditorDrawer({
           heading: data.heading || '',
           sections: Array.isArray(data.sections) ? data.sections : [],
           status: data.status === 'published' ? 'published' : 'draft',
-          slug,
+          slug: policySlug,
           isEmpty: Boolean(data.isEmpty),
         });
       } catch {
-        if (alive) setForm(EMPTY_FORM(slug!));
+        if (alive) setForm(EMPTY_FORM(policySlug));
       } finally {
         if (alive) setLoading(false);
       }

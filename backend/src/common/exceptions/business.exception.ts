@@ -26,15 +26,15 @@ export class InvalidCredentialsException extends BaseException {
   constructor() {
     super(
       ExceptionCode.INVALID_CREDENTIALS,
-      'Invalid email or password',
+      'Invalid email, mobile number, or password',
       HttpStatus.UNAUTHORIZED,
     );
   }
 }
 
 export class UnauthorizedException extends BaseException {
-  constructor(message = 'Unauthorized') {
-    super(ExceptionCode.UNAUTHORIZED, message, HttpStatus.UNAUTHORIZED);
+  constructor(message = 'Unauthorized', errors?: IValidationError[]) {
+    super(ExceptionCode.UNAUTHORIZED, message, HttpStatus.UNAUTHORIZED, errors);
   }
 }
 
