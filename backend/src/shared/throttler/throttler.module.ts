@@ -6,11 +6,13 @@ import { CustomThrottlerGuard } from '../../common/guards/throttler.guard';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([{
-      name: RATE_LIMIT.GLOBAL.name,
-      ttl: RATE_LIMIT.GLOBAL.ttl,
-      limit: RATE_LIMIT.GLOBAL.limit,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        name: RATE_LIMIT.GLOBAL.name,
+        ttl: RATE_LIMIT.GLOBAL.ttl,
+        limit: RATE_LIMIT.GLOBAL.limit,
+      },
+    ]),
   ],
   providers: [
     {

@@ -8,6 +8,7 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Injectable, Logger } from '@nestjs/common';
+import { readTokenClaims, textField } from '../auth/utils/token.util';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -23,7 +24,9 @@ interface AuthenticatedSocket extends Socket {
   },
   namespace: '/notifications',
 })
-export class NotificationGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -36,15 +39,16 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
 
   async handleConnection(client: AuthenticatedSocket) {
     try {
+      const bearer = textField(client.handshake.headers, 'authorization');
       const token =
-        client.handshake.auth?.token ||
-        client.handshake.headers?.authorization?.replace('Bearer ', '') ||
-        (client.handshake.query?.token as string);
+        textField(client.handshake.auth, 'token') ||
+        (bearer ? bearer.replace(/^Bearer\s+/i, '') : undefined) ||
+        textField(client.handshake.query, 'token');
 
       const tenantId =
-        (client.handshake.auth?.tenantId as string) ||
-        (client.handshake.headers['x-tenant-id'] as string) ||
-        (client.handshake.query?.tenantId as string);
+        textField(client.handshake.auth, 'tenantId') ||
+        textField(client.handshake.headers, 'x-tenant-id') ||
+        textField(client.handshake.query, 'tenantId');
 
       if (token) {
         try {
@@ -52,7 +56,9 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
             this.configService.get<string>('jwt.accessSecret') ||
             this.configService.get<string>('app.jwtSecret') ||
             'jwt-secret';
-          const payload = await this.jwtService.verifyAsync(token, { secret });
+          const payload = readTokenClaims(
+            await this.jwtService.verifyAsync(token, { secret }),
+          );
           client.userId = payload.sub || payload.id;
           client.tenantId = payload.tenantId || tenantId;
           client.role = payload.role;
@@ -60,23 +66,30 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
           if (client.userId) {
             const userRoom = `user_${client.userId}`;
             await client.join(userRoom);
-            this.logger.log(`User ${client.userId} joined notification room: ${userRoom}`);
+            this.logger.log(
+              `User ${client.userId} joined notification room: ${userRoom}`,
+            );
           }
 
           if (client.tenantId) {
             const tenantRoom = `tenant_${client.tenantId}`;
             await client.join(tenantRoom);
           }
-        } catch (authError) {
+        } catch {
           this.logger.warn(`Invalid JWT token on /notifications: ${client.id}`);
           client.disconnect();
         }
       } else {
-        this.logger.warn(`Missing token on /notifications connection: ${client.id}`);
+        this.logger.warn(
+          `Missing token on /notifications connection: ${client.id}`,
+        );
         client.disconnect();
       }
     } catch (err) {
-      this.logger.error(`Error connecting to notification gateway (${client.id})`, err);
+      this.logger.error(
+        `Error connecting to notification gateway (${client.id})`,
+        err,
+      );
       client.disconnect();
     }
   }
@@ -88,20 +101,24 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
   /**
    * 🔔 Send Real-Time Notification to a specific User
    */
-  sendToUser(userId: string, notification: any) {
+  sendToUser(userId: string, notification: { title?: string }) {
     if (!this.server || !userId) return;
     const userRoom = `user_${userId}`;
     this.server.to(userRoom).emit('new_notification', notification);
-    this.logger.log(`⚡ Real-time notification dispatched to user: ${userId} (${notification.title})`);
+    this.logger.log(
+      `⚡ Real-time notification dispatched to user: ${userId} (${notification.title})`,
+    );
   }
 
   /**
    * 📢 Send Real-Time Notification to an entire Tenant (All Staff & Owner)
    */
-  sendToTenant(tenantId: string, notification: any) {
+  sendToTenant(tenantId: string, notification: { title?: string }) {
     if (!this.server || !tenantId) return;
     const tenantRoom = `tenant_${tenantId}`;
     this.server.to(tenantRoom).emit('new_notification', notification);
-    this.logger.log(`⚡ Real-time notification dispatched to tenant: ${tenantId}`);
+    this.logger.log(
+      `⚡ Real-time notification dispatched to tenant: ${tenantId}`,
+    );
   }
 }

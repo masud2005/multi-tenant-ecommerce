@@ -1,15 +1,26 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class OwnerReviewQueryDto {
   @ApiPropertyOptional({
-    description: 'Search query across customer author, title, body, or product title',
+    description:
+      'Search query across customer author, title, body, or product title',
     example: 'Jamdani',
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   search?: string;
 
   @ApiPropertyOptional({
@@ -32,7 +43,8 @@ export class OwnerReviewQueryDto {
   productId?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by replied status (true = has admin reply, false = pending reply)',
+    description:
+      'Filter by replied status (true = has admin reply, false = pending reply)',
     example: false,
   })
   @Type(() => Boolean)

@@ -21,7 +21,10 @@ import { UpdateThemeDto } from '../dto/update-theme.dto';
 import { PublishThemeDto } from '../dto/publish-theme.dto';
 import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../../../common/guards/optional-jwt-auth.guard';
-import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../../common/decorators/current-user.decorator';
 
 @ApiTags('(Owner) Theme')
 @Controller('owner/theme')
@@ -34,8 +37,11 @@ export class ThemeController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get current tenant themes and version history' })
-  @ApiResponse({ status: 200, description: 'Theme data retrieved successfully' })
-  async findAll(@CurrentUser() user: any) {
+  @ApiResponse({
+    status: 200,
+    description: 'Theme data retrieved successfully',
+  })
+  async findAll(@CurrentUser() user: AuthUser) {
     return this.themeService.findAll(user.tenantId);
   }
 
@@ -43,9 +49,14 @@ export class ThemeController {
   @Get('live')
   @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get currently active live theme for the storefront (public)' })
-  @ApiResponse({ status: 200, description: 'Live theme retrieved successfully' })
-  async getLiveTheme(@CurrentUser() user?: any) {
+  @ApiOperation({
+    summary: 'Get currently active live theme for the storefront (public)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Live theme retrieved successfully',
+  })
+  async getLiveTheme(@CurrentUser() user?: AuthUser) {
     const tenantId = user?.tenantId;
     return this.themeService.getLiveTheme(tenantId);
   }
@@ -56,8 +67,11 @@ export class ThemeController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get single theme details' })
-  @ApiResponse({ status: 200, description: 'Theme details retrieved successfully' })
-  async findOne(@Param('id') id: string, @CurrentUser() user: any) {
+  @ApiResponse({
+    status: 200,
+    description: 'Theme details retrieved successfully',
+  })
+  async findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.themeService.findOne(id, user.tenantId);
   }
 
@@ -68,7 +82,7 @@ export class ThemeController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new draft theme' })
   @ApiResponse({ status: 201, description: 'Theme created successfully' })
-  async create(@Body() dto: CreateThemeDto, @CurrentUser() user: any) {
+  async create(@Body() dto: CreateThemeDto, @CurrentUser() user: AuthUser) {
     return this.themeService.create(dto, user.tenantId);
   }
 
@@ -77,12 +91,14 @@ export class ThemeController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update theme design tokens and brand settings (Save Draft)' })
+  @ApiOperation({
+    summary: 'Update theme design tokens and brand settings (Save Draft)',
+  })
   @ApiResponse({ status: 200, description: 'Theme draft saved successfully' })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateThemeDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.themeService.update(id, dto, user.tenantId);
   }
@@ -97,7 +113,7 @@ export class ThemeController {
   async publish(
     @Param('id') id: string,
     @Body() dto: PublishThemeDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.themeService.publish(id, dto, user.tenantId, user);
   }
@@ -112,7 +128,7 @@ export class ThemeController {
   async restoreVersion(
     @Param('id') id: string,
     @Param('versionId') versionId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.themeService.restoreVersion(id, versionId, user.tenantId);
   }

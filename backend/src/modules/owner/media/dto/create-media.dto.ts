@@ -27,4 +27,3 @@ export class CreateMediaDto {
   @IsOptional()
   alt?: string;
 }
-

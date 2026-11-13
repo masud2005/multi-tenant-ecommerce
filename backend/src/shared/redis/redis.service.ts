@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
@@ -7,7 +12,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private redisClient: Redis;
 
-  constructor(private readonly configService: ConfigService) { }
+  constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
     const host = this.configService.get<string>('redis.host', 'localhost');
@@ -30,15 +35,20 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         this.logger.log(`Connected to Redis at ${host}:${port}`);
       });
 
-      this.redisClient.on('error', (err) => {
-        this.logger.warn(`Redis notice (${host}:${port}): ${err.message}`);
+      this.redisClient.on('error', (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'unknown error';
+        this.logger.warn(`Redis notice (${host}:${port}): ${message}`);
       });
 
-      this.redisClient.connect().catch((err) => {
-        this.logger.warn(`Redis offline at ${host}:${port}: continuing without cache (${err.message})`);
+      this.redisClient.connect().catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'unknown error';
+        this.logger.warn(
+          `Redis offline at ${host}:${port}: continuing without cache (${message})`,
+        );
       });
-    } catch (err: any) {
-      this.logger.warn(`Redis init warning: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'unknown error';
+      this.logger.warn(`Redis init warning: ${message}`);
     }
   }
 

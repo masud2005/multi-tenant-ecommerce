@@ -19,7 +19,8 @@ export class CreateFaqDto {
   question: string;
 
   @ApiProperty({
-    example: 'Use the Track order page with your order number and phone number, or see live status in My Account -> Orders.',
+    example:
+      'Use the Track order page with your order number and phone number, or see live status in My Account -> Orders.',
     description: 'Answer text',
   })
   @IsString()

@@ -1,3 +1,5 @@
+import { Prisma } from '../../../../prisma/generated/client';
+import type { AuthUser } from '../../../common/decorators/current-user.decorator';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { TicketQueryDto } from './dto/ticket-query.dto';
@@ -35,7 +37,7 @@ export class OwnerSupportService {
   async getTickets(query: TicketQueryDto, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
-    const where: any = {
+    const where: Prisma.SupportTicketWhereInput = {
       tenantId: targetTenantId,
     };
 
@@ -137,7 +139,10 @@ export class OwnerSupportService {
       throw new NotFoundException(`Support ticket with id "${id}" not found`);
     }
 
-    return ResponseHelper.success(ticket, 'Ticket details retrieved successfully');
+    return ResponseHelper.success(
+      ticket,
+      'Ticket details retrieved successfully',
+    );
   }
 
   // 3. Post reply to a ticket
@@ -145,7 +150,7 @@ export class OwnerSupportService {
     id: string,
     dto: ReplyTicketDto,
     tenantId?: string,
-    adminUser?: any,
+    adminUser?: AuthUser,
   ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
@@ -217,6 +222,9 @@ export class OwnerSupportService {
       },
     });
 
-    return ResponseHelper.success(updated, 'Ticket status updated successfully');
+    return ResponseHelper.success(
+      updated,
+      'Ticket status updated successfully',
+    );
   }
 }

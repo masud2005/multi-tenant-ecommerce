@@ -22,4 +22,3 @@ import { ChatModule } from './chat/chat.module';
   ],
 })
 export class ModulesModule {}
-

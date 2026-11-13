@@ -1,6 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsIn, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { MilestoneDto } from './milestone.dto';
 import { StatItemDto } from './stat-item.dto';
 
@@ -106,7 +112,8 @@ export class UpdateAboutPageDto {
   seoTitle?: string;
 
   @ApiPropertyOptional({
-    example: 'Clothing that carries the hands that made it. Fair rates and craft empowerment across Bangladesh.',
+    example:
+      'Clothing that carries the hands that made it. Fair rates and craft empowerment across Bangladesh.',
     description: 'Custom SEO meta description',
   })
   @IsString()

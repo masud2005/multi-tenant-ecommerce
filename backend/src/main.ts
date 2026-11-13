@@ -7,6 +7,10 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { ValidationPipe } from '@nestjs/common';
 import { ValidationException } from './common/exceptions';
 
+function submittedValue(value: unknown): unknown {
+  return value;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
@@ -43,7 +47,7 @@ async function bootstrap() {
         const validationErrors = errors.map((error) => ({
           field: error.property,
           message: Object.values(error.constraints ?? {})[0] ?? 'Invalid value',
-          value: error.value,
+          value: submittedValue(error.value),
         }));
         return new ValidationException(validationErrors);
       },
@@ -75,5 +79,5 @@ async function bootstrap() {
   console.log(`API documentation: http://localhost:${PORT}/docs`);
 }
 
-bootstrap();
+void bootstrap();
 // Full reboot trigger for updated Prisma client schema

@@ -1,3 +1,5 @@
+import { Prisma } from '../../../../prisma/generated/client';
+import type { AuthUser } from '../../../common/decorators/current-user.decorator';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NotificationService } from '../../notification/notification.service';
@@ -7,6 +9,10 @@ import {
   ReturnStatus,
   StockMovementReason,
 } from '../../../../prisma/generated/client';
+
+function jsonText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
 
 @Injectable()
 export class ReturnService {
@@ -37,27 +43,45 @@ export class ReturnService {
   async findAll(query: QueryReturnDto, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
-    const where: any = {
+    const where: Prisma.ReturnRequestWhereInput = {
       tenantId: targetTenantId,
       deletedAt: null,
     };
 
     // Tab and Status Filtering
-    const normalizedTab = query.tab?.toLowerCase().trim().replace(/[\s-]+/g, '_');
+    const normalizedTab = query.tab
+      ?.toLowerCase()
+      .trim()
+      .replace(/[\s-]+/g, '_');
 
     if (normalizedTab === 'open') {
       where.status = {
-        notIn: [ReturnStatus.REFUNDED, ReturnStatus.EXCHANGED, ReturnStatus.REJECTED],
+        notIn: [
+          ReturnStatus.REFUNDED,
+          ReturnStatus.EXCHANGED,
+          ReturnStatus.REJECTED,
+        ],
       };
-    } else if (normalizedTab === 'awaiting_review' || normalizedTab === 'requested') {
+    } else if (
+      normalizedTab === 'awaiting_review' ||
+      normalizedTab === 'requested'
+    ) {
       where.status = ReturnStatus.REQUESTED;
     } else if (normalizedTab === 'in_progress') {
       where.status = {
-        in: [ReturnStatus.APPROVED, ReturnStatus.IN_TRANSIT, ReturnStatus.RECEIVED],
+        in: [
+          ReturnStatus.APPROVED,
+          ReturnStatus.IN_TRANSIT,
+          ReturnStatus.RECEIVED,
+        ],
       };
     } else if (normalizedTab === 'closed') {
       where.status = {
-        in: [ReturnStatus.REFUNDED, ReturnStatus.EXCHANGED, ReturnStatus.REJECTED],
+        in: [
+          ReturnStatus.REFUNDED,
+          ReturnStatus.EXCHANGED,
+          ReturnStatus.REJECTED,
+        ],
       };
     } else if (query.status) {
       where.status = query.status;
@@ -153,7 +177,11 @@ export class ReturnService {
           tenantId: targetTenantId,
           deletedAt: null,
           status: {
-            notIn: [ReturnStatus.REFUNDED, ReturnStatus.EXCHANGED, ReturnStatus.REJECTED],
+            notIn: [
+              ReturnStatus.REFUNDED,
+              ReturnStatus.EXCHANGED,
+              ReturnStatus.REJECTED,
+            ],
           },
         },
       }),
@@ -169,7 +197,11 @@ export class ReturnService {
           tenantId: targetTenantId,
           deletedAt: null,
           status: {
-            in: [ReturnStatus.APPROVED, ReturnStatus.IN_TRANSIT, ReturnStatus.RECEIVED],
+            in: [
+              ReturnStatus.APPROVED,
+              ReturnStatus.IN_TRANSIT,
+              ReturnStatus.RECEIVED,
+            ],
           },
         },
       }),
@@ -178,7 +210,11 @@ export class ReturnService {
           tenantId: targetTenantId,
           deletedAt: null,
           status: {
-            in: [ReturnStatus.REFUNDED, ReturnStatus.EXCHANGED, ReturnStatus.REJECTED],
+            in: [
+              ReturnStatus.REFUNDED,
+              ReturnStatus.EXCHANGED,
+              ReturnStatus.REJECTED,
+            ],
           },
         },
       }),
@@ -251,7 +287,9 @@ export class ReturnService {
     });
 
     if (!returnRequest) {
-      throw new NotFoundException(`Return request with identifier "${id}" not found`);
+      throw new NotFoundException(
+        `Return request with identifier "${id}" not found`,
+      );
     }
 
     return ResponseHelper.success(
@@ -265,7 +303,7 @@ export class ReturnService {
     id: string,
     dto: UpdateReturnStatusDto,
     tenantId?: string,
-    adminUser?: any,
+    adminUser?: AuthUser,
   ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
@@ -278,7 +316,9 @@ export class ReturnService {
     });
 
     if (!existing) {
-      throw new NotFoundException(`Return request with identifier "${id}" not found`);
+      throw new NotFoundException(
+        `Return request with identifier "${id}" not found`,
+      );
     }
 
     const adminName = adminUser?.name || adminUser?.email || 'Store Admin';
@@ -465,17 +505,14 @@ export class ReturnService {
     });
 
     // Notify customer for meaningful return outcomes
-    const notifyStatuses = new Set([
+    const notifyStatuses = new Set<ReturnStatus>([
       ReturnStatus.APPROVED,
       ReturnStatus.REJECTED,
       ReturnStatus.REFUNDED,
       ReturnStatus.EXCHANGED,
     ]);
-    if (
-      dto.status !== existing.status &&
-      notifyStatuses.has(dto.status as any)
-    ) {
-      (async () => {
+    if (dto.status !== existing.status && notifyStatuses.has(dto.status)) {
+      void (async () => {
         try {
           const order = updatedReturn.order;
           if (!order) return;
@@ -491,7 +528,7 @@ export class ReturnService {
             where: { id: existing.tenantId },
             select: { name: true },
           });
-          const ship = (order.shippingAddress || {}) as Record<string, any>;
+          const ship = (order.shippingAddress || {}) as Record<string, unknown>;
           await this.notificationService.sendFromTemplate({
             tenantId: existing.tenantId,
             key: 'RETURN_UPDATED',
@@ -501,7 +538,10 @@ export class ReturnService {
             link: `/account/orders`,
             vars: {
               customer_name:
-                ship.name || order.customer?.name || order.email || '',
+                jsonText(ship.name) ||
+                order.customer?.name ||
+                order.email ||
+                '',
               order_number: order.number,
               return_status: String(dto.status).replace(/_/g, ' '),
               return_note: dto.note || dto.inspectionNote || '',
@@ -520,5 +560,3 @@ export class ReturnService {
     );
   }
 }
-
-

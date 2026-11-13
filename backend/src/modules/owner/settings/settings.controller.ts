@@ -25,7 +25,10 @@ import { UpdateStoreSettingsDto } from './dto';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Store Settings')
@@ -40,7 +43,8 @@ export class SettingsController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Get store identity, contact info, working hours, and configuration',
+    summary:
+      'Get store identity, contact info, working hours, and configuration',
   })
   @ApiResponse({
     status: 200,
@@ -49,7 +53,7 @@ export class SettingsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async getStoreSettings(
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -60,7 +64,8 @@ export class SettingsController {
   @Patch()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Update store details, contact info (email, whatsapp, phone, address, hours)',
+    summary:
+      'Update store details, contact info (email, whatsapp, phone, address, hours)',
   })
   @ApiResponse({
     status: 200,
@@ -71,7 +76,7 @@ export class SettingsController {
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async updateStoreSettings(
     @Body() dto: UpdateStoreSettingsDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -103,7 +108,7 @@ export class SettingsController {
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async uploadLogo(
     @UploadedFile() file: Express.Multer.File,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -113,12 +118,14 @@ export class SettingsController {
   // 4. Remove store logo
   @Delete('logo')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Remove the store logo (storefront falls back to name)' })
+  @ApiOperation({
+    summary: 'Remove the store logo (storefront falls back to name)',
+  })
   @ApiResponse({ status: 200, description: 'Store logo removed successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   async removeLogo(
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;

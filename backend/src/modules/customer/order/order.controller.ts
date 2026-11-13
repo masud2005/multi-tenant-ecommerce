@@ -19,7 +19,10 @@ import {
 } from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
 
@@ -33,13 +36,18 @@ export class OrderController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Create and place a new order from checkout (Login required)' })
+  @ApiOperation({
+    summary: 'Create and place a new order from checkout (Login required)',
+  })
   @ApiResponse({ status: 201, description: 'Order created successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - Customer login required' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - Customer login required',
+  })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   async createOrder(
     @Body() dto: CreateOrderDto,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const userId = user?.id || user?.sub;
@@ -58,12 +66,14 @@ export class OrderController {
   @ApiResponse({ status: 200, description: 'Orders retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getCustomerOrders(
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const userId = user?.id || user?.sub;
     if (!userId) {
-      throw new UnauthorizedException('Authentication required to view order history');
+      throw new UnauthorizedException(
+        'Authentication required to view order history',
+      );
     }
     const tenantId = tenantHeader || user?.tenantId;
     return this.orderService.getCustomerOrders(userId, tenantId);
@@ -74,11 +84,14 @@ export class OrderController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({ summary: 'Get specific order details by order number' })
-  @ApiResponse({ status: 200, description: 'Order details retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Order details retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Order not found' })
   async getOrderByNumber(
     @Param('orderNumber') orderNumber: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const tenantId = tenantHeader || user?.tenantId;
@@ -97,7 +110,7 @@ export class OrderController {
   @ApiResponse({ status: 404, description: 'Order not found' })
   async cancelOrder(
     @Param('orderNumber') orderNumber: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
     @Headers('x-tenant-id') tenantHeader?: string,
   ) {
     const userId = user?.id || user?.sub;

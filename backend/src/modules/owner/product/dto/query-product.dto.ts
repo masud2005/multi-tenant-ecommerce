@@ -41,7 +41,8 @@ export class QueryProductDto {
   status?: ProductStatus;
 
   @ApiPropertyOptional({
-    description: 'Search term for title, short description, tags, or variant SKU',
+    description:
+      'Search term for title, short description, tags, or variant SKU',
   })
   @IsString()
   @IsOptional()

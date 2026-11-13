@@ -1,3 +1,4 @@
+import type { AuthUser } from '../../../common/decorators/current-user.decorator';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateContactMessageDto } from './dto/create-contact-message.dto';
@@ -40,7 +41,9 @@ export class CustomerSupportService {
     const phone = dto.phone?.trim() || null;
     const email =
       dto.email?.trim().toLowerCase() ||
-      (phone ? `${phone.replace(/[^0-9]/g, '')}@phone.store` : `guest-${Date.now()}@guest.store`);
+      (phone
+        ? `${phone.replace(/[^0-9]/g, '')}@phone.store`
+        : `guest-${Date.now()}@guest.store`);
 
     // Find or create customer profile
     let customer = await this.prisma.customerProfile.findUnique({
@@ -113,7 +116,7 @@ export class CustomerSupportService {
   }
 
   // 2. Get all support tickets submitted by this customer
-  async getCustomerTickets(tenantId?: string, user?: any) {
+  async getCustomerTickets(tenantId?: string, user?: AuthUser) {
     const targetTenantId = await this.resolveTenantId(tenantId);
     const userId = user?.id || user?.sub;
     const email = user?.email?.toLowerCase();
@@ -125,10 +128,7 @@ export class CustomerSupportService {
     const customers = await this.prisma.customerProfile.findMany({
       where: {
         tenantId: targetTenantId,
-        OR: [
-          ...(userId ? [{ userId }] : []),
-          ...(email ? [{ email }] : []),
-        ],
+        OR: [...(userId ? [{ userId }] : []), ...(email ? [{ email }] : [])],
       },
       select: { id: true },
     });
@@ -152,11 +152,19 @@ export class CustomerSupportService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return ResponseHelper.success(tickets, 'Customer tickets retrieved successfully');
+    return ResponseHelper.success(
+      tickets,
+      'Customer tickets retrieved successfully',
+    );
   }
 
   // 3. Customer replies to an existing ticket
-  async replyCustomerTicket(ticketId: string, replyText: string, tenantId?: string, user?: any) {
+  async replyCustomerTicket(
+    ticketId: string,
+    replyText: string,
+    tenantId?: string,
+    user?: AuthUser,
+  ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
     const userId = user?.id || user?.sub;
     const customerName = user?.name || 'Customer';
@@ -172,10 +180,16 @@ export class CustomerSupportService {
     });
 
     if (!ticket) {
-      throw new NotFoundException(`Support ticket with id "${ticketId}" not found`);
+      throw new NotFoundException(
+        `Support ticket with id "${ticketId}" not found`,
+      );
     }
 
-    if (ticket.customer?.userId && userId && ticket.customer.userId !== userId) {
+    if (
+      ticket.customer?.userId &&
+      userId &&
+      ticket.customer.userId !== userId
+    ) {
       throw new NotFoundException('You do not have access to this ticket');
     }
 

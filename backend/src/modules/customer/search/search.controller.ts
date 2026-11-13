@@ -19,7 +19,8 @@ export class SearchController {
   @Post('log')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Log customer search query for analytics and inventory demand detection',
+    summary:
+      'Log customer search query for analytics and inventory demand detection',
   })
   @ApiResponse({ status: 200, description: 'Search logged successfully' })
   async logSearch(
@@ -35,7 +36,10 @@ export class SearchController {
   @ApiOperation({
     summary: 'Log product click resulting from a search query',
   })
-  @ApiResponse({ status: 200, description: 'Product click logged successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Product click logged successfully',
+  })
   async logClick(
     @Body() dto: LogClickDto,
     @Headers('x-tenant-id') tenantHeader?: string,
@@ -44,4 +48,3 @@ export class SearchController {
     return this.searchService.logClick(dto, tenantHeader, authHeader);
   }
 }
-

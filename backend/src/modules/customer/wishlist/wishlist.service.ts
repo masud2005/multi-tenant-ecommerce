@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AddToWishlistDto } from './dto/add-to-wishlist.dto';
 import { QueryWishlistDto } from './dto/query-wishlist.dto';
@@ -75,7 +71,8 @@ export class WishlistService {
 
     if (user) {
       const userEmail = user.email || `${user.id}@customer.store`;
-      const profileName = user.name || (user.email ? user.email.split('@')[0] : 'Customer');
+      const profileName =
+        user.name || (user.email ? user.email.split('@')[0] : 'Customer');
       const newProfile = await this.prisma.customerProfile.upsert({
         where: {
           tenantId_email: {
@@ -103,10 +100,7 @@ export class WishlistService {
   /**
    * ইউজারের সেভ করা প্রোডাক্টগুলোর তালিকা নিয়ে আসা (Get User Wishlist Items)
    */
-  async getWishlist(
-    userIdOrCustomerId: string,
-    query?: QueryWishlistDto,
-  ) {
+  async getWishlist(userIdOrCustomerId: string, query?: QueryWishlistDto) {
     const targetTenantId = await this.resolveTenantId(query?.tenantId);
     const page = Number(query?.page) || 1;
     const limit = Number(query?.limit) || 20;
@@ -246,10 +240,7 @@ export class WishlistService {
   /**
    * উইশলিস্টে প্রোডাক্ট যুক্ত বা রিমুভ করা (Toggle Wishlist Item)
    */
-  async toggleWishlist(
-    userIdOrCustomerId: string,
-    dto: AddToWishlistDto,
-  ) {
+  async toggleWishlist(userIdOrCustomerId: string, dto: AddToWishlistDto) {
     const targetTenantId = await this.resolveTenantId(dto.tenantId);
 
     const customerId = await this.resolveCustomerId(
@@ -258,7 +249,9 @@ export class WishlistService {
     );
 
     if (!customerId) {
-      throw new NotFoundException('Customer profile could not be resolved for this user');
+      throw new NotFoundException(
+        'Customer profile could not be resolved for this user',
+      );
     }
 
     // প্রোডাক্টটি ডাটাবেজে সক্রিয় কি না চেক করা
@@ -344,10 +337,7 @@ export class WishlistService {
   /**
    * গেস্ট উইশলিস্ট প্রোডাক্টগুলো লগইন করা কাস্টমারের সাথে সিঙ্ক ও মার্জ করা (Sync Guest Wishlist)
    */
-  async syncWishlist(
-    userIdOrCustomerId: string,
-    dto: SyncWishlistDto,
-  ) {
+  async syncWishlist(userIdOrCustomerId: string, dto: SyncWishlistDto) {
     const targetTenantId = await this.resolveTenantId(dto.tenantId);
 
     const customerId = await this.resolveCustomerId(
@@ -375,7 +365,9 @@ export class WishlistService {
       const existingProductIds = new Set(existingItems.map((i) => i.productId));
 
       // ২. শুধুমাত্র যে প্রোডাক্টগুলো এখনো ডাটাবেজে নেই, সেগুলো ফিল্টার করা
-      const newProductIds = requestedIds.filter((id) => !existingProductIds.has(id));
+      const newProductIds = requestedIds.filter(
+        (id) => !existingProductIds.has(id),
+      );
 
       // ৩. প্রোডাক্টগুলো ডাটাবেজে সক্রিয় কি না চেক করা
       if (newProductIds.length > 0) {

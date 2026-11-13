@@ -1,3 +1,5 @@
+import { Prisma } from '../../../../prisma/generated/client';
+import type { AuthUser } from '../../../common/decorators/current-user.decorator';
 import {
   Injectable,
   NotFoundException,
@@ -73,7 +75,8 @@ export class StaffService {
     const defaultRoles = [
       {
         name: 'Store Manager',
-        description: 'Runs daily operations incl. orders, catalog, customers, and discounts.',
+        description:
+          'Runs daily operations incl. orders, catalog, customers, and discounts.',
         isSystem: true,
         permissions: {
           dashboard: ['view'],
@@ -101,7 +104,8 @@ export class StaffService {
       },
       {
         name: 'Fulfillment Staff',
-        description: 'Processes, packs, and ships orders; manages inventory stock.',
+        description:
+          'Processes, packs, and ships orders; manages inventory stock.',
         isSystem: true,
         permissions: {
           dashboard: ['view'],
@@ -114,7 +118,8 @@ export class StaffService {
       },
       {
         name: 'Customer Care',
-        description: 'Views orders and customers, handles returns, inquiries, and reviews.',
+        description:
+          'Views orders and customers, handles returns, inquiries, and reviews.',
         isSystem: true,
         permissions: {
           dashboard: ['view'],
@@ -168,7 +173,7 @@ export class StaffService {
     // Make sure standard roles exist for tenant
     await this.ensureDefaultRoles(targetTenantId);
 
-    const where: any = {
+    const where: Prisma.TenantMemberWhereInput = {
       tenantId: targetTenantId,
       deletedAt: null,
     };
@@ -196,54 +201,61 @@ export class StaffService {
     const limit = query.limit && query.limit > 0 ? query.limit : 50;
     const skip = (page - 1) * limit;
 
-    const [members, total, activeCount, invitedCount, deactivatedCount, rolesCount] =
-      await Promise.all([
-        this.prisma.tenantMember.findMany({
-          where,
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                phone: true,
-                role: true,
-                status: true,
-                lastLoginAt: true,
-                createdAt: true,
-              },
-            },
-            role: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
-                isSystem: true,
-                permissions: true,
-              },
+    const [
+      members,
+      total,
+      activeCount,
+      invitedCount,
+      deactivatedCount,
+      rolesCount,
+    ] = await Promise.all([
+      this.prisma.tenantMember.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              role: true,
+              status: true,
+              lastLoginAt: true,
+              createdAt: true,
             },
           },
-          orderBy: [
-            { isOwner: 'desc' },
-            { createdAt: 'asc' },
-          ],
-          skip,
-          take: limit,
-        }),
-        this.prisma.tenantMember.count({ where }),
-        this.prisma.tenantMember.count({
-          where: { tenantId: targetTenantId, status: 'active', deletedAt: null },
-        }),
-        this.prisma.tenantMember.count({
-          where: { tenantId: targetTenantId, status: 'invited', deletedAt: null },
-        }),
-        this.prisma.tenantMember.count({
-          where: { tenantId: targetTenantId, status: 'deactivated', deletedAt: null },
-        }),
-        this.prisma.tenantRole.count({
-          where: { tenantId: targetTenantId },
-        }),
-      ]);
+          role: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              isSystem: true,
+              permissions: true,
+            },
+          },
+        },
+        orderBy: [{ isOwner: 'desc' }, { createdAt: 'asc' }],
+        skip,
+        take: limit,
+      }),
+      this.prisma.tenantMember.count({ where }),
+      this.prisma.tenantMember.count({
+        where: { tenantId: targetTenantId, status: 'active', deletedAt: null },
+      }),
+      this.prisma.tenantMember.count({
+        where: { tenantId: targetTenantId, status: 'invited', deletedAt: null },
+      }),
+      this.prisma.tenantMember.count({
+        where: {
+          tenantId: targetTenantId,
+          status: 'deactivated',
+          deletedAt: null,
+        },
+      }),
+      this.prisma.tenantRole.count({
+        where: { tenantId: targetTenantId },
+      }),
+    ]);
 
     const formattedMembers = members.map((m) => {
       const roleName = m.isOwner ? 'Owner' : m.role?.name || 'Staff';
@@ -285,7 +297,12 @@ export class StaffService {
   }
 
   // 2. Invite or directly add a new staff member to the tenant with an assigned role
-  async inviteStaff(dto: InviteStaffDto, tenantId?: string, adminUser?: any) {
+  async inviteStaff(
+    dto: InviteStaffDto,
+    tenantId?: string,
+    _adminUser?: AuthUser,
+  ) {
+    void _adminUser;
     const targetTenantId = await this.resolveTenantId(tenantId);
     await this.ensureDefaultRoles(targetTenantId);
 
@@ -295,7 +312,7 @@ export class StaffService {
     }
 
     // Resolve assigned TenantRole
-    let targetRole: any = null;
+    let targetRole: Prisma.TenantRoleGetPayload<object> | null = null;
     if (dto.roleId) {
       targetRole = await this.prisma.tenantRole.findFirst({
         where: { id: dto.roleId, tenantId: targetTenantId },
@@ -333,6 +350,11 @@ export class StaffService {
           deletedAt: null,
         },
       });
+      if (existingMember) {
+        throw new BadRequestException(
+          'This user is already a staff member of this store',
+        );
+      }
 
       if (user.role === UserRole.CUSTOMER) {
         await this.prisma.user.update({
@@ -461,7 +483,9 @@ export class StaffService {
     }
 
     if (member.status !== 'invited') {
-      throw new BadRequestException('Can only resend invitation to pending invited members');
+      throw new BadRequestException(
+        'Can only resend invitation to pending invited members',
+      );
     }
 
     const inviteToken = crypto.randomBytes(24).toString('hex');
@@ -504,8 +528,9 @@ export class StaffService {
     memberId: string,
     dto: UpdateStaffDto,
     tenantId?: string,
-    adminUser?: any,
+    _adminUser?: AuthUser,
   ) {
+    void _adminUser;
     const targetTenantId = await this.resolveTenantId(tenantId);
 
     const existingMember = await this.prisma.tenantMember.findFirst({
@@ -521,11 +546,15 @@ export class StaffService {
     });
 
     if (!existingMember) {
-      throw new NotFoundException(`Staff member with ID "${memberId}" not found`);
+      throw new NotFoundException(
+        `Staff member with ID "${memberId}" not found`,
+      );
     }
 
     if (existingMember.isOwner && dto.status === 'deactivated') {
-      throw new BadRequestException('Store owner account cannot be deactivated');
+      throw new BadRequestException(
+        'Store owner account cannot be deactivated',
+      );
     }
 
     // 1. Resolve role if roleId or roleName is provided
@@ -618,9 +647,7 @@ export class StaffService {
       twoFactor: updatedMember.twoFactor,
       lastActiveAt:
         updatedMember.lastActiveAt || updatedMember.user?.lastLoginAt || null,
-      invitedAt: updatedMember.inviteExpiresAt
-        ? updatedMember.createdAt
-        : null,
+      invitedAt: updatedMember.inviteExpiresAt ? updatedMember.createdAt : null,
       createdAt: updatedMember.createdAt,
     };
 
@@ -634,7 +661,7 @@ export class StaffService {
   async removeStaffMember(
     memberId: string,
     tenantId?: string,
-    adminUser?: any,
+    adminUser?: AuthUser,
   ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
@@ -656,15 +683,21 @@ export class StaffService {
     });
 
     if (!existingMember) {
-      throw new NotFoundException(`Staff member with ID "${memberId}" not found`);
+      throw new NotFoundException(
+        `Staff member with ID "${memberId}" not found`,
+      );
     }
 
     if (existingMember.isOwner) {
-      throw new BadRequestException('Store owner account cannot be removed from store');
+      throw new BadRequestException(
+        'Store owner account cannot be removed from store',
+      );
     }
 
     if (adminUser?.id && adminUser.id === existingMember.userId) {
-      throw new BadRequestException('You cannot remove yourself from the store');
+      throw new BadRequestException(
+        'You cannot remove yourself from the store',
+      );
     }
 
     await this.prisma.tenantMember.update({
@@ -702,10 +735,7 @@ export class StaffService {
           },
         },
       },
-      orderBy: [
-        { isSystem: 'desc' },
-        { createdAt: 'asc' },
-      ],
+      orderBy: [{ isSystem: 'desc' }, { createdAt: 'asc' }],
     });
 
     const formattedRoles = roles.map((r) => ({
@@ -742,7 +772,9 @@ export class StaffService {
     });
 
     if (existingRole) {
-      throw new BadRequestException(`Role with name "${roleName}" already exists`);
+      throw new BadRequestException(
+        `Role with name "${roleName}" already exists`,
+      );
     }
 
     const createdRole = await this.prisma.tenantRole.create({
@@ -779,7 +811,9 @@ export class StaffService {
     let updatedName = existingRole.name;
     if (dto.name && dto.name.trim() !== existingRole.name) {
       if (existingRole.isSystem) {
-        throw new BadRequestException('System default role names cannot be renamed');
+        throw new BadRequestException(
+          'System default role names cannot be renamed',
+        );
       }
       const duplicate = await this.prisma.tenantRole.findFirst({
         where: {
@@ -789,7 +823,9 @@ export class StaffService {
         },
       });
       if (duplicate) {
-        throw new BadRequestException(`Another role named "${dto.name.trim()}" already exists`);
+        throw new BadRequestException(
+          `Another role named "${dto.name.trim()}" already exists`,
+        );
       }
       updatedName = dto.name.trim();
     }
@@ -804,8 +840,8 @@ export class StaffService {
             : existingRole.description,
         permissions:
           dto.permissions !== undefined
-            ? (dto.permissions as any)
-            : (existingRole.permissions as any),
+            ? (dto.permissions as Prisma.InputJsonValue)
+            : (existingRole.permissions as Prisma.InputJsonValue),
       },
     });
 

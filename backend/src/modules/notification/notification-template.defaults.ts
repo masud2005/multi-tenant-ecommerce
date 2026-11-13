@@ -115,7 +115,8 @@ We will update you when your order is on the way.`,
     key: 'ORDER_CANCELLED',
     event: 'Order Cancelled',
     group: 'Orders',
-    description: 'Sent when an order is cancelled by the store or customer flow.',
+    description:
+      'Sent when an order is cancelled by the store or customer flow.',
     email: true,
     inApp: true,
     subject: 'Order {{order_number}} cancelled — {{store_name}}',
@@ -138,7 +139,8 @@ Total was {{total_amount}}.`,
       'Sent when a manual bKash/Nagad payment is rejected or cannot be verified.',
     email: true,
     inApp: true,
-    subject: 'Payment could not be verified for {{order_number}} — {{store_name}}',
+    subject:
+      'Payment could not be verified for {{order_number}} — {{store_name}}',
     body: `Hi {{customer_name}},
 
 We could not verify payment for order {{order_number}} ({{total_amount}}).
@@ -264,7 +266,8 @@ Review it in Admin → Returns.`,
       'Sent to the customer when admin approves, rejects, refunds, or exchanges a return.',
     email: true,
     inApp: true,
-    subject: 'Return update for {{order_number}}: {{return_status}} — {{store_name}}',
+    subject:
+      'Return update for {{order_number}}: {{return_status}} — {{store_name}}',
     body: `Hi {{customer_name}},
 
 Your return request for order {{order_number}} is now: {{return_status}}.
@@ -358,7 +361,8 @@ Restock from Admin → Inventory.`,
 
 Moderate it in Admin → Reviews.`,
     inAppTitle: 'New review on {{product_title}}',
-    inAppMessage: '{{customer_name}} rated {{review_rating}} ★: "{{review_text}}"',
+    inAppMessage:
+      '{{customer_name}} rated {{review_rating}} ★: "{{review_text}}"',
     variables: [
       {
         tag: '{{customer_name}}',

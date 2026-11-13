@@ -21,7 +21,7 @@ export type DefaultStoreShipping = typeof DEFAULT_STORE_SHIPPING;
 export function mergeStoreShippingDefaults(
   raw?: Record<string, unknown> | null,
 ): DefaultStoreShipping {
-  const sh = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const sh = raw && typeof raw === 'object' ? raw : {};
 
   const num = (v: unknown, fallback: number) => {
     if (typeof v === 'number' && Number.isFinite(v) && v >= 0) return v;
@@ -42,8 +42,17 @@ export function mergeStoreShippingDefaults(
       sh.freeDeliveryThreshold ?? sh.freeShippingThreshold,
       DEFAULT_STORE_SHIPPING.freeDeliveryThreshold,
     ),
-    insideDhakaEst: str(sh.insideDhakaEst, DEFAULT_STORE_SHIPPING.insideDhakaEst),
-    outsideDhakaEst: str(sh.outsideDhakaEst, DEFAULT_STORE_SHIPPING.outsideDhakaEst),
-    pickup: typeof sh.pickup === 'boolean' ? sh.pickup : DEFAULT_STORE_SHIPPING.pickup,
+    insideDhakaEst: str(
+      sh.insideDhakaEst,
+      DEFAULT_STORE_SHIPPING.insideDhakaEst,
+    ),
+    outsideDhakaEst: str(
+      sh.outsideDhakaEst,
+      DEFAULT_STORE_SHIPPING.outsideDhakaEst,
+    ),
+    pickup:
+      typeof sh.pickup === 'boolean'
+        ? sh.pickup
+        : DEFAULT_STORE_SHIPPING.pickup,
   };
 }

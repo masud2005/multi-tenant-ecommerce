@@ -3,7 +3,9 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class QueryStaffDto {
-  @ApiPropertyOptional({ description: 'Search across staff name, email, or phone' })
+  @ApiPropertyOptional({
+    description: 'Search across staff name, email, or phone',
+  })
   @IsOptional()
   @IsString()
   search?: string;
@@ -13,7 +15,9 @@ export class QueryStaffDto {
   @IsString()
   roleId?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by member status (active, invited, deactivated)' })
+  @ApiPropertyOptional({
+    description: 'Filter by member status (active, invited, deactivated)',
+  })
   @IsOptional()
   @IsString()
   status?: string;

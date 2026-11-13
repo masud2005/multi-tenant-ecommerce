@@ -1,3 +1,5 @@
+import { Prisma } from '../../../../prisma/generated/client';
+import type { AuthUser } from '../../../common/decorators/current-user.decorator';
 import {
   BadRequestException,
   Injectable,
@@ -45,7 +47,7 @@ export class ReviewService {
   async getReviews(query: OwnerReviewQueryDto, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
-    const where: any = {
+    const where: Prisma.ReviewWhereInput = {
       tenantId: targetTenantId,
       deletedAt: null,
     };
@@ -134,7 +136,13 @@ export class ReviewService {
       }),
     ]);
 
-    const distribution: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    const distribution: Record<number, number> = {
+      5: 0,
+      4: 0,
+      3: 0,
+      2: 0,
+      1: 0,
+    };
     let totalScore = 0;
     let repliedCount = 0;
     let withPhotosCount = 0;
@@ -216,14 +224,17 @@ export class ReviewService {
       throw new NotFoundException(`Review with id "${id}" not found`);
     }
 
-    return ResponseHelper.success(review, 'Review details retrieved successfully');
+    return ResponseHelper.success(
+      review,
+      'Review details retrieved successfully',
+    );
   }
 
   async replyToReview(
     id: string,
     dto: ReplyReviewDto,
     tenantId?: string,
-    adminUser?: any,
+    adminUser?: AuthUser,
   ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
@@ -272,12 +283,14 @@ export class ReviewService {
   async createReviewManually(
     dto: CreateOwnerReviewDto,
     tenantId?: string,
-    adminUser?: any,
+    adminUser?: AuthUser,
   ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
     if (!dto.productId?.trim()) {
-      throw new BadRequestException('Product ID is required to create a review');
+      throw new BadRequestException(
+        'Product ID is required to create a review',
+      );
     }
 
     const productExists = await this.prisma.product.findFirst({
@@ -289,7 +302,9 @@ export class ReviewService {
     });
 
     if (!productExists) {
-      throw new NotFoundException(`Product with ID "${dto.productId}" not found`);
+      throw new NotFoundException(
+        `Product with ID "${dto.productId}" not found`,
+      );
     }
 
     const review = await this.prisma.review.create({
@@ -372,14 +387,13 @@ export class ReviewService {
 
     await syncProductReviewAggregates(this.prisma, existing.productId);
 
-    return ResponseHelper.success(updated, `Review status updated to ${dto.status}`);
+    return ResponseHelper.success(
+      updated,
+      `Review status updated to ${dto.status}`,
+    );
   }
 
-  async updateReview(
-    id: string,
-    dto: UpdateOwnerReviewDto,
-    tenantId?: string,
-  ) {
+  async updateReview(id: string, dto: UpdateOwnerReviewDto, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
     const existing = await this.prisma.review.findFirst({
@@ -390,7 +404,7 @@ export class ReviewService {
       throw new NotFoundException(`Review with id "${id}" not found`);
     }
 
-    const data: any = {
+    const data: Prisma.ReviewUpdateInput = {
       updatedAt: new Date(),
     };
 
@@ -412,9 +426,11 @@ export class ReviewService {
         },
       });
       if (!productExists) {
-        throw new NotFoundException(`Product with ID "${dto.productId}" not found`);
+        throw new NotFoundException(
+          `Product with ID "${dto.productId}" not found`,
+        );
       }
-      data.productId = dto.productId;
+      data.product = { connect: { id: dto.productId } };
       nextProductId = dto.productId;
     }
 

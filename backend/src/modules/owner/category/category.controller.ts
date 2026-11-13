@@ -27,7 +27,10 @@ import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../../common/guards/optional-jwt-auth.guard';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../../common/decorators/current-user.decorator';
 import { UserRole } from '../../../../prisma/generated/client';
 
 @ApiTags('(Owner) Categories')
@@ -42,17 +45,25 @@ export class CategoryController {
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Create a new category or subcategory with optional image file' })
+  @ApiOperation({
+    summary: 'Create a new category or subcategory with optional image file',
+  })
   @ApiResponse({ status: 201, description: 'Category created successfully' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
-  @ApiResponse({ status: 404, description: 'Tenant or parent category not found' })
-  @ApiResponse({ status: 409, description: 'Category slug or name already exists' })
+  @ApiResponse({
+    status: 404,
+    description: 'Tenant or parent category not found',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Category slug or name already exists',
+  })
   async create(
     @Body() dto: CreateCategoryDto,
     @UploadedFile() file?: Express.Multer.File,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.categoryService.create(dto, file, user?.tenantId);
   }
@@ -60,9 +71,14 @@ export class CategoryController {
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get all categories for owner tenant or public storefront' })
-  @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
-  async findAll(@CurrentUser() user?: any) {
+  @ApiOperation({
+    summary: 'Get all categories for owner tenant or public storefront',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Categories retrieved successfully',
+  })
+  async findAll(@CurrentUser() user?: AuthUser) {
     return this.categoryService.findAll(user?.tenantId);
   }
 
@@ -70,11 +86,14 @@ export class CategoryController {
   @UseGuards(OptionalJwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get single category details by ID or Slug' })
-  @ApiResponse({ status: 200, description: 'Category details retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Category details retrieved successfully',
+  })
   @ApiResponse({ status: 404, description: 'Category not found' })
   async findOne(
     @Param('idOrSlug') idOrSlug: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.categoryService.findOne(idOrSlug, user?.tenantId);
   }
@@ -86,18 +105,24 @@ export class CategoryController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('image'))
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Update an existing category or subcategory with optional image file' })
+  @ApiOperation({
+    summary:
+      'Update an existing category or subcategory with optional image file',
+  })
   @ApiResponse({ status: 200, description: 'Category updated successfully' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
   @ApiResponse({ status: 404, description: 'Category or parent not found' })
-  @ApiResponse({ status: 409, description: 'Category slug or subcategory name conflict' })
+  @ApiResponse({
+    status: 409,
+    description: 'Category slug or subcategory name conflict',
+  })
   async update(
     @Param('idOrSlug') idOrSlug: string,
     @Body() dto: UpdateCategoryDto,
     @UploadedFile() file?: Express.Multer.File,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.categoryService.update(idOrSlug, dto, file, user?.tenantId);
   }
@@ -114,7 +139,7 @@ export class CategoryController {
   @ApiResponse({ status: 404, description: 'Category not found' })
   async remove(
     @Param('idOrSlug') idOrSlug: string,
-    @CurrentUser() user?: any,
+    @CurrentUser() user?: AuthUser,
   ) {
     return this.categoryService.remove(idOrSlug, user?.tenantId);
   }

@@ -3,7 +3,6 @@ import {
   IsEnum,
   IsNumber,
   IsString,
-  IsEmail,
   IsOptional,
   validateSync,
 } from 'class-validator';

@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -39,7 +40,7 @@ export class AuditLogService {
     action?: string;
     message?: string;
     category?: string;
-    metadata?: any;
+    metadata?: Prisma.InputJsonValue;
   }) {
     try {
       let tid = payload.tenantId;
@@ -62,8 +63,9 @@ export class AuditLogService {
           after: payload.metadata ? JSON.stringify(payload.metadata) : null,
         },
       });
-    } catch (err: any) {
-      this.logger.warn(`Could not persist audit log: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'unknown error';
+      this.logger.warn(`Could not persist audit log: ${message}`);
     }
   }
 
@@ -74,8 +76,8 @@ export class AuditLogService {
     action: string,
     resource: string,
     category: string,
-    before?: any,
-    after?: any,
+    before?: Prisma.InputJsonValue,
+    after?: Prisma.InputJsonValue,
   ) {
     const tid = await this.resolveTenantId(tenantId);
     return this.prisma.auditLog.create({
@@ -95,7 +97,7 @@ export class AuditLogService {
   async getAuditLogs(query: QueryAuditLogDto, tenantId?: string) {
     const targetTenantId = await this.resolveTenantId(tenantId);
 
-    const where: any = {
+    const where: Prisma.AuditLogWhereInput = {
       tenantId: targetTenantId,
     };
 
@@ -158,4 +160,3 @@ export class AuditLogService {
     );
   }
 }
-

@@ -18,6 +18,11 @@ import {
 } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 
+function asJsonObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
 const CUSTOMER_CANCELLABLE: OrderStatus[] = [
   OrderStatus.PENDING_PAYMENT,
   OrderStatus.CONFIRMED,
@@ -89,7 +94,8 @@ export class OrderService {
     });
     if (user) {
       const userEmail = user.email || `${user.id}@customer.store`;
-      const profileName = user.name || (user.email ? user.email.split('@')[0] : 'Customer');
+      const profileName =
+        user.name || (user.email ? user.email.split('@')[0] : 'Customer');
       const newProfile = await this.prisma.customerProfile.upsert({
         where: {
           tenantId_email: {
@@ -131,7 +137,10 @@ export class OrderService {
   ) {
     // Step 1: Resolve tenant and customer identities
     const resolvedTenantId = await this.resolveTenantId(tenantId);
-    const resolvedCustomerId = await this.resolveCustomerId(userId, resolvedTenantId);
+    const resolvedCustomerId = await this.resolveCustomerId(
+      userId,
+      resolvedTenantId,
+    );
 
     // Step 2: Extract recipient information with fallback to shippingAddress
     const customerName = dto.customerName || dto.shippingAddress?.name;
@@ -142,7 +151,9 @@ export class OrderService {
       throw new BadRequestException('Recipient name is required');
     }
     if (!phone) {
-      throw new BadRequestException('Recipient contact phone number is required');
+      throw new BadRequestException(
+        'Recipient contact phone number is required',
+      );
     }
     if (!dto.items || dto.items.length === 0) {
       throw new BadRequestException('Order must contain at least one item');
@@ -163,12 +174,9 @@ export class OrderService {
       where: { id: resolvedTenantId },
       select: { settings: true },
     });
-    const settings =
-      tenantSettings?.settings && typeof tenantSettings.settings === 'object'
-        ? (tenantSettings.settings as Record<string, any>)
-        : {};
-    const payCfg = (settings.payment || {}) as Record<string, any>;
-    const pmCfg = (settings.pm || {}) as Record<string, any>;
+    const settings = asJsonObject(tenantSettings?.settings);
+    const payCfg = asJsonObject(settings.payment);
+    const pmCfg = asJsonObject(settings.pm);
     const methodEnabled = {
       [PaymentMethod.COD]:
         typeof payCfg.codEnabled === 'boolean'
@@ -228,7 +236,11 @@ export class OrderService {
       .filter((id): id is string => Boolean(id));
     if (productIdsToCheck.length > 0) {
       const existingProducts = await this.prisma.product.findMany({
-        where: { id: { in: productIdsToCheck }, tenantId: resolvedTenantId, deletedAt: null },
+        where: {
+          id: { in: productIdsToCheck },
+          tenantId: resolvedTenantId,
+          deletedAt: null,
+        },
         select: { id: true },
       });
       existingProducts.forEach((p) => validProductIds.add(p.id));
@@ -289,8 +301,14 @@ export class OrderService {
           // Link line items with safe foreign keys
           items: {
             create: dto.items.map((item) => ({
-              productId: item.productId && validProductIds.has(item.productId) ? item.productId : null,
-              variantId: item.variantId && validVariantIds.has(item.variantId) ? item.variantId : null,
+              productId:
+                item.productId && validProductIds.has(item.productId)
+                  ? item.productId
+                  : null,
+              variantId:
+                item.variantId && validVariantIds.has(item.variantId)
+                  ? item.variantId
+                  : null,
               title: item.title,
               image: item.image,
               color: item.color,
@@ -309,7 +327,12 @@ export class OrderService {
                 by: 'Customer',
               },
               ...(isCod
-                ? [{ label: 'Order confirmed (Cash on delivery)', by: 'System' }]
+                ? [
+                    {
+                      label: 'Order confirmed (Cash on delivery)',
+                      by: 'System',
+                    },
+                  ]
                 : [
                     {
                       label: `Manual ${dto.paymentMethod} payment submitted`,
@@ -328,7 +351,10 @@ export class OrderService {
       });
 
       // Record manual payment attempt if bKash or Nagad was selected
-      if (dto.paymentMethod === PaymentMethod.BKASH || dto.paymentMethod === PaymentMethod.NAGAD) {
+      if (
+        dto.paymentMethod === PaymentMethod.BKASH ||
+        dto.paymentMethod === PaymentMethod.NAGAD
+      ) {
         await tx.paymentAttempt.create({
           data: {
             orderId: order.id,
@@ -393,10 +419,12 @@ export class OrderService {
       return order;
     });
 
-    this.logger.log(`Order ${createdOrder.number} created successfully for tenant ${resolvedTenantId}`);
+    this.logger.log(
+      `Order ${createdOrder.number} created successfully for tenant ${resolvedTenantId}`,
+    );
 
     // Trigger Notification Events asynchronously (does not block order response)
-    (async () => {
+    void (async () => {
       try {
         const toNum = (v: unknown) => Number(v) || 0;
         const customerDisplayName =
@@ -539,7 +567,16 @@ export class OrderService {
           ? {
               OR: [
                 ...(customerId ? [{ customerId }] : []),
-                ...(userEmail ? [{ email: { equals: userEmail, mode: 'insensitive' as const } }] : []),
+                ...(userEmail
+                  ? [
+                      {
+                        email: {
+                          equals: userEmail,
+                          mode: 'insensitive' as const,
+                        },
+                      },
+                    ]
+                  : []),
               ],
             }
           : { id: 'impossible_empty_match' }),
@@ -553,7 +590,10 @@ export class OrderService {
       },
     });
 
-    return ResponseHelper.success(orders, 'Customer orders retrieved successfully');
+    return ResponseHelper.success(
+      orders,
+      'Customer orders retrieved successfully',
+    );
   }
 
   // Fetch details of a specific order by its order number
@@ -601,7 +641,10 @@ export class OrderService {
       }
     }
 
-    return ResponseHelper.success(order, 'Order details retrieved successfully');
+    return ResponseHelper.success(
+      order,
+      'Order details retrieved successfully',
+    );
   }
 
   private async restoreOrderStock(
@@ -725,7 +768,7 @@ export class OrderService {
       return cancelled;
     });
 
-    (async () => {
+    void (async () => {
       try {
         const tenant = await this.prisma.tenant.findUnique({
           where: { id: updated.tenantId },
@@ -758,5 +801,3 @@ export class OrderService {
     return ResponseHelper.success(updated, 'Order cancelled successfully');
   }
 }
-
-

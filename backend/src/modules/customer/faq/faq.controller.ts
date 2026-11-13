@@ -17,7 +17,11 @@ export class CustomerFaqController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all public FAQs for the store' })
-  @ApiQuery({ name: 'category', required: false, description: 'Filter by category (e.g. Orders, Delivery, Returns, Account)' })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    description: 'Filter by category (e.g. Orders, Delivery, Returns, Account)',
+  })
   @ApiResponse({ status: 200, description: 'FAQs retrieved successfully' })
   async getFaqs(
     @Query('category') category?: string,

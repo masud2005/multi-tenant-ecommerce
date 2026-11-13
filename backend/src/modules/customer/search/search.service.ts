@@ -3,6 +3,8 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { LogSearchDto } from './dto/log-search.dto';
 import { LogClickDto } from './dto/log-click.dto';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
+import { parseJson } from '../../../common/helpers/json.helper';
+import { readTokenClaims } from '../../auth/utils/token.util';
 
 @Injectable()
 export class SearchService {
@@ -16,9 +18,13 @@ export class SearchService {
       const token = authHeader.replace('Bearer ', '').trim();
       const parts = token.split('.');
       if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+        const payload = readTokenClaims(
+          parseJson(Buffer.from(parts[1], 'base64').toString('utf8')),
+        );
         const role = (payload.role || '').toUpperCase();
-        return ['OWNER', 'ADMIN', 'MANAGER', 'STAFF', 'SUPER_ADMIN'].includes(role);
+        return ['OWNER', 'ADMIN', 'MANAGER', 'STAFF', 'SUPER_ADMIN'].includes(
+          role,
+        );
       }
     } catch {
       // ignore
@@ -48,7 +54,10 @@ export class SearchService {
 
   async logSearch(dto: LogSearchDto, tenantId?: string, authHeader?: string) {
     if (this.isAdmin(authHeader)) {
-      return ResponseHelper.success(null, 'Admin search excluded from customer analytics');
+      return ResponseHelper.success(
+        null,
+        'Admin search excluded from customer analytics',
+      );
     }
 
     const targetTenantId = await this.resolveTenantId(tenantId);
@@ -73,16 +82,25 @@ export class SearchService {
           "updatedAt" = ${now}
       `;
 
-      return ResponseHelper.success({ term: cleanTerm, results: resultsCount }, 'Search query recorded');
-    } catch (err: any) {
+      return ResponseHelper.success(
+        { term: cleanTerm, results: resultsCount },
+        'Search query recorded',
+      );
+    } catch (err: unknown) {
       this.logger.error('Failed to log search query:', err);
-      return ResponseHelper.success(null, 'Search query logging failed gracefully');
+      return ResponseHelper.success(
+        null,
+        'Search query logging failed gracefully',
+      );
     }
   }
 
   async logClick(dto: LogClickDto, tenantId?: string, authHeader?: string) {
     if (this.isAdmin(authHeader)) {
-      return ResponseHelper.success(null, 'Admin click excluded from customer analytics');
+      return ResponseHelper.success(
+        null,
+        'Admin click excluded from customer analytics',
+      );
     }
 
     const targetTenantId = await this.resolveTenantId(tenantId);
@@ -104,11 +122,16 @@ export class SearchService {
         WHERE "tenantId" = ${targetTenantId} AND "term" = ${cleanTerm}
       `;
 
-      return ResponseHelper.success({ term: cleanTerm }, 'Product click recorded');
-    } catch (err: any) {
+      return ResponseHelper.success(
+        { term: cleanTerm },
+        'Product click recorded',
+      );
+    } catch (err: unknown) {
       this.logger.error('Failed to log product click:', err);
-      return ResponseHelper.success(null, 'Product click logging failed gracefully');
+      return ResponseHelper.success(
+        null,
+        'Product click logging failed gracefully',
+      );
     }
   }
 }
-

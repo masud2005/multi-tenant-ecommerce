@@ -12,7 +12,8 @@ export class AddOrderNoteDto {
 
   @ApiPropertyOptional({
     default: true,
-    description: 'Whether this note is internal (staff only) or customer-visible',
+    description:
+      'Whether this note is internal (staff only) or customer-visible',
   })
   @IsBoolean()
   @IsOptional()

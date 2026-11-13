@@ -1,9 +1,11 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { StorageService } from '../../../shared/storage/storage.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductDto } from './dto/query-product.dto';
+import { toInputJson } from '../../../common/helpers/json.helper';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import {
   ConflictException,
@@ -18,7 +20,11 @@ export class ProductService {
   ) {}
 
   // Create a new product with images, variants, collection associations, and rollback on failure
-  async create(dto: CreateProductDto, files?: Express.Multer.File[], tenantId?: string) {
+  async create(
+    dto: CreateProductDto,
+    files?: Express.Multer.File[],
+    tenantId?: string,
+  ) {
     let resolvedTenantId = tenantId;
     if (!resolvedTenantId) {
       const activeTenant = await this.prisma.tenant.findFirst({
@@ -29,7 +35,9 @@ export class ProductService {
     }
 
     if (!resolvedTenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // 1. Verify tenant exists
@@ -181,9 +189,14 @@ export class ProductService {
     }
 
     // Combine explicit DTO images and uploaded image files
-    const explicitImages: { url: string; alt?: string; isCover?: boolean; order?: number }[] = [];
+    const explicitImages: {
+      url: string;
+      alt?: string;
+      isCover?: boolean;
+      order?: number;
+    }[] = [];
     if (Array.isArray(dto.images)) {
-      dto.images.forEach((img: any, idx: number) => {
+      dto.images.forEach((img, idx: number) => {
         if (typeof img === 'string' && img.trim().length > 0) {
           explicitImages.push({
             url: img.trim(),
@@ -220,7 +233,7 @@ export class ProductService {
           slug,
           shortDescription: dto.shortDescription?.trim() || undefined,
           description: dto.description?.trim() || undefined,
-          status: (dto.status as any) || 'DRAFT',
+          status: dto.status || 'DRAFT',
           price: dto.price,
           salePrice: dto.salePrice !== undefined ? dto.salePrice : undefined,
           cost: dto.cost ?? 0,
@@ -229,7 +242,7 @@ export class ProductService {
           isNew: dto.isNew ?? false,
           isBestseller: dto.isBestseller ?? false,
           tags: dto.tags || [],
-          specs: dto.specs || undefined,
+          specs: toInputJson(dto.specs),
           seoTitle: dto.seoTitle?.trim() || undefined,
           seoDescription: dto.seoDescription?.trim() || undefined,
           categoryId: category.id,
@@ -312,7 +325,9 @@ export class ProductService {
     } catch (error) {
       // Rollback uploaded files from storage if database creation fails
       if (uploadedImageUrls.length > 0) {
-        await this.storageService.deleteFiles(uploadedImageUrls).catch(() => {});
+        await this.storageService
+          .deleteFiles(uploadedImageUrls)
+          .catch(() => {});
       }
       throw error;
     }
@@ -335,7 +350,9 @@ export class ProductService {
     }
 
     if (!resolvedTenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // 1. Find existing product
@@ -430,7 +447,9 @@ export class ProductService {
         },
       });
       if (conflict) {
-        throw new ConflictException(`Product with slug '${slug}' already exists in this store.`);
+        throw new ConflictException(
+          `Product with slug '${slug}' already exists in this store.`,
+        );
       }
     }
 
@@ -456,7 +475,9 @@ export class ProductService {
     }
 
     // 7. Validate variants if provided
-    let preparedVariants: any[] | undefined = undefined;
+    let preparedVariants:
+      | Prisma.ProductVariantCreateWithoutProductInput[]
+      | undefined = undefined;
     if (dto.variants && dto.variants.length > 0) {
       preparedVariants = [];
       const seenVariantCombos = new Set<string>();
@@ -502,13 +523,20 @@ export class ProductService {
     }
 
     // Prepare images to retain, add, and clean up
-    let finalImagesToSet: any[] | undefined = undefined;
+    let finalImagesToSet:
+      | Prisma.ProductImageCreateWithoutProductInput[]
+      | undefined = undefined;
     let imagesToDeleteFromStorage: string[] = [];
 
     if (files?.length || dto.images !== undefined) {
-      const baseImages: { url: string; alt?: string; isCover?: boolean; order?: number }[] = [];
+      const baseImages: {
+        url: string;
+        alt?: string;
+        isCover?: boolean;
+        order?: number;
+      }[] = [];
       if (Array.isArray(dto.images)) {
-        dto.images.forEach((img: any, idx: number) => {
+        dto.images.forEach((img, idx: number) => {
           if (typeof img === 'string' && img.trim().length > 0) {
             baseImages.push({
               url: img.trim(),
@@ -570,20 +598,32 @@ export class ProductService {
           data: {
             title: dto.title?.trim() ?? undefined,
             slug: slug !== existingProduct.slug ? slug : undefined,
-            shortDescription: dto.shortDescription !== undefined ? dto.shortDescription?.trim() : undefined,
-            description: dto.description !== undefined ? dto.description?.trim() : undefined,
-            status: (dto.status as any) ?? undefined,
+            shortDescription:
+              dto.shortDescription !== undefined
+                ? dto.shortDescription?.trim()
+                : undefined,
+            description:
+              dto.description !== undefined
+                ? dto.description?.trim()
+                : undefined,
+            status: dto.status ?? undefined,
             price: dto.price !== undefined ? dto.price : undefined,
             salePrice: dto.salePrice !== undefined ? dto.salePrice : undefined,
             cost: dto.cost !== undefined ? dto.cost : undefined,
-            weightGrams: dto.weightGrams !== undefined ? dto.weightGrams : undefined,
+            weightGrams:
+              dto.weightGrams !== undefined ? dto.weightGrams : undefined,
             preorder: dto.preorder !== undefined ? dto.preorder : undefined,
             isNew: dto.isNew !== undefined ? dto.isNew : undefined,
-            isBestseller: dto.isBestseller !== undefined ? dto.isBestseller : undefined,
+            isBestseller:
+              dto.isBestseller !== undefined ? dto.isBestseller : undefined,
             tags: dto.tags !== undefined ? dto.tags : undefined,
-            specs: dto.specs !== undefined ? dto.specs : undefined,
-            seoTitle: dto.seoTitle !== undefined ? dto.seoTitle?.trim() : undefined,
-            seoDescription: dto.seoDescription !== undefined ? dto.seoDescription?.trim() : undefined,
+            specs: dto.specs !== undefined ? toInputJson(dto.specs) : undefined,
+            seoTitle:
+              dto.seoTitle !== undefined ? dto.seoTitle?.trim() : undefined,
+            seoDescription:
+              dto.seoDescription !== undefined
+                ? dto.seoDescription?.trim()
+                : undefined,
             categoryId: resolvedCategoryId,
             subcategoryId: resolvedSubcategoryId,
             brandId: resolvedBrandId,
@@ -643,14 +683,18 @@ export class ProductService {
 
       // Cleanup deleted images from Cloudinary storage asynchronously
       if (imagesToDeleteFromStorage.length > 0) {
-        this.storageService.deleteFiles(imagesToDeleteFromStorage).catch(() => {});
+        this.storageService
+          .deleteFiles(imagesToDeleteFromStorage)
+          .catch(() => {});
       }
 
       return this.findOne(existingProduct.id, tenantId);
     } catch (error) {
       // Rollback newly uploaded images from Cloudinary if update failed
       if (uploadedImageUrls.length > 0) {
-        await this.storageService.deleteFiles(uploadedImageUrls).catch(() => {});
+        await this.storageService
+          .deleteFiles(uploadedImageUrls)
+          .catch(() => {});
       }
       throw error;
     }
@@ -671,7 +715,7 @@ export class ProductService {
       return ResponseHelper.success([], 'Products retrieved successfully');
     }
 
-    const where: any = {
+    const where: Prisma.ProductWhereInput = {
       tenantId: resolvedTenantId,
       deletedAt: null,
     };
@@ -805,10 +849,7 @@ export class ProductService {
       take: limit,
     });
 
-    return ResponseHelper.success(
-      products,
-      'Products retrieved successfully',
-    );
+    return ResponseHelper.success(products, 'Products retrieved successfully');
   }
 
   // Get single product details by ID or Slug
@@ -891,7 +932,10 @@ export class ProductService {
       throw new NotFoundException('Product');
     }
 
-    return ResponseHelper.success(product, 'Product details retrieved successfully');
+    return ResponseHelper.success(
+      product,
+      'Product details retrieved successfully',
+    );
   }
 
   // Delete product (soft delete) and remove its images from Cloudinary storage
@@ -906,7 +950,9 @@ export class ProductService {
     }
 
     if (!resolvedTenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const product = await this.prisma.product.findFirst({

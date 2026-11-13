@@ -45,7 +45,13 @@ function money(amount: number) {
 }
 
 function esc(value: unknown) {
-  return String(value ?? '')
+  const text =
+    typeof value === 'string'
+      ? value
+      : typeof value === 'number' || typeof value === 'boolean'
+        ? String(value)
+        : '';
+  return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -65,7 +71,9 @@ function paymentLabel(method?: string | null) {
  * Customer invoice email — same layout as storefront PDF invoice.
  * No mock/fallback branding: missing admin values stay blank.
  */
-export function buildOrderInvoiceEmailHtml(payload: OrderInvoiceEmailPayload): string {
+export function buildOrderInvoiceEmailHtml(
+  payload: OrderInvoiceEmailPayload,
+): string {
   const {
     storeName,
     storeLogoUrl,
@@ -149,9 +157,13 @@ export function buildOrderInvoiceEmailHtml(payload: OrderInvoiceEmailPayload): s
 
   const deliveryBits = [
     zone ? `<div>Zone: <strong>${esc(zone)}</strong></div>` : '',
-    shippingMethod ? `<div>Method: <strong>${esc(shippingMethod)}</strong></div>` : '',
+    shippingMethod
+      ? `<div>Method: <strong>${esc(shippingMethod)}</strong></div>`
+      : '',
     courier ? `<div>Courier: <strong>${esc(courier)}</strong></div>` : '',
-    tracking ? `<div style="font-size:11px;color:#6b6560;">Tracking: ${esc(tracking)}</div>` : '',
+    tracking
+      ? `<div style="font-size:11px;color:#6b6560;">Tracking: ${esc(tracking)}</div>`
+      : '',
     fulfillmentStatus
       ? `<div style="font-size:11px;color:#6b6560;">Fulfillment: ${esc(String(fulfillmentStatus).toUpperCase())}</div>`
       : '',
@@ -204,7 +216,7 @@ export function buildOrderInvoiceEmailHtml(payload: OrderInvoiceEmailPayload): s
                         ? `<div style="font-size:11px;color:#6b6560;">${esc(
                             [shippingAddress.area, shippingAddress.district]
                               .filter(Boolean)
-                              .join(', ')
+                              .join(', '),
                           )}</div>`
                         : ''
                     }

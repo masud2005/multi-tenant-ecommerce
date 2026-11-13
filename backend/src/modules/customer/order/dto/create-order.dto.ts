@@ -13,7 +13,10 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { PaymentMethod, PaymentStatus } from '../../../../../prisma/generated/client';
+import {
+  PaymentMethod,
+  PaymentStatus,
+} from '../../../../../prisma/generated/client';
 
 /** Manual-fulfillment stores: COD + manual MFS only (no online gateways). */
 export const SUPPORTED_CHECKOUT_PAYMENT_METHODS = [
@@ -30,7 +33,9 @@ export class OrderAddressDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Recipient name is required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   name: string;
 
   @ApiProperty({
@@ -42,7 +47,9 @@ export class OrderAddressDto {
   @Matches(/^01[3-9]\d{2}-?\d{6}$|^01[3-9]\d{8}$/, {
     message: 'Please enter a valid 11-digit Bangladeshi mobile number',
   })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   phone: string;
 
   @ApiProperty({
@@ -51,7 +58,9 @@ export class OrderAddressDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Delivery address details are required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   line1: string;
 
   @ApiProperty({
@@ -60,7 +69,9 @@ export class OrderAddressDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Thana / area is required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   area: string;
 
   @ApiProperty({
@@ -69,7 +80,9 @@ export class OrderAddressDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'District is required' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   district: string;
 }
 
@@ -176,7 +189,9 @@ export class CreateOrderDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   customerName?: string;
 
   @ApiPropertyOptional({
@@ -185,11 +200,14 @@ export class CreateOrderDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : ''))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : '',
+  )
   email?: string;
 
   @ApiPropertyOptional({
-    description: 'Customer contact phone (optional: defaults to shippingAddress.phone)',
+    description:
+      'Customer contact phone (optional: defaults to shippingAddress.phone)',
     example: '01712345678',
   })
   @IsString()
@@ -197,7 +215,9 @@ export class CreateOrderDto {
   @Matches(/^01[3-9]\d{2}-?\d{6}$|^01[3-9]\d{8}$/, {
     message: 'Please enter a valid 11-digit Bangladeshi mobile number',
   })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   phone?: string;
 
   // Shipping and pricing financials
@@ -269,7 +289,9 @@ export class CreateOrderDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : undefined))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : undefined,
+  )
   couponCode?: string;
 
   @ApiPropertyOptional({

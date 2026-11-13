@@ -1,3 +1,4 @@
+import type { AuthUser } from '../../../common/decorators/current-user.decorator';
 import {
   Injectable,
   Logger,
@@ -18,7 +19,6 @@ import {
   PaymentStatus,
   FulfillmentStatus,
   PaymentMethod,
-  OrderChannel,
   StockMovementReason,
   Prisma,
 } from '../../../../prisma/generated/client';
@@ -108,7 +108,7 @@ export class OrderService {
       throw new NotFoundException('Store tenant context not found');
     }
 
-    const where: any = {
+    const where: Prisma.OrderWhereInput = {
       tenantId: targetTenantId,
       deletedAt: null,
     };
@@ -117,9 +117,23 @@ export class OrderService {
     const activeTab = query.tab?.toLowerCase() || query.status?.toLowerCase();
 
     if (activeTab === 'unfulfilled') {
-      where.status = { notIn: [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.FAILED] };
+      where.status = {
+        notIn: [
+          OrderStatus.DELIVERED,
+          OrderStatus.CANCELLED,
+          OrderStatus.FAILED,
+        ],
+      };
       where.OR = [
-        { status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.PENDING_PAYMENT] } },
+        {
+          status: {
+            in: [
+              OrderStatus.CONFIRMED,
+              OrderStatus.PROCESSING,
+              OrderStatus.PENDING_PAYMENT,
+            ],
+          },
+        },
         { fulfillmentStatus: FulfillmentStatus.UNFULFILLED },
       ];
     } else if (activeTab === 'unpaid') {
@@ -139,7 +153,9 @@ export class OrderService {
     } else if (activeTab === 'packed') {
       where.status = OrderStatus.PACKED;
     } else if (activeTab === 'shipped' || activeTab === 'in_transit') {
-      where.status = { in: [OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY] };
+      where.status = {
+        in: [OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY],
+      };
     } else if (activeTab === 'returns') {
       where.status = {
         in: [
@@ -151,20 +167,21 @@ export class OrderService {
       };
     } else if (activeTab === 'closed') {
       where.status = {
-        in: [
-          OrderStatus.DELIVERED,
-          OrderStatus.CANCELLED,
-          OrderStatus.FAILED,
-        ],
+        in: [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.FAILED],
       };
-    } else if (query.status && Object.values(OrderStatus).includes(query.status.toUpperCase() as OrderStatus)) {
+    } else if (
+      query.status &&
+      Object.values(OrderStatus).includes(
+        query.status.toUpperCase() as OrderStatus,
+      )
+    ) {
       where.status = query.status.toUpperCase() as OrderStatus;
     }
 
     // Keyword search across order number, customer name, email, and phone
     if (query.search?.trim()) {
       const s = query.search.trim();
-      const searchCondition = [
+      const searchCondition: Prisma.OrderWhereInput[] = [
         { number: { contains: s, mode: 'insensitive' } },
         { customerName: { contains: s, mode: 'insensitive' } },
         { email: { contains: s, mode: 'insensitive' } },
@@ -261,9 +278,23 @@ export class OrderService {
         where: {
           tenantId: targetTenantId,
           deletedAt: null,
-          status: { notIn: [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.FAILED] },
+          status: {
+            notIn: [
+              OrderStatus.DELIVERED,
+              OrderStatus.CANCELLED,
+              OrderStatus.FAILED,
+            ],
+          },
           OR: [
-            { status: { in: [OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.PENDING_PAYMENT] } },
+            {
+              status: {
+                in: [
+                  OrderStatus.CONFIRMED,
+                  OrderStatus.PROCESSING,
+                  OrderStatus.PENDING_PAYMENT,
+                ],
+              },
+            },
             { fulfillmentStatus: FulfillmentStatus.UNFULFILLED },
           ],
         },
@@ -403,7 +434,10 @@ export class OrderService {
       throw new NotFoundException(`Order with identifier "${id}" not found`);
     }
 
-    return ResponseHelper.success(order, 'Order details retrieved successfully');
+    return ResponseHelper.success(
+      order,
+      'Order details retrieved successfully',
+    );
   }
 
   // Update order status, courier tracking, and append audit timeline
@@ -411,7 +445,7 @@ export class OrderService {
     id: string,
     dto: UpdateOrderStatusDto,
     tenantId?: string,
-    adminUser?: any,
+    adminUser?: AuthUser,
   ) {
     const existingOrder = await this.prisma.order.findFirst({
       where: {
@@ -433,7 +467,10 @@ export class OrderService {
     if (!derivedFulfillmentStatus && dto.status) {
       if (dto.status === OrderStatus.DELIVERED) {
         derivedFulfillmentStatus = FulfillmentStatus.FULFILLED;
-      } else if (dto.status === OrderStatus.SHIPPED || dto.status === OrderStatus.OUT_FOR_DELIVERY) {
+      } else if (
+        dto.status === OrderStatus.SHIPPED ||
+        dto.status === OrderStatus.OUT_FOR_DELIVERY
+      ) {
         derivedFulfillmentStatus = FulfillmentStatus.PARTIALLY_FULFILLED;
       }
     }
@@ -478,9 +515,14 @@ export class OrderService {
         where: { id: existingOrder.id },
         data: {
           status: targetStatus,
-          ...(derivedFulfillmentStatus ? { fulfillmentStatus: derivedFulfillmentStatus } : {}),
+          ...(derivedFulfillmentStatus
+            ? { fulfillmentStatus: derivedFulfillmentStatus }
+            : {}),
           ...(targetPaymentStatus
-            ? { paymentStatus: targetPaymentStatus, ...(isCod ? { codCollected } : {}) }
+            ? {
+                paymentStatus: targetPaymentStatus,
+                ...(isCod ? { codCollected } : {}),
+              }
             : {}),
           ...(dto.courier ? { courier: dto.courier } : {}),
           ...(dto.trackingNumber ? { trackingNumber: dto.trackingNumber } : {}),
@@ -540,7 +582,7 @@ export class OrderService {
       };
       const templateKey = statusKeyMap[dto.status];
       if (templateKey) {
-        (async () => {
+        void (async () => {
           try {
             let customerUserId: string | undefined;
             if (updatedOrder.customerId) {
@@ -571,8 +613,7 @@ export class OrderService {
                 total_amount: `৳${Number(updatedOrder.total || 0).toLocaleString('en-BD')}`,
                 store_name: tenant?.name || 'Store',
                 payment_method: String(updatedOrder.paymentMethod || '—'),
-                courier_name:
-                  dto.courier || updatedOrder.courier || 'Courier',
+                courier_name: dto.courier || updatedOrder.courier || 'Courier',
                 tracking_number:
                   dto.trackingNumber || updatedOrder.trackingNumber || '—',
                 shipping_address: [
@@ -592,7 +633,10 @@ export class OrderService {
       }
     }
 
-    return ResponseHelper.success(updatedOrder, 'Order status updated successfully');
+    return ResponseHelper.success(
+      updatedOrder,
+      'Order status updated successfully',
+    );
   }
 
   // Add an internal or customer-facing note to the order
@@ -600,7 +644,7 @@ export class OrderService {
     id: string,
     dto: AddOrderNoteDto,
     tenantId?: string,
-    adminUser?: any,
+    adminUser?: AuthUser,
   ) {
     const existingOrder = await this.prisma.order.findFirst({
       where: {
@@ -634,7 +678,7 @@ export class OrderService {
     approved: boolean,
     note?: string,
     tenantId?: string,
-    user?: any,
+    user?: AuthUser,
   ) {
     const targetTenantId = await this.resolveTenantId(tenantId);
     const order = await this.prisma.order.findFirst({
@@ -685,7 +729,7 @@ export class OrderService {
       }
 
       if (order.status === OrderStatus.PENDING_PAYMENT) {
-        (async () => {
+        void (async () => {
           try {
             let customerUserId: string | undefined;
             if (order.customerId) {
@@ -719,7 +763,10 @@ export class OrderService {
               },
             });
           } catch (err) {
-            this.logger.error('Failed to send payment-approved notification', err);
+            this.logger.error(
+              'Failed to send payment-approved notification',
+              err,
+            );
           }
         })();
       }
@@ -769,7 +816,7 @@ export class OrderService {
         return failed;
       });
 
-      (async () => {
+      void (async () => {
         try {
           let customerUserId: string | undefined;
           if (order.customerId) {
@@ -803,7 +850,10 @@ export class OrderService {
             },
           });
         } catch (err) {
-          this.logger.error('Failed to send payment-rejected notification', err);
+          this.logger.error(
+            'Failed to send payment-rejected notification',
+            err,
+          );
         }
       })();
 
@@ -822,7 +872,7 @@ export class OrderService {
     id: string,
     dto: RefundOrderDto,
     tenantId?: string,
-    adminUser?: any,
+    adminUser?: AuthUser,
   ) {
     const existingOrder = await this.prisma.order.findFirst({
       where: {
@@ -902,6 +952,3 @@ export class OrderService {
     );
   }
 }
-
-
-

@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NotificationService } from '../../notification/notification.service';
@@ -7,7 +8,10 @@ import {
   NotFoundException,
   ConflictException,
 } from '../../../common/exceptions/business.exception';
-import { ReturnResolution, ReturnStatus } from '../../../../prisma/generated/client';
+import {
+  ReturnResolution,
+  ReturnStatus,
+} from '../../../../prisma/generated/client';
 
 @Injectable()
 export class ReturnService {
@@ -78,7 +82,9 @@ export class ReturnService {
 
     // 2. Validate items
     if (!dto.items || dto.items.length === 0) {
-      throw new BadRequestException('At least one item must be selected for return.');
+      throw new BadRequestException(
+        'At least one item must be selected for return.',
+      );
     }
 
     // 3. Calculate total return amount
@@ -143,7 +149,7 @@ export class ReturnService {
     });
 
     // Notify store owner & active staff members about Return Request (In-App)
-    (async () => {
+    void (async () => {
       try {
         const staffWithUsers = await this.prisma.tenantMember.findMany({
           where: {
@@ -175,7 +181,10 @@ export class ReturnService {
           });
         }
       } catch (err) {
-        this.logger.error('Failed to dispatch return request notification', err);
+        this.logger.error(
+          'Failed to dispatch return request notification',
+          err,
+        );
       }
     })();
 
@@ -203,23 +212,22 @@ export class ReturnService {
       userEmail = user?.email || undefined;
     }
 
-    const where: any = {
+    const where: Prisma.ReturnRequestWhereInput = {
       tenantId: resolvedTenantId,
       deletedAt: null,
     };
 
     if (orderIdFilter && orderIdFilter.trim()) {
       where.order = {
-        OR: [
-          { id: orderIdFilter.trim() },
-          { number: orderIdFilter.trim() },
-        ],
+        OR: [{ id: orderIdFilter.trim() }, { number: orderIdFilter.trim() }],
       };
     } else if (customerId || userEmail) {
       where.order = {
         OR: [
           ...(customerId ? [{ customerId }] : []),
-          ...(userEmail ? [{ email: { equals: userEmail, mode: 'insensitive' as const } }] : []),
+          ...(userEmail
+            ? [{ email: { equals: userEmail, mode: 'insensitive' as const } }]
+            : []),
         ],
       };
     }
@@ -275,7 +283,14 @@ export class ReturnService {
                 OR: [
                   ...(customerId ? [{ customerId }] : []),
                   ...(userEmail
-                    ? [{ email: { equals: userEmail, mode: 'insensitive' as const } }]
+                    ? [
+                        {
+                          email: {
+                            equals: userEmail,
+                            mode: 'insensitive' as const,
+                          },
+                        },
+                      ]
                     : []),
                 ],
               },

@@ -34,7 +34,9 @@ export class CategoryService {
     tenantId?: string,
   ) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // Verify tenant exists
@@ -72,10 +74,7 @@ export class CategoryService {
     if (dto.parentId) {
       const parentCategory = await this.prisma.category.findFirst({
         where: {
-          OR: [
-            { id: dto.parentId },
-            { slug: dto.parentId },
-          ],
+          OR: [{ id: dto.parentId }, { slug: dto.parentId }],
           tenantId,
           deletedAt: null,
         },
@@ -120,7 +119,9 @@ export class CategoryService {
           name: dto.name,
           slug,
           description: dto.description,
-          image: uploadedImageUrl || dto.image,
+          image:
+            uploadedImageUrl ||
+            (typeof dto.image === 'string' ? dto.image : undefined),
           seoTitle: dto.seoTitle,
           seoDescription: dto.seoDescription,
           status: dto.status ?? 'published',
@@ -143,12 +144,14 @@ export class CategoryService {
       return ResponseHelper.created(category, 'Category created successfully');
     } catch (error) {
       if (uploadedImageUrl) {
-        await this.storageService.deleteFile(uploadedImageUrl).catch((delErr) => {
-          this.logger.error(
-            `Rollback failed for uploaded category image: ${uploadedImageUrl}`,
-            delErr,
-          );
-        });
+        await this.storageService
+          .deleteFile(uploadedImageUrl)
+          .catch((delErr) => {
+            this.logger.error(
+              `Rollback failed for uploaded category image: ${uploadedImageUrl}`,
+              delErr,
+            );
+          });
       }
       throw error;
     }
@@ -162,7 +165,9 @@ export class CategoryService {
     tenantId?: string,
   ) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     // Find existing category
@@ -246,15 +251,23 @@ export class CategoryService {
         data: {
           name: dto.name ?? undefined,
           slug: slug !== category.slug ? slug : undefined,
-          description: dto.description !== undefined ? dto.description : undefined,
-          image: uploadedImageUrl !== null ? uploadedImageUrl : (dto.image !== undefined ? dto.image : undefined),
+          description:
+            dto.description !== undefined ? dto.description : undefined,
+          image:
+            uploadedImageUrl !== null
+              ? uploadedImageUrl
+              : typeof dto.image === 'string'
+                ? dto.image
+                : undefined,
           seoTitle: dto.seoTitle !== undefined ? dto.seoTitle : undefined,
-          seoDescription: dto.seoDescription !== undefined ? dto.seoDescription : undefined,
+          seoDescription:
+            dto.seoDescription !== undefined ? dto.seoDescription : undefined,
           status: dto.status !== undefined ? dto.status : undefined,
           isActive: dto.isActive !== undefined ? dto.isActive : undefined,
           showInNav: dto.showInNav !== undefined ? dto.showInNav : undefined,
           order: dto.order !== undefined ? dto.order : undefined,
-          parentId: resolvedParentId !== undefined ? resolvedParentId : undefined,
+          parentId:
+            resolvedParentId !== undefined ? resolvedParentId : undefined,
         },
         include: {
           parent: {
@@ -288,15 +301,20 @@ export class CategoryService {
         });
       }
 
-      return ResponseHelper.success(updatedCategory, 'Category updated successfully');
+      return ResponseHelper.success(
+        updatedCategory,
+        'Category updated successfully',
+      );
     } catch (error) {
       if (uploadedImageUrl) {
-        await this.storageService.deleteFile(uploadedImageUrl).catch((delErr) => {
-          this.logger.error(
-            `Rollback failed for uploaded category image: ${uploadedImageUrl}`,
-            delErr,
-          );
-        });
+        await this.storageService
+          .deleteFile(uploadedImageUrl)
+          .catch((delErr) => {
+            this.logger.error(
+              `Rollback failed for uploaded category image: ${uploadedImageUrl}`,
+              delErr,
+            );
+          });
       }
       throw error;
     }
@@ -346,7 +364,10 @@ export class CategoryService {
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
 
-    return ResponseHelper.success(categories, 'Categories retrieved successfully');
+    return ResponseHelper.success(
+      categories,
+      'Categories retrieved successfully',
+    );
   }
 
   // Get single category details by ID or Slug
@@ -392,13 +413,18 @@ export class CategoryService {
       throw new NotFoundException('Category');
     }
 
-    return ResponseHelper.success(category, 'Category details retrieved successfully');
+    return ResponseHelper.success(
+      category,
+      'Category details retrieved successfully',
+    );
   }
 
   // Delete a category (soft delete, cascade to child categories) and cleanup image
   async remove(idOrSlug: string, tenantId?: string) {
     if (!tenantId) {
-      throw new ConflictException('Tenant could not be resolved from authenticated user token.');
+      throw new ConflictException(
+        'Tenant could not be resolved from authenticated user token.',
+      );
     }
 
     const category = await this.prisma.category.findFirst({
@@ -443,5 +469,3 @@ export class CategoryService {
     return ResponseHelper.success(null, 'Category deleted successfully');
   }
 }
-
-

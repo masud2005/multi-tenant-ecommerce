@@ -3,12 +3,17 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class QueryMediaDto {
-  @ApiPropertyOptional({ description: 'Search term across asset name or alt text' })
+  @ApiPropertyOptional({
+    description: 'Search term across asset name or alt text',
+  })
   @IsOptional()
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Filter: all, noalt, unused', default: 'all' })
+  @ApiPropertyOptional({
+    description: 'Filter: all, noalt, unused',
+    default: 'all',
+  })
   @IsOptional()
   @IsString()
   filter?: string;
@@ -27,4 +32,3 @@ export class QueryMediaDto {
   @Min(1)
   limit?: number = 30;
 }
-

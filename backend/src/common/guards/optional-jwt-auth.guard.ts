@@ -1,3 +1,4 @@
+import type { AuthUser } from '../decorators/current-user.decorator';
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -11,10 +12,7 @@ export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
     }
   }
 
-  handleRequest<TUser = any>(
-    _err: any,
-    user: any,
-  ): TUser {
-    return user || undefined;
+  handleRequest<TUser = AuthUser>(_err: unknown, user: unknown): TUser {
+    return (user || undefined) as TUser;
   }
 }

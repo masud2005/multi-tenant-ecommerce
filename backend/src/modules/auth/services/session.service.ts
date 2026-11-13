@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -30,7 +34,7 @@ export class SessionService {
   }
 
   async issueTokens(
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
     meta?: { userAgent?: string | null; ipAddress?: string | null },
   ) {
     const userId = payload.sub as string;
@@ -71,7 +75,7 @@ export class SessionService {
     sessionId: string,
     userId: string,
     oldRefreshToken: string,
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
   ) {
     const stored = await this.redisService.get(
       `refresh_token:session:${sessionId}`,
@@ -80,10 +84,7 @@ export class SessionService {
       `refresh_token_prev:session:${sessionId}`,
     );
 
-    if (
-      !stored ||
-      (stored !== oldRefreshToken && prev !== oldRefreshToken)
-    ) {
+    if (!stored || (stored !== oldRefreshToken && prev !== oldRefreshToken)) {
       // Backward-compatible: legacy single-token key
       const legacy = await this.redisService.get(`refresh_token:${userId}`);
       const legacyPrev = await this.redisService.get(
@@ -138,14 +139,11 @@ export class SessionService {
   async rotateLegacyRefreshToken(
     userId: string,
     oldRefreshToken: string,
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
   ) {
     const stored = await this.redisService.get(`refresh_token:${userId}`);
     const prev = await this.redisService.get(`refresh_token_prev:${userId}`);
-    if (
-      !stored ||
-      (stored !== oldRefreshToken && prev !== oldRefreshToken)
-    ) {
+    if (!stored || (stored !== oldRefreshToken && prev !== oldRefreshToken)) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
@@ -216,7 +214,11 @@ export class SessionService {
     );
   }
 
-  async revokeOne(userId: string, sessionId: string, currentSessionId?: string | null) {
+  async revokeOne(
+    userId: string,
+    sessionId: string,
+    currentSessionId?: string | null,
+  ) {
     await this.revokeSession(sessionId, userId);
     const signedOutCurrent = Boolean(
       currentSessionId && currentSessionId === sessionId,
@@ -240,7 +242,9 @@ export class SessionService {
     });
 
     await Promise.all(
-      others.map((s) => this.revokeSession(s.id, userId).catch(() => undefined)),
+      others.map((s) =>
+        this.revokeSession(s.id, userId).catch(() => undefined),
+      ),
     );
 
     // Also clear legacy single-token key so old devices cannot refresh

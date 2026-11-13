@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { Prisma } from '../../../../prisma/generated/client';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
 import { ConflictException } from '../../../common/exceptions/business.exception';
 import { DEFAULT_NOTIFICATION_TEMPLATES } from '../../notification/notification-template.defaults';
@@ -18,7 +19,7 @@ export class OwnerNotificationTemplateService {
     return tenantId;
   }
 
-  private serialize(row: any) {
+  private serialize(row: Prisma.NotificationTemplateGetPayload<object>) {
     return {
       id: row.id,
       key: row.key,
@@ -43,7 +44,9 @@ export class OwnerNotificationTemplateService {
       select: { key: true },
     });
     const have = new Set(existing.map((e) => e.key));
-    const missing = DEFAULT_NOTIFICATION_TEMPLATES.filter((d) => !have.has(d.key));
+    const missing = DEFAULT_NOTIFICATION_TEMPLATES.filter(
+      (d) => !have.has(d.key),
+    );
 
     if (missing.length === 0) return;
 
@@ -95,12 +98,17 @@ export class OwnerNotificationTemplateService {
     );
   }
 
-  async update(id: string, dto: UpdateNotificationTemplateDto, tenantId?: string) {
+  async update(
+    id: string,
+    dto: UpdateNotificationTemplateDto,
+    tenantId?: string,
+  ) {
     const tid = this.requireTenant(tenantId);
     const existing = await this.prisma.notificationTemplate.findFirst({
       where: { id, tenantId: tid },
     });
-    if (!existing) throw new NotFoundException('Notification template not found');
+    if (!existing)
+      throw new NotFoundException('Notification template not found');
 
     const updated = await this.prisma.notificationTemplate.update({
       where: { id: existing.id },

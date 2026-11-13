@@ -1,3 +1,4 @@
+import { Prisma } from '../../../../prisma/generated/client';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ResponseHelper } from '../../../common/helpers/response.helper';
@@ -35,7 +36,7 @@ export class CustomerService {
   async findAll(query?: QueryCustomerDto, tenantId?: string) {
     const resolvedTenantId = await this.resolveTenantId(tenantId);
 
-    const where: any = {
+    const where: Prisma.CustomerProfileWhereInput = {
       tenantId: resolvedTenantId,
       deletedAt: null,
     };
@@ -55,7 +56,13 @@ export class CustomerService {
     const limit = query?.limit && query.limit > 0 ? Number(query.limit) : 50;
     const skip = (page - 1) * limit;
 
-    const allowedSortFields = ['createdAt', 'totalSpent', 'ordersCount', 'name', 'lastLoginAt'];
+    const allowedSortFields = [
+      'createdAt',
+      'totalSpent',
+      'ordersCount',
+      'name',
+      'lastLoginAt',
+    ];
     const sortBy = allowedSortFields.includes(query?.sortBy || '')
       ? query!.sortBy!
       : 'createdAt';
@@ -97,7 +104,11 @@ export class CustomerService {
     ]);
 
     const meta = ResponseHelper.buildPaginationMeta(total, page, limit);
-    return ResponseHelper.paginated(customers, meta, 'Customers retrieved successfully');
+    return ResponseHelper.paginated(
+      customers,
+      meta,
+      'Customers retrieved successfully',
+    );
   }
 
   // 2. GET /api/v1/owner/customers/:id
@@ -184,11 +195,18 @@ export class CustomerService {
       throw new NotFoundException('Customer');
     }
 
-    return ResponseHelper.success(customer, 'Customer details retrieved successfully');
+    return ResponseHelper.success(
+      customer,
+      'Customer details retrieved successfully',
+    );
   }
 
   // 3. PATCH /api/v1/owner/customers/:id/status
-  async updateStatus(id: string, dto?: UpdateCustomerStatusDto, tenantId?: string) {
+  async updateStatus(
+    id: string,
+    dto?: UpdateCustomerStatusDto,
+    tenantId?: string,
+  ) {
     const resolvedTenantId = await this.resolveTenantId(tenantId);
 
     const customer = await this.prisma.customerProfile.findFirst({
@@ -203,7 +221,8 @@ export class CustomerService {
       throw new NotFoundException('Customer');
     }
 
-    const nextStatus = typeof dto?.isActive === 'boolean' ? dto.isActive : !customer.isActive;
+    const nextStatus =
+      typeof dto?.isActive === 'boolean' ? dto.isActive : !customer.isActive;
 
     const updated = await this.prisma.customerProfile.update({
       where: { id: customer.id },
@@ -240,7 +259,8 @@ export class CustomerService {
         name: dto.name?.trim() !== undefined ? dto.name.trim() : undefined,
         phone: dto.phone?.trim() !== undefined ? dto.phone.trim() : undefined,
         tags: dto.tags !== undefined ? dto.tags : undefined,
-        storeCredit: dto.storeCredit !== undefined ? dto.storeCredit : undefined,
+        storeCredit:
+          dto.storeCredit !== undefined ? dto.storeCredit : undefined,
       },
       include: {
         addresses: true,

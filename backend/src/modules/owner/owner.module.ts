@@ -67,5 +67,3 @@ import { OwnerNotificationTemplateModule } from './notification-template/notific
   ],
 })
 export class OwnerModule {}
-
-

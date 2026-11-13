@@ -11,11 +11,16 @@ export class UpdateOrderStatusDto {
   @ApiPropertyOptional({
     enum: OrderStatus,
     example: OrderStatus.SHIPPED,
-    description: 'New status for the order (e.g. PROCESSING, PACKED, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)',
+    description:
+      'New status for the order (e.g. PROCESSING, PACKED, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED)',
   })
   @IsEnum(OrderStatus, { message: 'Invalid order status' })
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
   status?: OrderStatus;
 
   @ApiPropertyOptional({
@@ -25,7 +30,11 @@ export class UpdateOrderStatusDto {
   })
   @IsEnum(FulfillmentStatus, { message: 'Invalid fulfillment status' })
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
   fulfillmentStatus?: FulfillmentStatus;
 
   @ApiPropertyOptional({
@@ -35,12 +44,17 @@ export class UpdateOrderStatusDto {
   })
   @IsEnum(PaymentStatus, { message: 'Invalid payment status' })
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
   paymentStatus?: PaymentStatus;
 
   @ApiPropertyOptional({
     example: 'Pathao Courier',
-    description: 'Courier service provider name (e.g. Pathao, Steadfast, Paperfly, RedX)',
+    description:
+      'Courier service provider name (e.g. Pathao, Steadfast, Paperfly, RedX)',
   })
   @IsString()
   @IsOptional()

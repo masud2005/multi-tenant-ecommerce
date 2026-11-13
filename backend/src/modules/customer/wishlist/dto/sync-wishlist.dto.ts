@@ -3,7 +3,8 @@ import { IsArray, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class SyncWishlistDto {
   @ApiProperty({
-    description: 'Array of product IDs collected during guest browsing to sync into account',
+    description:
+      'Array of product IDs collected during guest browsing to sync into account',
     example: ['3fa85f64-5717-4562-b3fc-2c963f66afa6'],
   })
   @IsArray()

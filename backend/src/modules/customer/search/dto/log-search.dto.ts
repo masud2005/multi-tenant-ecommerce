@@ -7,7 +7,10 @@ export class LogSearchDto {
   @IsNotEmpty()
   term: string;
 
-  @ApiPropertyOptional({ description: 'Number of product results found', default: 0 })
+  @ApiPropertyOptional({
+    description: 'Number of product results found',
+    default: 0,
+  })
   @IsNumber()
   @IsOptional()
   results?: number;

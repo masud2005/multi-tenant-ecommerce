@@ -11,9 +11,9 @@ import { Type } from 'class-transformer';
 import { StockMovementReason } from '../../../../../prisma/generated/client';
 
 export enum StockAdjustmentType {
-  ADD = 'ADD',             // স্টক যোগ করা (e.g. +10)
-  SUBTRACT = 'SUBTRACT',   // স্টক কমানো (e.g. -5)
-  SET = 'SET',             // নির্দিষ্ট স্টক সংখ্যা সেট করা (e.g. exact 50)
+  ADD = 'ADD', // স্টক যোগ করা (e.g. +10)
+  SUBTRACT = 'SUBTRACT', // স্টক কমানো (e.g. -5)
+  SET = 'SET', // নির্দিষ্ট স্টক সংখ্যা সেট করা (e.g. exact 50)
 }
 
 export class AdjustStockDto {

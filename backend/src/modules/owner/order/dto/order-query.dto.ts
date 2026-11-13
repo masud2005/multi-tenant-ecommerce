@@ -12,7 +12,8 @@ import {
 export class OrderQueryDto {
   @ApiPropertyOptional({
     example: 'TN-10024',
-    description: 'Search string matching order number, customer name, email, or phone',
+    description:
+      'Search string matching order number, customer name, email, or phone',
   })
   @IsString()
   @IsOptional()
@@ -20,55 +21,81 @@ export class OrderQueryDto {
 
   @ApiPropertyOptional({
     example: 'unfulfilled',
-    description: 'Tab filter: all, unfulfilled, unpaid, packed, shipped, returns, closed',
+    description:
+      'Tab filter: all, unfulfilled, unpaid, packed, shipped, returns, closed',
   })
   @IsString()
   @IsOptional()
   tab?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter orders by order status (e.g. PENDING_PAYMENT, CONFIRMED, PROCESSING, PACKED, SHIPPED, DELIVERED, CANCELLED)',
+    description:
+      'Filter orders by order status (e.g. PENDING_PAYMENT, CONFIRMED, PROCESSING, PACKED, SHIPPED, DELIVERED, CANCELLED)',
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
-  status?: string;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
+  status?: OrderStatus;
 
   @ApiPropertyOptional({
-    description: 'Filter orders by payment status (PENDING, PAID, FAILED, REFUNDED)',
+    description:
+      'Filter orders by payment status (PENDING, PAID, FAILED, REFUNDED)',
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
-  paymentStatus?: string;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
+  paymentStatus?: PaymentStatus;
 
   @ApiPropertyOptional({
-    description: 'Filter orders by fulfillment status (UNFULFILLED, PARTIALLY_FULFILLED, FULFILLED)',
+    description:
+      'Filter orders by fulfillment status (UNFULFILLED, PARTIALLY_FULFILLED, FULFILLED)',
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
-  fulfillmentStatus?: string;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
+  fulfillmentStatus?: FulfillmentStatus;
 
   @ApiPropertyOptional({
-    description: 'Filter orders by payment method (BKASH, NAGAD, SSLCOMMERZ, STRIPE, COD)',
+    description:
+      'Filter orders by payment method (BKASH, NAGAD, SSLCOMMERZ, STRIPE, COD)',
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
-  paymentMethod?: string;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
+  paymentMethod?: PaymentMethod;
 
   @ApiPropertyOptional({
     description: 'Filter orders by sales channel (ONLINE, MANUAL)',
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.toUpperCase().replace(/\s+/g, '_') : value))
-  channel?: string;
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string'
+      ? value.toUpperCase().replace(/\s+/g, '_')
+      : value,
+  )
+  channel?: OrderChannel;
 
   @ApiPropertyOptional({
     example: '2026-10-01',
-    description: 'Filter orders created on or after this date (YYYY-MM-DD or ISO)',
+    description:
+      'Filter orders created on or after this date (YYYY-MM-DD or ISO)',
   })
   @IsString()
   @IsOptional()
@@ -76,7 +103,8 @@ export class OrderQueryDto {
 
   @ApiPropertyOptional({
     example: '2026-10-31',
-    description: 'Filter orders created on or before this date (YYYY-MM-DD or ISO)',
+    description:
+      'Filter orders created on or before this date (YYYY-MM-DD or ISO)',
   })
   @IsString()
   @IsOptional()
