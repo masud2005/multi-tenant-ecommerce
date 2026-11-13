@@ -53,6 +53,14 @@ export interface Tenant {
   contact: TenantContact;
   announcement?: string;
   announcementEnabled?: boolean;
+  authPage?: {
+    signInTitle: string;
+    signInSubtitle: string;
+    signUpTitle: string;
+    signUpSubtitle: string;
+    imageUrl: string;
+    caption: string;
+  };
   socials?: {
     facebook?: string;
     instagram?: string;

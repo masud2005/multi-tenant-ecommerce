@@ -11,8 +11,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <AuthLayout
-      title="Sign in"
-      subtitle="Welcome back to Tanti."
+      mode="sign-in"
       footer={
         <>
           New here?{' '}

@@ -86,18 +86,61 @@ export class AuthService {
         );
     }
 
-    async login(dto: LoginDto, meta?: AuthRequestMeta) {
-        const user = await this.prisma.user.findUnique({
-            where: { email: dto.email },
-            include: {
-                tenantMemberships: {
-                    include: {
-                        role: true,
-                        tenant: true,
-                    },
+    private phoneLookupValues(input: string): string[] {
+        const trimmed = input.trim();
+        const digits = trimmed.replace(/\D/g, '');
+        const values = new Set<string>();
+        if (trimmed) values.add(trimmed);
+        if (digits) values.add(digits);
+        if (digits.startsWith('880') && digits.length > 3) {
+            values.add(`0${digits.slice(3)}`);
+            values.add(`+${digits}`);
+        } else if (digits.startsWith('0') && digits.length > 1) {
+            values.add(`880${digits.slice(1)}`);
+            values.add(`+880${digits.slice(1)}`);
+        }
+        return [...values];
+    }
+
+    private async findUserForLogin(dto: LoginDto) {
+        const email = dto.email?.trim() || '';
+        const phone = dto.phone?.trim() || '';
+        const identifier = email || phone;
+        if (!identifier) {
+            throw new InvalidCredentialsException();
+        }
+
+        const loginInclude = {
+            tenantMemberships: {
+                include: {
+                    role: true,
+                    tenant: true,
                 },
             },
+        } as const;
+
+        const looksLikeEmail = identifier.includes('@');
+        if (looksLikeEmail) {
+            return this.prisma.user.findFirst({
+                where: { email: identifier, deletedAt: null },
+                include: loginInclude,
+            });
+        }
+
+        const phones = this.phoneLookupValues(phone || identifier);
+        const matches = await this.prisma.user.findMany({
+            where: { phone: { in: phones }, deletedAt: null },
+            include: loginInclude,
         });
+        return (
+            matches.find((user) => user.phone === (phone || identifier)) ||
+            matches[0] ||
+            null
+        );
+    }
+
+    async login(dto: LoginDto, meta?: AuthRequestMeta) {
+        const user = await this.findUserForLogin(dto);
         if (!user || !user.password) {
             throw new InvalidCredentialsException();
         }
@@ -108,12 +151,17 @@ export class AuthService {
         }
 
         if (user.status === UserStatus.PENDING_VERIFICATION) {
-            await this.otpService.sendOtp({
-                email: user.email!,
-                type: OtpType.ACCOUNT_VERIFY,
-            });
+            if (user.email) {
+                await this.otpService.sendOtp({
+                    email: user.email,
+                    type: OtpType.ACCOUNT_VERIFY,
+                });
+            }
             throw new UnauthorizedException(
                 'Your account is not verified yet. We have sent a new OTP to your email. Please verify your account to continue.',
+                user.email
+                    ? [{ field: 'email', message: 'Verify this email', value: user.email }]
+                    : undefined,
             );
         }
 
