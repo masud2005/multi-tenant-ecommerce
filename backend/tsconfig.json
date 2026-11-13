@@ -28,7 +28,6 @@
   },
   "include": [
     "src",
-    "api",
     "test",
     "prisma/generated/client",
     "prisma.config.ts",
