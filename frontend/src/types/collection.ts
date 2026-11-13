@@ -5,6 +5,7 @@ export type CollectionType = 'MANUAL' | 'RULE' | 'manual' | 'rule';
 export interface CollectionRule {
   field: string;
   op: string;
+  condition?: string;
   value: string;
 }
 
@@ -34,7 +35,7 @@ export interface CreateCollectionPayload {
   seoTitle?: string;
   seoDescription?: string;
   type?: 'MANUAL' | 'RULE';
-  rule?: any;
+  rule?: CollectionRule | string | null;
   isActive?: boolean;
   isFeatured?: boolean;
   order?: number;
@@ -50,7 +51,7 @@ export interface UpdateCollectionPayload {
   seoTitle?: string;
   seoDescription?: string;
   type?: 'MANUAL' | 'RULE';
-  rule?: any;
+  rule?: CollectionRule | string | null;
   isActive?: boolean;
   isFeatured?: boolean;
   order?: number;
@@ -68,7 +69,7 @@ export interface CollectionResponseData {
   seoTitle: string | null;
   seoDescription: string | null;
   type: 'MANUAL' | 'RULE';
-  rule: any;
+  rule: CollectionRule | string | null;
   isActive: boolean;
   isFeatured: boolean;
   order: number;
@@ -77,5 +78,5 @@ export interface CollectionResponseData {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
-  products?: any[];
+  products?: Array<{ id: string; slug?: string; name?: string }>;
 }

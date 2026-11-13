@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Sparkles, Calendar, Tag, Percent, DollarSign, Truck, ShieldAlert } from 'lucide-react';
@@ -195,9 +197,9 @@ export function DiscountModal({
           onClose();
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to save discount:', error);
-      toast.error(error?.message || 'Failed to save discount');
+      toast.error(asApiError(error).message || 'Failed to save discount');
     } finally {
       setLoading(false);
     }

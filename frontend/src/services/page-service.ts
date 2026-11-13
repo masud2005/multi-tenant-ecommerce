@@ -98,9 +98,9 @@ class PageService {
   }
 
   // 3. Get all CMS pages for Admin / Owner
-  async getOwnerPages(): Promise<any[]> {
+  async getOwnerPages(): Promise<unknown[]> {
     try {
-      const res = await apiClient.get<ApiResponse<any[]>>('/owner/pages');
+      const res = await apiClient.get<ApiResponse<unknown[]>>('/owner/pages');
       return res.data || [];
     } catch (error) {
       console.error('Failed to fetch owner pages:', error);
@@ -109,7 +109,7 @@ class PageService {
   }
 
   // 4. Get Public page by slug for Storefront
-  async getPublicPage<T = any>(slug: string): Promise<T | null> {
+  async getPublicPage<T = unknown>(slug: string): Promise<T | null> {
     try {
       const cleanSlug = slug.replace(/^\//, '');
       const res = await apiClient.get<ApiResponse<T>>(`/customer/pages/${cleanSlug}`);

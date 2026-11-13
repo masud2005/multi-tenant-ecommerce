@@ -18,7 +18,7 @@ export default function AboutPage() {
     async function loadAboutPage() {
       try {
         setIsLoading(true);
-        const res = await pageService.getPublicPage('about');
+        const res = await pageService.getPublicPage<AboutPageData>('about');
         if (isMounted && res) {
           setData(res);
         }

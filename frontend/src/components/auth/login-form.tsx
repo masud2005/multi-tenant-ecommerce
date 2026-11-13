@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -42,7 +44,7 @@ function LoginFormContent() {
 
       // Determine destination according to RBAC role and dynamic redirect
       const user = res.data?.user;
-      const redirectUrl = (res.data as any)?.redirectUrl;
+      const redirectUrl = res.data?.redirectUrl;
       const role = (user?.role || authService.getUserRole() || '').toUpperCase();
       const isOwnerOrAdmin = ['OWNER', 'ADMIN', 'SUPER_ADMIN', 'MANAGER', 'STAFF'].includes(role);
 
@@ -58,9 +60,9 @@ function LoginFormContent() {
 
       // Hard redirect to clear router cache and trigger server proxy with fresh cookies
       window.location.href = targetUrl;
-    } catch (err: any) {
-      const errMsg = err?.message || 'Invalid email, mobile number, or password';
-      const verifyEmail = err?.body?.errors?.find(
+    } catch (err: unknown) {
+      const errMsg = asApiError(err).message || 'Invalid email, mobile number, or password';
+      const verifyEmail = asApiError(err).body?.errors?.find(
         (item: { field?: string; value?: string }) => item.field === 'email' && item.value,
       )?.value;
       if (typeof errMsg === 'string' && errMsg.toLowerCase().includes('not verified')) {

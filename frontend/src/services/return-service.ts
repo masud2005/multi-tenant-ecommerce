@@ -1,5 +1,6 @@
 import { apiClient } from './api-client';
 import type { ApiResponse } from '@/types';
+import { unchangedEnvelope } from '@/types/api';
 import type { ReturnRequest, ReturnResolution, ReturnStatus } from '@/types/commerce';
 export interface OwnerReturnQueryParams {
   search?: string;
@@ -15,8 +16,55 @@ export interface OwnerReturnQueryParams {
   tenantId?: string;
 }
 
+interface BackendReturnOrder {
+  id?: string;
+  number?: string;
+  customerName?: string;
+}
+
+interface BackendReturnEvent {
+  createdAt?: string;
+  label?: string;
+  by?: string;
+  note?: string;
+}
+
+interface BackendReturnItem {
+  title?: string;
+  image?: string;
+  qty?: number | string;
+  price?: number | string;
+  size?: string;
+  color?: string;
+}
+
+interface BackendReturn {
+  id: string;
+  order?: BackendReturnOrder;
+  orderId?: string;
+  customerName?: string;
+  reason?: string;
+  details?: string;
+  photos?: unknown;
+  resolution?: string;
+  status?: string;
+  amount?: number | string;
+  inspectionNote?: string;
+  createdAt?: string;
+  timeline?: BackendReturnEvent[];
+  items?: BackendReturnItem[];
+}
+
+interface BackendReturnList {
+  returns?: BackendReturn[];
+  pagination?: OwnerReturnsResponseData['pagination'];
+  counts?: OwnerReturnsResponseData['counts'];
+}
+
+export type ReturnView = ReturnRequest & { photoUrls?: string[]; order?: BackendReturnOrder };
+
 export interface OwnerReturnsResponseData {
-  returns: (ReturnRequest & { photoUrls?: string[]; order?: any })[];
+  returns: ReturnView[];
   pagination: {
     total: number;
     page: number;
@@ -56,9 +104,7 @@ export interface CreateCustomerReturnPayload {
 }
 
 // Mapper to transform backend ReturnRequest into frontend ReturnRequest
-export function mapBackendReturnToFrontend(
-  item: any,
-): ReturnRequest & { photoUrls?: string[]; order?: any } {
+export function mapBackendReturnToFrontend(item: BackendReturn): ReturnView {
   const photosArray = Array.isArray(item.photos) ? item.photos : [];
   return {
     id: item.id,
@@ -77,13 +123,13 @@ export function mapBackendReturnToFrontend(
     amount: Number(item.amount) || 0,
     inspectionNote: item.inspectionNote || undefined,
     createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString(),
-    timeline: (item.timeline || []).map((t: any) => ({
+    timeline: (item.timeline || []).map((t) => ({
       at: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
-      label: t.label,
+      label: t.label || '',
       by: t.by || undefined,
       note: t.note || undefined,
     })),
-    items: (item.items || []).map((i: any) => ({
+    items: (item.items || []).map((i) => ({
       title: i.title || '',
       image: i.image || '',
       qty: Number(i.qty) || 1,
@@ -120,7 +166,7 @@ export const returnService = {
 
     const qs = query.toString();
     const endpoint = `/owner/returns${qs ? `?${qs}` : ''}`;
-    const res = await apiClient.get<ApiResponse<any>>(endpoint);
+    const res = await apiClient.get<ApiResponse<BackendReturnList>>(endpoint);
 
     if (res?.data) {
       const rawReturns = Array.isArray(res.data.returns) ? res.data.returns : [];
@@ -145,25 +191,25 @@ export const returnService = {
       };
     }
 
-    return res;
+    return unchangedEnvelope<OwnerReturnsResponseData>(res);
   },
 
   // 2. Fetch full detail and timeline of a single return request (Owner)
   async getOwnerReturnDetail(
     id: string,
     tenantId?: string,
-  ): Promise<ApiResponse<ReturnRequest & { photoUrls?: string[]; order?: any }>> {
+  ): Promise<ApiResponse<ReturnView>> {
     const endpoint = tenantId
       ? `/owner/returns/${encodeURIComponent(id)}?tenantId=${encodeURIComponent(tenantId)}`
       : `/owner/returns/${encodeURIComponent(id)}`;
-    const res = await apiClient.get<ApiResponse<any>>(endpoint);
+    const res = await apiClient.get<ApiResponse<BackendReturn>>(endpoint);
     if (res?.data) {
       return {
         ...res,
         data: mapBackendReturnToFrontend(res.data),
       };
     }
-    return res;
+    return unchangedEnvelope<ReturnView>(res);
   },
 
   // 3. Update return status, inspection notes, and timeline (Owner)
@@ -171,25 +217,25 @@ export const returnService = {
     id: string,
     payload: UpdateOwnerReturnStatusPayload,
     tenantId?: string,
-  ): Promise<ApiResponse<ReturnRequest & { photoUrls?: string[]; order?: any }>> {
+  ): Promise<ApiResponse<ReturnView>> {
     const endpoint = tenantId
       ? `/owner/returns/${encodeURIComponent(id)}/status?tenantId=${encodeURIComponent(tenantId)}`
       : `/owner/returns/${encodeURIComponent(id)}/status`;
 
-    const body: any = {
+    const body: { status: string; inspectionNote?: string; note?: string } = {
       status: payload.status.toUpperCase(),
     };
     if (payload.inspectionNote !== undefined) body.inspectionNote = payload.inspectionNote;
     if (payload.note !== undefined) body.note = payload.note;
 
-    const res = await apiClient.patch<ApiResponse<any>>(endpoint, body);
+    const res = await apiClient.patch<ApiResponse<BackendReturn>>(endpoint, body);
     if (res?.data) {
       return {
         ...res,
         data: mapBackendReturnToFrontend(res.data),
       };
     }
-    return res;
+    return unchangedEnvelope<ReturnView>(res);
   },
 
   // ----------------------------------------------------
@@ -200,22 +246,22 @@ export const returnService = {
   async createCustomerReturn(
     payload: CreateCustomerReturnPayload,
   ): Promise<ApiResponse<ReturnRequest>> {
-    const res = await apiClient.post<ApiResponse<any>>('/customer/returns', payload);
+    const res = await apiClient.post<ApiResponse<BackendReturn>>('/customer/returns', payload);
     if (res?.data) {
       return {
         ...res,
         data: mapBackendReturnToFrontend(res.data),
       };
     }
-    return res;
+    return unchangedEnvelope<ReturnRequest>(res);
   },
 
   // 5. Fetch previous return requests for logged-in customer
-  async getCustomerReturns(orderId?: string): Promise<ApiResponse<ReturnRequest[]>> {
+  async getCustomerReturns(orderId?: string): Promise<ApiResponse<ReturnView[]>> {
     const endpoint = orderId
       ? `/customer/returns?orderId=${encodeURIComponent(orderId)}`
       : '/customer/returns';
-    const res = await apiClient.get<ApiResponse<any[]>>(endpoint);
+    const res = await apiClient.get<ApiResponse<BackendReturn[]>>(endpoint);
     if (Array.isArray(res?.data)) {
       return {
         ...res,

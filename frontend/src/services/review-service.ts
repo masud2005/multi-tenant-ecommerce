@@ -1,5 +1,7 @@
+import { asApiError } from '@/lib/api-error';
 import { apiClient } from './api-client';
 import type { ApiResponse } from '@/types';
+import { unchangedEnvelope } from '@/types/api';
 import type {
   Review,
   ReviewStats,
@@ -25,8 +27,60 @@ function mapProductImageUrls(images: unknown): string[] {
     .filter(Boolean);
 }
 
+interface BackendReview {
+  id: string;
+  tenantId?: string;
+  productId?: string;
+  customerId?: string | null;
+  productTitle?: string;
+  author?: string;
+  rating?: number | string;
+  title?: string;
+  body?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  verified?: boolean;
+  photos?: unknown;
+  helpful?: number | string;
+  helpfulVotedByMe?: boolean;
+  status?: Review['status'];
+  size?: string;
+  reply?: string;
+  reported?: boolean;
+  product?: {
+    id?: string;
+    title?: string;
+    slug?: string;
+    images?: unknown;
+    price?: number | string;
+    salePrice?: number | string | null;
+  };
+  customer?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    phone?: string | null;
+  };
+}
+
+interface ReviewableProductRaw {
+  id: string;
+  title?: string;
+  slug?: string;
+  images?: unknown;
+  price?: number | string;
+  salePrice?: number | string | null;
+}
+
+interface BackendReviewPage {
+  reviews?: BackendReview[];
+  stats?: ProductReviewsResponse['stats'];
+  pagination?: ProductReviewsResponse['pagination'];
+  reviewableProducts?: ReviewableProductRaw[];
+}
+
 // Mapper to normalize raw backend review to frontend format
-export function mapBackendReviewToFrontend(raw: any): Review {
+export function mapBackendReviewToFrontend(raw: BackendReview): Review {
   const photos = Array.isArray(raw.photos)
     ? raw.photos
     : typeof raw.photos === 'string'
@@ -56,21 +110,21 @@ export function mapBackendReviewToFrontend(raw: any): Review {
     size: raw.size || undefined,
     reply: raw.reply || undefined,
     reported: Boolean(raw.reported),
-    product: raw.product
+    product: raw.product?.id
       ? {
           id: raw.product.id,
-          title: raw.product.title,
-          slug: raw.product.slug,
+          title: raw.product.title || '',
+          slug: raw.product.slug || '',
           images: mapProductImageUrls(raw.product.images),
           price: Number(raw.product.price) || 0,
           salePrice: raw.product.salePrice ? Number(raw.product.salePrice) : null,
         }
       : undefined,
-    customer: raw.customer
+    customer: raw.customer?.id
       ? {
           id: raw.customer.id,
-          name: raw.customer.name,
-          email: raw.customer.email,
+          name: raw.customer.name || '',
+          email: raw.customer.email || '',
           phone: raw.customer.phone || null,
         }
       : undefined,
@@ -87,15 +141,15 @@ export const reviewService = {
     payload: CreateReviewPayload,
   ): Promise<ApiResponse<Review>> {
     try {
-      const res = await apiClient.post<ApiResponse<any>>('/customer/reviews', payload);
+      const res = await apiClient.post<ApiResponse<BackendReview>>('/customer/reviews', payload);
       if (res?.data) {
         return {
           ...res,
           data: mapBackendReviewToFrontend(res.data),
         };
       }
-      return res;
-    } catch (error: any) {
+      return unchangedEnvelope<Review>(res);
+    } catch (error: unknown) {
       console.error('Failed to create customer review:', error);
       throw error;
     }
@@ -118,7 +172,7 @@ export const reviewService = {
     const endpoint = `/customer/products/${encodeURIComponent(productId)}/reviews${qs ? `?${qs}` : ''}`;
 
     try {
-      const res = await apiClient.get<ApiResponse<any>>(endpoint);
+      const res = await apiClient.get<ApiResponse<BackendReviewPage>>(endpoint);
       if (res?.data) {
         const rawReviews = Array.isArray(res.data.reviews) ? res.data.reviews : [];
         return {
@@ -141,8 +195,8 @@ export const reviewService = {
         };
       }
       throw new Error('No data received from reviews API');
-    } catch (error: any) {
-      console.warn(`[review-service] Failed to fetch product reviews for "${productId}":`, error?.message || error);
+    } catch (error: unknown) {
+      console.warn(`[review-service] Failed to fetch product reviews for "${productId}":`, asApiError(error).message || error);
       return {
         success: false,
         data: {
@@ -160,7 +214,7 @@ export const reviewService = {
             totalPages: 1,
           },
         },
-        message: error?.message || 'Failed to load reviews',
+        message: asApiError(error).message || 'Failed to load reviews',
       };
     }
   },
@@ -173,7 +227,7 @@ export const reviewService = {
       return await apiClient.post<
         ApiResponse<{ id: string; helpful: number; helpfulVotedByMe: boolean }>
       >(`/customer/reviews/${reviewId}/helpful`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to toggle review helpful vote:', error);
       throw error;
     }
@@ -194,7 +248,7 @@ export const reviewService = {
     }>
   > {
     try {
-      const res = await apiClient.get<ApiResponse<any>>('/customer/reviews/me');
+      const res = await apiClient.get<ApiResponse<BackendReviewPage>>('/customer/reviews/me');
       if (res?.data) {
         const rawReviews = Array.isArray(res.data.reviews) ? res.data.reviews : [];
         const rawProducts = Array.isArray(res.data.reviewableProducts)
@@ -204,10 +258,10 @@ export const reviewService = {
           ...res,
           data: {
             reviews: rawReviews.map(mapBackendReviewToFrontend),
-            reviewableProducts: rawProducts.map((p: any) => ({
+            reviewableProducts: rawProducts.map((p) => ({
               id: p.id,
-              title: p.title,
-              slug: p.slug,
+              title: p.title || '',
+              slug: p.slug || '',
               images: mapProductImageUrls(p.images),
               price: Number(p.price) || 0,
               salePrice: p.salePrice != null ? Number(p.salePrice) : null,
@@ -216,8 +270,8 @@ export const reviewService = {
         };
       }
       throw new Error('No data received');
-    } catch (error: any) {
-      console.warn('[review-service] Failed to fetch my reviews:', error?.message || error);
+    } catch (error: unknown) {
+      console.warn('[review-service] Failed to fetch my reviews:', asApiError(error).message || error);
       throw error;
     }
   },
@@ -238,7 +292,7 @@ export const reviewService = {
     const endpoint = `/customer/reviews${qs ? `?${qs}` : ''}`;
 
     try {
-      const res = await apiClient.get<ApiResponse<any>>(endpoint);
+      const res = await apiClient.get<ApiResponse<BackendReviewPage>>(endpoint);
       if (res?.data) {
         const rawReviews = Array.isArray(res.data.reviews) ? res.data.reviews : [];
         return {
@@ -255,15 +309,15 @@ export const reviewService = {
         };
       }
       throw new Error('No data received');
-    } catch (error: any) {
-      console.warn('[review-service] Failed to fetch store reviews:', error?.message || error);
+    } catch (error: unknown) {
+      console.warn('[review-service] Failed to fetch store reviews:', asApiError(error).message || error);
       return {
         success: false,
         data: {
           reviews: [],
           pagination: { total: 0, page: 1, limit: query.limit || 15, totalPages: 1 },
         },
-        message: error?.message || 'Failed to load reviews',
+        message: asApiError(error).message || 'Failed to load reviews',
       };
     }
   },
@@ -295,7 +349,7 @@ export const reviewService = {
     const endpoint = `/owner/reviews${qs ? `?${qs}` : ''}`;
 
     try {
-      const res = await apiClient.get<ApiResponse<any>>(endpoint);
+      const res = await apiClient.get<ApiResponse<BackendReviewPage>>(endpoint);
       if (res?.data) {
         const rawReviews = Array.isArray(res.data.reviews) ? res.data.reviews : [];
         return {
@@ -320,8 +374,8 @@ export const reviewService = {
         };
       }
       throw new Error('No data received');
-    } catch (error: any) {
-      console.warn('[review-service] Failed to fetch owner reviews:', error?.message || error);
+    } catch (error: unknown) {
+      console.warn('[review-service] Failed to fetch owner reviews:', asApiError(error).message || error);
       return {
         success: false,
         data: {
@@ -341,26 +395,26 @@ export const reviewService = {
             totalPages: 1,
           },
         },
-        message: error?.message || 'Failed to fetch reviews',
+        message: asApiError(error).message || 'Failed to fetch reviews',
       };
     }
   },
 
   // 5. Fetch single review by ID (GET /owner/reviews/:id)
   async getOwnerReviewById(id: string): Promise<ApiResponse<Review>> {
-    const res = await apiClient.get<ApiResponse<any>>(`/owner/reviews/${id}`);
+    const res = await apiClient.get<ApiResponse<BackendReview>>(`/owner/reviews/${id}`);
     if (res?.data) {
       return {
         ...res,
         data: mapBackendReviewToFrontend(res.data),
       };
     }
-    return res;
+    return unchangedEnvelope<Review>(res);
   },
 
   // 6. Post admin reply (POST /owner/reviews/:id/reply)
   async replyToReview(id: string, reply: string): Promise<ApiResponse<Review>> {
-    const res = await apiClient.post<ApiResponse<any>>(`/owner/reviews/${id}/reply`, {
+    const res = await apiClient.post<ApiResponse<BackendReview>>(`/owner/reviews/${id}/reply`, {
       reply,
     });
     if (res?.data) {
@@ -369,21 +423,21 @@ export const reviewService = {
         data: mapBackendReviewToFrontend(res.data),
       };
     }
-    return res;
+    return unchangedEnvelope<Review>(res);
   },
 
   // 7. Create review manually (POST /owner/reviews)
   async createOwnerReview(
     payload: CreateOwnerReviewPayload,
   ): Promise<ApiResponse<Review>> {
-    const res = await apiClient.post<ApiResponse<any>>('/owner/reviews', payload);
+    const res = await apiClient.post<ApiResponse<BackendReview>>('/owner/reviews', payload);
     if (res?.data) {
       return {
         ...res,
         data: mapBackendReviewToFrontend(res.data),
       };
     }
-    return res;
+    return unchangedEnvelope<Review>(res);
   },
 
   // 8. Update review status (PATCH /owner/reviews/:id/status)
@@ -391,7 +445,7 @@ export const reviewService = {
     id: string,
     status: ReviewStatus,
   ): Promise<ApiResponse<Review>> {
-    const res = await apiClient.patch<ApiResponse<any>>(`/owner/reviews/${id}/status`, {
+    const res = await apiClient.patch<ApiResponse<BackendReview>>(`/owner/reviews/${id}/status`, {
       status,
     });
     if (res?.data) {
@@ -400,7 +454,7 @@ export const reviewService = {
         data: mapBackendReviewToFrontend(res.data),
       };
     }
-    return res;
+    return unchangedEnvelope<Review>(res);
   },
 
   // 9. Update review details (PATCH /owner/reviews/:id)
@@ -408,14 +462,14 @@ export const reviewService = {
     id: string,
     payload: UpdateOwnerReviewPayload,
   ): Promise<ApiResponse<Review>> {
-    const res = await apiClient.patch<ApiResponse<any>>(`/owner/reviews/${id}`, payload);
+    const res = await apiClient.patch<ApiResponse<BackendReview>>(`/owner/reviews/${id}`, payload);
     if (res?.data) {
       return {
         ...res,
         data: mapBackendReviewToFrontend(res.data),
       };
     }
-    return res;
+    return unchangedEnvelope<Review>(res);
   },
 
   // 10. Delete review (DELETE /owner/reviews/:id)

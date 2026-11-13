@@ -112,8 +112,9 @@ export function getAuthRole(): UserRole | null {
   if (!token) return null;
   const payload = parseJwtPayload(token);
   if (!payload) return null;
-  if (payload.isOwner || (payload.role as any) === 'OWNER' || (payload.role as any) === 'SUPER_ADMIN') return 'OWNER' as UserRole;
-  if (payload.staffRole || (payload.permissions && Object.keys(payload.permissions).length > 0) || (payload.role as any) === 'STAFF') {
+  const role = payload.role;
+  if (payload.isOwner || role === 'OWNER' || role === 'SUPER_ADMIN') return 'OWNER';
+  if (payload.staffRole || (payload.permissions && Object.keys(payload.permissions).length > 0) || role === 'STAFF') {
     return 'STAFF' as UserRole;
   }
   return (payload?.role as UserRole) || 'CUSTOMER' as UserRole;

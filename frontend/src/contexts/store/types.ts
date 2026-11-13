@@ -53,7 +53,7 @@ export interface StoreContextValue {
   compare: string[];
   recentlyViewed: string[];
   user: User | null;
-  setUser: (u: any) => void;
+  setUser: (u: User | null | ((prev: User | null) => User | null)) => void;
   isAuthLoading?: boolean;
   addresses: Address[];
   isAddressesLoading?: boolean;
@@ -81,7 +81,7 @@ export interface StoreContextValue {
   login: (email: string) => void;
   register: (u: Omit<User, 'id'>) => void;
   logout: () => void;
-  saveAddress: (a: Address) => Promise<any> | void;
+  saveAddress: (a: Address) => Promise<Address | void> | void;
   deleteAddress: (id: string) => Promise<void> | void;
   setDefaultAddress: (id: string) => Promise<void> | void;
   placeOrder: (input: PlaceOrderInput) => Promise<Order>;

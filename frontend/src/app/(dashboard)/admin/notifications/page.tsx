@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
@@ -81,11 +83,11 @@ export default function AdminNotificationsPage() {
     try {
       const rows = await notificationService.getTemplates();
       setTemplates(rows.map(mapDto));
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to load notification templates:', err);
       setTemplates([]);
       toast.error(
-        err?.response?.data?.message || 'Could not load notification templates',
+        asApiError(err).response?.data?.message || 'Could not load notification templates',
       );
     } finally {
       setTemplatesLoading(false);
@@ -158,9 +160,9 @@ export default function AdminNotificationsPage() {
       const mapped = mapDto(updated);
       setTemplates((prev) => prev.map((t) => (t.id === id ? mapped : t)));
       return mapped;
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(
-        err?.response?.data?.message || err?.message || 'Failed to save template',
+        asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to save template',
       );
       throw err;
     } finally {

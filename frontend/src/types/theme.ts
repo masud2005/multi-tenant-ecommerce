@@ -21,7 +21,7 @@ export interface ThemeSection {
   label: string;
   orderIndex: number;
   isVisible: boolean;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -50,7 +50,7 @@ export interface ThemePreset {
     sectionType: string;
     label: string;
     isVisible?: boolean;
-    settings?: Record<string, any>;
+    settings?: Record<string, unknown>;
   }>;
   isActive: boolean;
 }

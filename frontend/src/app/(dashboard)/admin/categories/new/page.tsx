@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -147,9 +149,9 @@ export default function AdminNewCategoryPage() {
 
       toast.success(`Category "${newCategory.name}" created successfully`);
       router.push('/admin/categories');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create category:', error);
-      toast.error(error?.message || 'Failed to create category');
+      toast.error(asApiError(error).message || 'Failed to create category');
     } finally {
       setIsSubmitting(false);
     }

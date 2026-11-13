@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -68,8 +70,8 @@ function ProductRowActionMenu({
       await productService.deleteProduct(product.id);
       toast.success(`"${product.title}" deleted successfully`);
       onRefresh();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to delete product');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to delete product');
     }
   };
 
@@ -242,14 +244,14 @@ export default function AdminProductsPage() {
       const backendStatus = status === 'published' ? 'PUBLISHED' : status === 'archived' ? 'ARCHIVED' : 'DRAFT';
       await Promise.all(
         selected.map((id) =>
-          productService.updateProduct(id, { status: backendStatus as any })
+          productService.updateProduct(id, { status: backendStatus })
         )
       );
       toast.success(`${selected.length} products updated to ${status}`);
       setSelected([]);
       loadData();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update selected products');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to update selected products');
       loadData();
     }
   };
@@ -563,8 +565,8 @@ export default function AdminProductsPage() {
                 toast.success(`${selected.length} products deleted successfully`);
                 setSelected([]);
                 loadData();
-              } catch (err: any) {
-                toast.error(err?.message || 'Failed to delete some products');
+              } catch (err: unknown) {
+                toast.error(asApiError(err).message || 'Failed to delete some products');
                 loadData();
               }
             }

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
@@ -116,9 +118,9 @@ export function ContactEditorDrawer({
       toast.success('Contact details updated successfully!');
       if (onSaved) onSaved();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update contact settings:', err);
-      toast.error(err?.message || 'Failed to update contact settings');
+      toast.error(asApiError(err).message || 'Failed to update contact settings');
     } finally {
       setSaving(false);
     }

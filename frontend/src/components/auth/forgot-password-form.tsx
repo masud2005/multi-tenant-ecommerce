@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
@@ -25,8 +27,8 @@ export function ForgotPasswordForm() {
       await authService.forgotPassword({ email });
       // Redirect to verification OTP page with reset type
       router.push(`/verify?type=reset&to=${encodeURIComponent(email)}`);
-    } catch (err: any) {
-      setError(err?.message || 'Unable to send password reset code. Please try again.');
+    } catch (err: unknown) {
+      setError(asApiError(err).message || 'Unable to send password reset code. Please try again.');
     } finally {
       setLoading(false);
     }

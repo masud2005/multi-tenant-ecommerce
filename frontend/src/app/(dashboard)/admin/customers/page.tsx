@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useMemo, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
@@ -32,11 +34,11 @@ import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { DataTable, type Column } from '@/components/dashboard/shared/DataTable';
 import { GuardedButton } from '@/components/dashboard/shared/GuardedButton';
 import { ModuleGate } from '@/components/dashboard/shared/ModuleGate';
-import { Badge } from '@/components/ui/Badge';
+import { Badge, type Tone } from '@/components/ui/Badge';
 import { Drawer } from '@/components/ui/Drawer';
 import { Textarea } from '@/components/ui/Textarea';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { customerService, mapBackendCustomerToFrontend } from '@/services/customer-service';
+import { customerService, mapBackendCustomerToFrontend, type CustomerDetailRecord } from '@/services/customer-service';
 import { orderStatusMeta } from '@/utils/status';
 import { formatBDT, formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
@@ -77,7 +79,7 @@ function CustomersContent() {
 
   // Active Customer detailed data
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'profile'>('products');
-  const [customerDetail, setCustomerDetail] = useState<any>(null);
+  const [customerDetail, setCustomerDetail] = useState<CustomerDetailRecord | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   // Fetch customers from backend API only
@@ -173,11 +175,11 @@ function CustomersContent() {
         if (Array.isArray(ord.items)) {
           for (const item of ord.items) {
             list.push({
-              id: item.id,
+              id: item.id || '',
               orderId: ord.id,
               orderNumber: ord.number || ord.id.slice(0, 8),
               orderStatus: ord.status?.toLowerCase() || 'pending',
-              orderDate: ord.createdAt,
+              orderDate: ord.createdAt || '',
               productId: item.productId,
               variantId: item.variantId,
               title: item.title || item.product?.title || 'Product Item',
@@ -225,10 +227,9 @@ function CustomersContent() {
       );
 
       if (customerDetail && customerDetail.id === customer.id) {
-        setCustomerDetail((prev: any) => ({
-          ...prev,
-          isActive: nextActiveState,
-        }));
+        setCustomerDetail((prev) =>
+          prev ? { ...prev, isActive: nextActiveState } : prev,
+        );
       }
 
       toast.success(
@@ -236,8 +237,8 @@ function CustomersContent() {
           ? `Customer ${customer.name} reactivated successfully`
           : `Customer ${customer.name} deactivated / banned successfully`,
       );
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update customer status');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to update customer status');
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -733,9 +734,9 @@ function CustomersContent() {
                   </div>
                 ) : (
                   <ul className="divide-y divide-line rounded-lg border border-line overflow-hidden bg-surface">
-                    {custOrders.map((o: any) => {
+                    {custOrders.map((o) => {
                       const statusKey = (o.status?.toLowerCase() || 'pending') as keyof typeof orderStatusMeta;
-                      const statusConfig = orderStatusMeta[statusKey] || { label: o.status || 'Pending', tone: 'neutral' };
+                      const statusConfig = orderStatusMeta[statusKey] || { label: o.status || 'Pending', tone: 'neutral' as Tone };
 
                       return (
                         <li key={o.id}>
@@ -750,11 +751,11 @@ function CustomersContent() {
                                   <ChevronRight className="h-3.5 w-3.5 text-ink-muted group-hover:translate-x-0.5 transition-transform" />
                                 </span>
                                 <span className="text-xs text-ink-muted flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" aria-hidden /> {formatDate(o.createdAt)}
+                                  <Calendar className="h-3 w-3" aria-hidden /> {formatDate(o.createdAt || '')}
                                 </span>
                               </div>
                               <div className="flex items-center gap-3">
-                                <Badge tone={statusConfig.tone as any}>
+                                <Badge tone={statusConfig.tone}>
                                   {statusConfig.label}
                                 </Badge>
                                 <span className="font-bold text-ink text-sm">
@@ -812,7 +813,7 @@ function CustomersContent() {
                       <MapPin className="h-3.5 w-3.5" aria-hidden /> Saved Delivery Addresses
                     </h4>
                     <div className="space-y-2">
-                      {customerDetail.addresses.map((addr: any) => (
+                      {customerDetail.addresses.map((addr) => (
                         <div
                           key={addr.id}
                           className="rounded-md border border-line bg-canvas p-2.5 text-xs space-y-1"

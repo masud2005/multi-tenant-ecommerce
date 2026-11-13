@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useStore } from '@/contexts/StoreContext';
@@ -33,14 +35,18 @@ export default function AccountProfilePage() {
             name: res.data.name || '',
             email: res.data.email || '',
             phone: res.data.phone || '',
-            district: (res.data as any).district || '',
+            district: res.data.district || '',
           });
-          setUser((prev: any) => ({
-            ...prev,
-            name: res.data.name,
-            email: res.data.email,
-            phone: res.data.phone,
-          }));
+          setUser((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  name: res.data.name,
+                  email: res.data.email,
+                  phone: res.data.phone || prev.phone,
+                }
+              : prev,
+          );
         }
       })
       .catch(() => {})
@@ -62,22 +68,26 @@ export default function AccountProfilePage() {
         district: form.district.trim() || undefined,
       });
       if (res?.data) {
-        setUser((prev: any) => ({
-          ...prev,
-          name: res.data.name,
-          phone: res.data.phone,
-        }));
+        setUser((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: res.data.name,
+                phone: res.data.phone || prev.phone,
+              }
+            : prev,
+        );
         setForm((prev) => ({
           ...prev,
           name: res.data.name || prev.name,
           phone: res.data.phone || prev.phone,
-          district: (res.data as any).district ?? prev.district,
+          district: res.data.district ?? prev.district,
         }));
       }
       setDirty(false);
       toast.success('Profile updated');
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to update profile');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }

@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
@@ -190,10 +192,10 @@ export function AboutEditorDrawer({
       } else {
         toast.error('Failed to update About Us page');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to save about page:', err);
       toast.error(
-        err?.response?.data?.message || 'Error saving About Us page'
+        asApiError(err).response?.data?.message || 'Error saving About Us page'
       );
     } finally {
       setSaving(false);

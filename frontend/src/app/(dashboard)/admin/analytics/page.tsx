@@ -323,9 +323,10 @@ export default function AdminAnalyticsPage() {
                     width={60}
                   />
                   <Tooltip
-                    formatter={(value: any) =>
-                      value ? formatBDT(Number(value)) : ''
-                    }
+                    formatter={(value) => {
+                      const raw = Array.isArray(value) ? value[0] : value;
+                      return raw != null && raw !== '' ? formatBDT(Number(raw)) : '';
+                    }}
                     contentStyle={{
                       fontSize: 12,
                       borderRadius: 6,
@@ -442,9 +443,10 @@ export default function AdminAnalyticsPage() {
                       width={90}
                     />
                     <Tooltip
-                      formatter={(value: any) =>
-                        value ? formatBDT(Number(value)) : '৳0'
-                      }
+                      formatter={(value) => {
+                        const raw = Array.isArray(value) ? value[0] : value;
+                        return raw != null && raw !== '' ? formatBDT(Number(raw)) : '৳0';
+                      }}
                       contentStyle={{
                         fontSize: 12,
                         borderRadius: 6,

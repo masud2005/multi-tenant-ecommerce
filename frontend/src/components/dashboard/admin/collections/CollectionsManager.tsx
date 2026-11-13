@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
@@ -97,7 +99,7 @@ export function CollectionsManager({
           description: c.description || '',
           image: c.image || images.hero,
           type: (c.type?.toLowerCase() === 'rule' ? 'rule' : 'manual') as 'manual' | 'rule',
-          ruleDetails: c.rule || undefined,
+          ruleDetails: c.rule && typeof c.rule === 'object' ? c.rule : undefined,
           rule:
             c.rule && typeof c.rule === 'object'
               ? `${c.rule.field || 'Tag'} ${c.rule.op || c.rule.condition || 'contains'} "${c.rule.value || ''}"`
@@ -173,9 +175,9 @@ export function CollectionsManager({
       setCollectionsList((prev) => prev.filter((c) => c.slug !== slug));
       setDeletingCollection(null);
       toast.success(`Collection "${name}" deleted successfully`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete collection:', error);
-      toast.error(error?.message || 'Failed to delete collection');
+      toast.error(asApiError(error).message || 'Failed to delete collection');
     } finally {
       setIsDeleting(false);
     }

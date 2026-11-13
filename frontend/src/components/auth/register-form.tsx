@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -69,8 +71,8 @@ export function RegisterForm() {
 
       // Redirect to verification OTP page
       router.push(`/verify?type=otp&to=${encodeURIComponent(form.email)}&next=/account`);
-    } catch (err: any) {
-      setErrors({ email: err?.message || 'Registration failed. Please try again.' });
+    } catch (err: unknown) {
+      setErrors({ email: asApiError(err).message || 'Registration failed. Please try again.' });
     } finally {
       setLoading(false);
     }

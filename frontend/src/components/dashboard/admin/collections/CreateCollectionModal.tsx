@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import {
@@ -349,9 +351,9 @@ function CollectionForm({
           : `Collection "${savedCol.name}" created successfully!`
       );
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to save collection:', error);
-      toast.error(error?.message || 'Failed to save collection');
+      toast.error(asApiError(error).message || 'Failed to save collection');
     } finally {
       setIsSubmitting(false);
     }

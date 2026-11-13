@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -199,9 +201,9 @@ export function CategoryDetailPanel({
       setIsEditingCategory(false);
       setShowImagePicker(false);
       onRefresh?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update category:', error);
-      toast.error(error?.message || 'Failed to update category');
+      toast.error(asApiError(error).message || 'Failed to update category');
     } finally {
       setIsSaving(false);
     }
@@ -216,9 +218,9 @@ export function CategoryDetailPanel({
       toast.success(`Category "${category.name}" has been deleted`);
       setConfirmDeleteCategory(false);
       onRefresh?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete category:', error);
-      toast.error(error?.message || 'Failed to delete category');
+      toast.error(asApiError(error).message || 'Failed to delete category');
     } finally {
       setIsDeletingCategory(false);
     }
@@ -248,9 +250,9 @@ export function CategoryDetailPanel({
       toast.success(`Added subcategory "${trimmed}" to ${category.name}`);
       setNewSubName('');
       onRefresh?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to add subcategory:', error);
-      toast.error(error?.message || 'Failed to add subcategory');
+      toast.error(asApiError(error).message || 'Failed to add subcategory');
     } finally {
       setIsAddingSub(false);
     }
@@ -279,9 +281,9 @@ export function CategoryDetailPanel({
         onSelectSubcategory?.(trimmed);
       }
       onRefresh?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to rename subcategory:', error);
-      toast.error(error?.message || 'Failed to rename subcategory');
+      toast.error(asApiError(error).message || 'Failed to rename subcategory');
     }
   };
 
@@ -296,7 +298,7 @@ export function CategoryDetailPanel({
         onSelectSubcategory?.(null);
       }
       onRefresh?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to remove subcategory:', error);
       toast.error('Failed to remove subcategory');
     }
@@ -388,9 +390,9 @@ export function CategoryDetailPanel({
                       );
                       onSelectSubcategory?.(trimmed);
                       onRefresh?.();
-                    } catch (error: any) {
+                    } catch (error: unknown) {
                       console.error('Failed to update subcategory:', error);
-                      toast.error(error?.message || 'Failed to update subcategory');
+                      toast.error(asApiError(error).message || 'Failed to update subcategory');
                     }
                   }}
                   className="cursor-pointer shrink-0"

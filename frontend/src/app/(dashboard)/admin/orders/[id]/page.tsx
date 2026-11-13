@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { use, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -106,9 +108,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setRejectOpen(false);
       setRejectReason('');
       await fetchOrderDetail();
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(
-        err?.response?.data?.message || err.message || 'Payment verification failed',
+        asApiError(err).response?.data?.message || asApiError(err).message || 'Payment verification failed',
       );
     } finally {
       setIsVerifyingPayment(false);
@@ -127,10 +129,10 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         setLiveOrder(null);
         setLoadError('Order not found');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Backend order fetch failed:', err);
       setLiveOrder(null);
-      setLoadError(err?.response?.data?.message || err?.message || 'Failed to load order');
+      setLoadError(asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to load order');
     } finally {
       setIsLoading(false);
     }
@@ -187,7 +189,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     try {
       setIsUpdating(true);
       const res = await orderService.updateOwnerOrderStatus(order.id, {
-        status: (order.status === 'pending_payment' ? 'CONFIRMED' : order.status).toUpperCase() as any,
+        status: (order.status === 'pending_payment' ? 'CONFIRMED' : order.status).toUpperCase(),
         paymentStatus: 'PAID',
         note: 'Payment marked as received by admin',
       });
@@ -202,12 +204,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       }
       toast.success('Payment marked as paid & order confirmed');
       fetchOrderDetail();
-    } catch (err: any) {
-      const fieldErrors = err?.response?.data?.errors;
+    } catch (err: unknown) {
+      const fieldErrors = asApiError(err).response?.data?.errors;
       if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
-        toast.error(fieldErrors.map((e: any) => `${e.field}: ${e.message}`).join(' | '));
+        toast.error(fieldErrors.map((e) => `${e.field}: ${e.message}`).join(' | '));
       } else {
-        toast.error(err?.response?.data?.message || err.message || 'Failed to update payment status');
+        toast.error(asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to update payment status');
       }
     } finally {
       setIsUpdating(false);
@@ -231,7 +233,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setIsUpdating(true);
       const label = eventLabel[next] ?? `Order status updated to ${next}`;
       const res = await orderService.updateOwnerOrderStatus(order.id, {
-        status: next.toUpperCase() as any,
+        status: next.toUpperCase(),
         note: label,
       });
 
@@ -243,12 +245,12 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
       toast.success(`${order.number}: Marked as ${orderStatusMeta[next]?.label || next}`);
       fetchOrderDetail();
-    } catch (err: any) {
-      const fieldErrors = err?.response?.data?.errors;
+    } catch (err: unknown) {
+      const fieldErrors = asApiError(err).response?.data?.errors;
       if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
-        toast.error(fieldErrors.map((e: any) => `${e.field}: ${e.message}`).join(' | '));
+        toast.error(fieldErrors.map((e) => `${e.field}: ${e.message}`).join(' | '));
       } else {
-        toast.error(err?.response?.data?.message || err.message || 'Failed to update order status');
+        toast.error(asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to update order status');
       }
     } finally {
       setIsUpdating(false);
@@ -280,8 +282,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setShipOpen(false);
       toast.success('Shipment created and order status updated to Shipped');
       fetchOrderDetail();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to create shipment');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to create shipment');
     } finally {
       setIsUpdating(false);
     }
@@ -300,8 +302,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       setNote('');
       toast.success('Order note added successfully');
       fetchOrderDetail();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to add note');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to add note');
     } finally {
       setIsAddingNote(false);
     }
@@ -324,8 +326,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       }
       toast.success('Cash on delivery marked as collected');
       fetchOrderDetail();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update payment status');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Failed to update payment status');
     } finally {
       setIsUpdating(false);
     }
@@ -351,9 +353,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         } if the customer already paid.`,
       );
       await fetchOrderDetail();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setRefundError(
-        err?.response?.data?.message || err?.message || 'Failed to record refund',
+        asApiError(err).response?.data?.message || asApiError(err).message || 'Failed to record refund',
       );
     } finally {
       setIsRefunding(false);
@@ -725,7 +727,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               {order.customerNote && (
                 <div className="border-t border-line pt-3">
                   <p className="text-xs font-medium text-ink-muted mb-1">Customer Note</p>
-                  <p className="text-xs text-ink bg-canvas p-2 rounded italic">"{order.customerNote}"</p>
+                  <p className="text-xs text-ink bg-canvas p-2 rounded italic">&quot;{order.customerNote}&quot;</p>
                 </div>
               )}
             </div>

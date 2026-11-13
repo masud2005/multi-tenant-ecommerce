@@ -15,7 +15,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
-import { returnService } from '@/services/return-service';
+import { returnService, type ReturnView } from '@/services/return-service';
 import { AccountHeader } from '@/components/account/AccountHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
@@ -35,9 +35,7 @@ const flow: ReturnStatus[] = [
 
 export default function AccountReturnsPage() {
   const { user } = useStore();
-  const [returnsList, setReturnsList] = useState<
-    (ReturnRequest & { photoUrls?: string[]; order?: any })[]
-  >([]);
+  const [returnsList, setReturnsList] = useState<ReturnView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedTimelineId, setExpandedTimelineId] = useState<string | null>(null);
 

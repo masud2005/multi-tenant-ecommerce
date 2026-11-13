@@ -1,5 +1,7 @@
 'use client';
 
+
+import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -144,14 +146,14 @@ export default function AccountSupportPage() {
       socket.emit(
         'join_conversation',
         { conversationId: conversation.id },
-        (res: any) => {
+        (res: { isOtherPartyOnline?: boolean }) => {
           if (res?.isOtherPartyOnline) setIsAgentOnline(true);
         }
       );
       socket.emit(
         'check_presence',
         { conversationId: conversation.id },
-        (res: any) => {
+        (res: { isOnline?: boolean }) => {
           if (res?.isOnline !== undefined) setIsAgentOnline(res.isOnline);
         }
       );
@@ -217,8 +219,8 @@ export default function AccountSupportPage() {
       } else {
         toast.error('Upload failed');
       }
-    } catch (err: any) {
-      toast.error(err?.message || 'Could not upload file');
+    } catch (err: unknown) {
+      toast.error(asApiError(err).message || 'Could not upload file');
     } finally {
       setUploadingFile(false);
     }
@@ -268,11 +270,12 @@ export default function AccountSupportPage() {
             senderName,
             attachments: attachmentUrls.length ? attachmentUrls : undefined,
           },
-          (res: any) => {
-            if (res?.success && res?.data) {
+          (res: { success?: boolean; data?: ChatMessage }) => {
+            if (res?.success && res.data) {
+              const message = res.data;
               setMessages((prev) => {
-                if (prev.some((m) => m.id === res.data.id)) return prev;
-                return [...prev, res.data];
+                if (prev.some((m) => m.id === message.id)) return prev;
+                return [...prev, message];
               });
             }
           }
