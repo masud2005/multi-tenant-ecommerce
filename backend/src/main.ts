@@ -1,77 +1,14 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-import { ValidationPipe } from '@nestjs/common';
-import { ValidationException } from './common/exceptions';
-
-function submittedValue(value: unknown): unknown {
-  return value;
-}
+import { configureApp } from './configure-app';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
-  // Review photo submissions send base64 in JSON; default ~100kb is too small
   app.useBodyParser('json', { limit: '10mb' });
   app.useBodyParser('urlencoded', { limit: '10mb', extended: true });
+  configureApp(app);
 
-  // Enable CORS
-  app.enableCors({
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  });
-
-  // Global prefix
-  app.setGlobalPrefix('api/v1');
-
-  // Global filters
-  app.useGlobalFilters(new GlobalExceptionFilter());
-
-  // Global interceptors
-  const reflector = app.get(Reflector);
-  app.useGlobalInterceptors(new ResponseInterceptor(reflector));
-
-  // Global pipes
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-      exceptionFactory: (errors) => {
-        const validationErrors = errors.map((error) => ({
-          field: error.property,
-          message: Object.values(error.constraints ?? {})[0] ?? 'Invalid value',
-          value: submittedValue(error.value),
-        }));
-        return new ValidationException(validationErrors);
-      },
-    }),
-  );
-
-  // Swagger setup
-  const config = new DocumentBuilder()
-    .setTitle('Backend API')
-    .setDescription('The API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config, {
-    ignoreGlobalPrefix: false,
-  });
-  SwaggerModule.setup('docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
-
-  // Start the server
   const PORT = process.env.PORT ?? 3000;
   await app.listen(PORT, '0.0.0.0');
   console.log(`Server running on PORT ${PORT}`);
@@ -80,4 +17,3 @@ async function bootstrap() {
 }
 
 void bootstrap();
-// Full reboot trigger for updated Prisma client schema
