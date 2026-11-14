@@ -118,8 +118,8 @@ export default function AdminAuditPage() {
         />
 
         {/* Filters Bar */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[240px] flex-1">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-muted" />
             <input
               type="text"
@@ -130,31 +130,33 @@ export default function AdminAuditPage() {
             />
           </div>
 
-          <select
-            aria-label="Category"
-            value={cat}
-            onChange={(e) => setCat(e.target.value)}
-            className="h-9 rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
-          >
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c === 'All' ? 'All Categories' : c}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              aria-label="Category"
+              value={cat}
+              onChange={(e) => setCat(e.target.value)}
+              className="h-9 flex-1 sm:flex-initial rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c === 'All' ? 'All Categories' : c}
+                </option>
+              ))}
+            </select>
 
-          <select
-            aria-label="Actor"
-            value={actor}
-            onChange={(e) => setActor(e.target.value)}
-            className="h-9 rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
-          >
-            {actors.map((a) => (
-              <option key={a} value={a}>
-                {a === 'All' ? 'All Staff / Actors' : a}
-              </option>
-            ))}
-          </select>
+            <select
+              aria-label="Actor"
+              value={actor}
+              onChange={(e) => setActor(e.target.value)}
+              className="h-9 flex-1 sm:flex-initial rounded-md border border-line bg-surface px-3 text-sm text-ink focus:outline-none"
+            >
+              {actors.map((a) => (
+                <option key={a} value={a}>
+                  {a === 'All' ? 'All Staff / Actors' : a}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Logs List */}
@@ -185,10 +187,10 @@ export default function AdminAuditPage() {
                     aria-expanded={hasDiff ? expanded : undefined}
                     className="flex w-full flex-wrap items-center gap-3 px-5 py-3 text-left text-sm enabled:hover:bg-subtle/30 transition-colors disabled:cursor-default"
                   >
-                    <span className="w-36 text-xs text-ink-muted shrink-0">
+                    <span className="w-full sm:w-36 text-xs text-ink-muted shrink-0">
                       {formatDateTime(l.createdAt)}
                     </span>
-                    <span className="min-w-[200px] flex-1">
+                    <span className="min-w-0 flex-1">
                       <b className="font-medium text-ink">{l.actor}</b>{' '}
                       <span className="text-ink">
                         {l.action.charAt(0).toLowerCase() + l.action.slice(1)}

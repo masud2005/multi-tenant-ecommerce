@@ -3,10 +3,9 @@
 
 import { asApiError } from '@/lib/api-error';
 import React, { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { ShieldCheck, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { ShieldCheck, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/Badge';
@@ -15,7 +14,6 @@ import { resolveUserRole } from '@/constants/roles';
 import { setAuthSession, clearAuthSession } from '@/services/auth/auth.storage';
 
 function AcceptInviteForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
 

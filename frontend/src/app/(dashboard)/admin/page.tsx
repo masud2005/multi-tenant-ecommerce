@@ -233,24 +233,26 @@ export default function AdminDashboardPage() {
   ].filter((t) => t.show);
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 min-w-0">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight text-ink">
+        <h1 className="text-xl font-semibold tracking-tight text-ink truncate">
           Good morning, {greetingName}
         </h1>
-        <p className="mt-1 text-sm text-ink-muted">
+        <p className="mt-1 text-sm text-ink-muted break-words">
           Here’s what’s happening at {storeName} today · {todayFormatted}
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 min-w-0">
         {showMoney ? (
-          <Panel className="lg:col-span-2" flush>
-            <div className="flex flex-wrap items-start justify-between gap-4 px-5 pt-5">
-              <div>
-                <p className="text-sm text-ink-muted">Net sales</p>
-                <p className="mt-1 text-3xl font-semibold tracking-tight text-ink tabular-nums">{formatBDT(total)}</p>
-                <p className="mt-1 flex items-center gap-1 text-sm">
+          <Panel className="lg:col-span-2 min-w-0" flush>
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 p-4 sm:p-5">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm text-ink-muted">Net sales</p>
+                <p className="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-ink tabular-nums truncate">
+                  {formatBDT(total)}
+                </p>
+                <p className="mt-1 flex flex-wrap items-center gap-1 text-xs sm:text-sm">
                   <span className="inline-flex items-center font-medium text-success">
                     <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
                     {change.toFixed(1)}%
@@ -258,12 +260,12 @@ export default function AdminDashboardPage() {
                   <span className="text-ink-muted">vs previous period</span>
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
                 <button
                   type="button"
                   onClick={fetchOverview}
                   disabled={isLoadingAnalytics}
-                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line bg-surface text-ink-muted hover:text-ink cursor-pointer transition-colors"
+                  className="flex h-7 w-7 items-center justify-center rounded-md border border-line bg-surface text-ink-muted hover:text-ink cursor-pointer transition-colors shrink-0"
                   title="Refresh live analytics"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isLoadingAnalytics ? 'animate-spin' : ''}`} />
@@ -275,7 +277,7 @@ export default function AdminDashboardPage() {
                       onClick={() => setRange(r)}
                       aria-pressed={range === r}
                       className={cn(
-                        'whitespace-nowrap rounded px-2.5 py-1 cursor-pointer transition-colors',
+                        'whitespace-nowrap rounded px-2 sm:px-2.5 py-1 cursor-pointer transition-colors text-xs',
                         range === r ? 'bg-ink text-canvas font-medium' : 'text-ink-muted hover:text-ink'
                       )}
                     >
@@ -285,14 +287,15 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="h-64 px-2 pb-2 pt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={series} margin={{ top: 5, right: 12, left: 0, bottom: 0 }}>
+            <div className="h-60 sm:h-64 px-1 sm:px-2 pb-2 pt-2 sm:pt-4 w-full min-w-0 overflow-hidden">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <AreaChart data={series} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                   <CartesianGrid stroke="rgb(var(--line))" vertical={false} />
                   <XAxis
                     dataKey="date"
                     tickLine={false}
                     axisLine={false}
+                    minTickGap={16}
                     tick={{ fontSize: 11, fill: 'rgb(var(--ink-muted))' }}
                   />
                   <YAxis
@@ -300,7 +303,7 @@ export default function AdminDashboardPage() {
                     axisLine={false}
                     tick={{ fontSize: 11, fill: 'rgb(var(--ink-muted))' }}
                     tickFormatter={(v) => formatCompactBDT(v)}
-                    width={56}
+                    width={48}
                   />
                   <Tooltip
                     formatter={(value, name) => [
@@ -337,36 +340,37 @@ export default function AdminDashboardPage() {
                 <div
                   key={l}
                   className={cn(
-                    'px-5 py-3.5',
-                    i > 0 && 'sm:border-l sm:border-line',
-                    i % 2 === 1 && 'border-l border-line'
+                    'px-3.5 py-3 sm:px-5 sm:py-3.5 min-w-0',
+                    i >= 2 && 'border-t border-line sm:border-t-0',
+                    i % 2 === 1 && 'border-l border-line',
+                    i > 0 && 'sm:border-l sm:border-line'
                   )}
                 >
-                  <dt className="text-xs text-ink-muted">{l}</dt>
-                  <dd className="mt-0.5 text-sm font-semibold text-ink tabular-nums">{v}</dd>
+                  <dt className="text-xs text-ink-muted truncate">{l}</dt>
+                  <dd className="mt-0.5 text-sm sm:text-base font-semibold text-ink tabular-nums truncate">{v}</dd>
                 </div>
               ))}
             </dl>
           </Panel>
         ) : (
-          <Panel className="lg:col-span-2" title="Your queue" description="Sales figures are hidden for your role.">
-            <p className="text-3xl font-semibold text-ink">{toFulfill.length + toShip.length} orders</p>
+          <Panel className="lg:col-span-2 min-w-0" title="Your queue" description="Sales figures are hidden for your role.">
+            <p className="text-2xl sm:text-3xl font-semibold text-ink">{toFulfill.length + toShip.length} orders</p>
             <p className="mt-1 text-sm text-ink-muted">need picking, packing or handover today</p>
           </Panel>
         )}
 
-        <Panel title="Needs your attention" flush>
+        <Panel title="Needs your attention" flush className="min-w-0">
           <ul className="divide-y divide-line">
             {todos.map((t) => {
               const Icon = t.icon;
               return (
                 <li key={t.label}>
-                  <Link href={t.to} className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas transition-colors">
+                  <Link href={t.to} className="flex items-center gap-3 px-4 sm:px-5 py-3 sm:py-3.5 hover:bg-canvas transition-colors">
                     <Icon className="h-4 w-4 text-ink-muted shrink-0" aria-hidden />
-                    <span className="flex-1 text-sm text-ink">{t.label}</span>
+                    <span className="flex-1 min-w-0 text-sm text-ink truncate">{t.label}</span>
                     <span
                       className={cn(
-                        'min-w-[28px] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums',
+                        'min-w-[28px] rounded-full px-2 py-0.5 text-center text-xs font-semibold tabular-nums shrink-0',
                         t.count ? 'bg-ink text-canvas' : 'bg-subtle text-ink-muted'
                       )}
                     >
@@ -381,7 +385,7 @@ export default function AdminDashboardPage() {
         </Panel>
 
         <Panel
-          className="lg:col-span-2"
+          className="lg:col-span-2 min-w-0"
           title="Recent orders"
           actions={
             <Link href="/admin/orders" className="text-sm font-medium text-ink hover:text-clay transition-colors">
@@ -395,21 +399,33 @@ export default function AdminDashboardPage() {
               <li key={o.id}>
                 <Link
                   href={`/admin/orders/${o.id}`}
-                  className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-5 py-3 hover:bg-canvas transition-colors sm:grid-cols-[110px_1fr_auto_auto_90px]"
+                  className="flex flex-col gap-1.5 px-4 py-3 sm:px-5 sm:py-3.5 hover:bg-canvas transition-colors sm:grid sm:grid-cols-[110px_minmax(0,1fr)_auto_auto_90px] sm:items-center sm:gap-4"
                 >
-                  <span className="text-sm font-medium text-ink">{o.number}</span>
-                  <span className="text-right text-sm tabular-nums text-ink font-medium sm:order-4">
-                    {formatBDT(o.total)}
-                  </span>
-                  <span className="truncate text-sm text-ink-soft sm:order-1">
-                    {o.customerName} <span className="text-ink-muted">· {timeAgo(o.createdAt)}</span>
-                  </span>
-                  <span className="hidden sm:order-2 sm:block">
-                    <PaymentMark method={o.paymentMethod} />
-                  </span>
-                  <span className="sm:order-3">
-                    <Badge tone={orderStatusMeta[o.status].tone}>{orderStatusMeta[o.status].label}</Badge>
-                  </span>
+                  {/* Top row on mobile / Col 1 & 4 on desktop */}
+                  <div className="flex items-center justify-between gap-2 sm:contents">
+                    <span className="text-sm font-semibold sm:font-medium text-ink truncate sm:order-0">
+                      {o.number}
+                    </span>
+                    <span className="sm:hidden">
+                      <Badge tone={orderStatusMeta[o.status].tone}>{orderStatusMeta[o.status].label}</Badge>
+                    </span>
+                  </div>
+
+                  {/* Bottom row on mobile / Col 2, 3, 4, 5 on desktop */}
+                  <div className="flex items-center justify-between gap-2 min-w-0 sm:contents">
+                    <span className="truncate min-w-0 text-xs sm:text-sm text-ink-soft sm:order-1 flex-1">
+                      {o.customerName} <span className="text-ink-muted">· {timeAgo(o.createdAt)}</span>
+                    </span>
+                    <span className="hidden sm:order-2 sm:block shrink-0">
+                      <PaymentMark method={o.paymentMethod} />
+                    </span>
+                    <span className="hidden sm:order-3 sm:block shrink-0">
+                      <Badge tone={orderStatusMeta[o.status].tone}>{orderStatusMeta[o.status].label}</Badge>
+                    </span>
+                    <span className="text-right text-sm tabular-nums text-ink font-semibold sm:font-medium sm:order-4 shrink-0">
+                      {formatBDT(o.total)}
+                    </span>
+                  </div>
                 </Link>
               </li>
             ))}
@@ -419,20 +435,20 @@ export default function AdminDashboardPage() {
           </ul>
         </Panel>
 
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           {showMoney && (
-            <Panel title="Top products · recent orders" flush>
+            <Panel title="Top products · recent orders" flush className="min-w-0">
               <ol className="divide-y divide-line">
                 {topProducts.map((p, i) => (
-                  <li key={p.key} className="flex items-center gap-3 px-5 py-2.5">
-                    <span className="w-4 text-xs text-ink-muted tabular-nums">{i + 1}</span>
+                  <li key={p.key} className="flex items-center gap-3 px-4 sm:px-5 py-2.5">
+                    <span className="w-4 text-xs text-ink-muted tabular-nums shrink-0">{i + 1}</span>
                     {p.image ? (
-                      <img src={p.image} alt="" className="h-9 w-7 rounded object-cover" />
+                      <img src={p.image} alt="" className="h-9 w-7 rounded object-cover shrink-0" />
                     ) : (
-                      <span className="h-9 w-7 rounded bg-subtle" />
+                      <span className="h-9 w-7 rounded bg-subtle shrink-0" />
                     )}
-                    <span className="flex-1 truncate text-sm text-ink">{p.title}</span>
-                    <span className="text-xs text-ink-muted tabular-nums">{p.qty} sold</span>
+                    <span className="flex-1 min-w-0 truncate text-sm text-ink">{p.title}</span>
+                    <span className="text-xs text-ink-muted tabular-nums shrink-0">{p.qty} sold</span>
                   </li>
                 ))}
                 {topProducts.length === 0 && (
@@ -443,6 +459,7 @@ export default function AdminDashboardPage() {
           )}
           {can('inventory') && (
             <Panel
+              className="min-w-0"
               title={
                 <span className="flex items-center gap-1.5">
                   <AlertTriangle className="h-4 w-4 text-warning" aria-hidden /> Low stock
@@ -459,8 +476,8 @@ export default function AdminDashboardPage() {
                 {lowStock.map((v) => {
                   const available = Math.max(0, (v.stock || 0) - (v.reserved || 0));
                   return (
-                    <li key={v.id} className="flex items-center gap-3 px-5 py-2.5 text-sm">
-                      <span className="flex-1 truncate text-ink">
+                    <li key={v.id} className="flex items-center gap-3 px-4 sm:px-5 py-2.5 text-sm">
+                      <span className="flex-1 min-w-0 truncate text-ink">
                         {v.product?.title || 'Product'}{' '}
                         <span className="text-ink-muted">
                           · {[v.color, v.size].filter(Boolean).join(' / ') || v.sku}
@@ -468,7 +485,7 @@ export default function AdminDashboardPage() {
                       </span>
                       <span
                         className={cn(
-                          'font-semibold tabular-nums',
+                          'font-semibold tabular-nums shrink-0',
                           available === 0 ? 'text-danger' : 'text-warning'
                         )}
                       >

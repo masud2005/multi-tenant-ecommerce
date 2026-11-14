@@ -327,7 +327,7 @@ export default function PaymentsPage() {
         </div>
 
         <Panel flush>
-          <div className="flex items-center justify-between border-b border-line px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 sm:px-5 py-3">
             <div className="flex flex-wrap gap-1">
               {(['all', ...MANUAL_METHODS] as ('all' | PaymentMethod)[]).map(
                 (g) => (

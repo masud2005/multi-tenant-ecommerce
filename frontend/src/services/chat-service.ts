@@ -128,7 +128,7 @@ class ChatService {
     try {
       await apiClient.patch(`/customer/chat/conversations/${conversationId}/read`, {});
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

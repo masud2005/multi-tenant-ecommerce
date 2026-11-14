@@ -374,7 +374,7 @@ function OrdersContent() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
-          <div className="relative min-w-[200px] flex-1">
+          <div className="relative w-full sm:w-auto sm:min-w-[200px] flex-1">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden />
             <input
               value={q}
@@ -388,7 +388,7 @@ function OrdersContent() {
             aria-label="Payment method filter"
             value={method}
             onChange={(e) => setMethod(e.target.value as typeof method)}
-            className="h-9 rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
+            className="h-9 w-full sm:w-auto rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
           >
             <option value="all">All payment methods</option>
             <option value="cod">Cash on delivery (COD)</option>
@@ -397,7 +397,7 @@ function OrdersContent() {
             aria-label="Channel filter"
             value={channel}
             onChange={(e) => setChannel(e.target.value as typeof channel)}
-            className="h-9 rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
+            className="h-9 w-full sm:w-auto rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
           >
             <option value="all">All channels</option>
             <option value="online">Online store</option>

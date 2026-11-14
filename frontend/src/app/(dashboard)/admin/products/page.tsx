@@ -468,7 +468,7 @@ export default function AdminProductsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
-          <div className="relative min-w-[200px] flex-1">
+          <div className="relative w-full sm:w-auto sm:min-w-[200px] flex-1">
             <Search
               className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
               aria-hidden
@@ -485,7 +485,7 @@ export default function AdminProductsPage() {
             aria-label="Category"
             value={cat}
             onChange={(e) => setCat(e.target.value)}
-            className="h-9 rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
+            className="h-9 w-full sm:w-auto rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
           >
             <option value="all">All categories</option>
             {categoryFilterOptions.map((c) => (
@@ -498,7 +498,7 @@ export default function AdminProductsPage() {
             aria-label="Stock"
             value={stock}
             onChange={(e) => setStock(e.target.value as typeof stock)}
-            className="h-9 rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
+            className="h-9 w-full sm:w-auto rounded-md border border-line bg-surface px-2.5 text-sm text-ink focus:outline-none"
           >
             <option value="all">Any stock level</option>
             <option value="low">Low stock</option>

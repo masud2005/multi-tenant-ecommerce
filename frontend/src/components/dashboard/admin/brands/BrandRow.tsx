@@ -48,10 +48,10 @@ export function BrandRow({ brand, products, onEdit, onDelete }: BrandRowProps) {
   );
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-4 px-6 py-4.5 transition-colors hover:bg-subtle/25">
+    <li className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4.5 transition-colors hover:bg-subtle/25">
       {/* Left: Avatar + Title & Description */}
-      <div className="flex items-center gap-4 min-w-[240px] flex-1">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-subtle/80 font-display text-base font-semibold text-ink shadow-2xs overflow-hidden">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+        <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl border border-line bg-subtle/80 font-display text-base font-semibold text-ink shadow-2xs overflow-hidden">
           {brand.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -63,13 +63,13 @@ export function BrandRow({ brand, products, onEdit, onDelete }: BrandRowProps) {
             <span className="font-serif text-lg">{brand.name[0]?.toUpperCase() || 'B'}</span>
           )}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="text-sm sm:text-[15px] font-semibold text-ink leading-snug truncate">
               {brand.name}
             </p>
             {brand.isActive === false && (
-              <span className="rounded bg-subtle px-1.5 py-0.5 text-xs font-medium text-ink-muted border border-line">
+              <span className="rounded bg-subtle px-1.5 py-0.5 text-xs font-medium text-ink-muted border border-line shrink-0">
                 Inactive
               </span>
             )}
@@ -81,9 +81,9 @@ export function BrandRow({ brand, products, onEdit, onDelete }: BrandRowProps) {
       </div>
 
       {/* Right: Metrics + Brand page link + 3-Dot Actions Menu */}
-      <div className="flex items-center gap-6 sm:gap-8 shrink-0">
-        <div className="text-right">
-          <p className="text-sm font-normal text-ink tabular-nums">
+      <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-8 w-full sm:w-auto shrink-0 border-t sm:border-t-0 border-line/40 pt-2 sm:pt-0">
+        <div className="text-left sm:text-right">
+          <p className="text-xs sm:text-sm font-normal text-ink tabular-nums">
             {productCount} {productCount === 1 ? 'product' : 'products'}
           </p>
           <p className="text-xs text-ink-muted tabular-nums mt-0.5">

@@ -152,8 +152,8 @@ export default function AdminMediaPage() {
           }
         />
 
-        <div className="mb-5 flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[200px] flex-1">
+        <div className="mb-5 flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-3">
+          <div className="relative w-full sm:w-auto sm:min-w-[200px] flex-1">
             <Search
               className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
               aria-hidden
@@ -168,7 +168,7 @@ export default function AdminMediaPage() {
           </div>
 
           <div
-            className="flex rounded-md border border-line bg-surface p-0.5 text-xs"
+            className="flex overflow-x-auto scrollbar-none rounded-md border border-line bg-surface p-0.5 text-xs w-full sm:w-auto"
             role="group"
             aria-label="Filter"
           >
@@ -194,7 +194,7 @@ export default function AdminMediaPage() {
             ))}
           </div>
 
-          <div className="w-48 text-xs text-ink-muted">
+          <div className="w-full sm:w-48 text-xs text-ink-muted">
             <p>
               {metrics.storageUsedFormatted} of {metrics.storageLimitFormatted} used
             </p>

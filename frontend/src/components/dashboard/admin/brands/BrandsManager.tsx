@@ -221,57 +221,57 @@ export function BrandsManager({
       />
 
       {/* Top Overview KPI Stat Cards */}
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4 sm:gap-4">
-        <div className="flex flex-col rounded-2xl border border-line bg-surface p-4 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-4">
+        <div className="flex flex-col rounded-2xl border border-line bg-surface p-3 sm:p-4 min-w-0 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-ink-muted">Total Brands</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-clay/10 text-clay">
+            <span className="text-xs font-medium text-ink-muted truncate">Total Brands</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-clay/10 text-clay shrink-0">
               <Award className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+          <p className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-ink truncate">
             {stats.totalBrands}
           </p>
-          <span className="text-xs text-ink-muted mt-0.5">Registered labels</span>
+          <span className="text-xs text-ink-muted mt-0.5 truncate">Registered labels</span>
         </div>
 
-        <div className="flex flex-col rounded-2xl border border-line bg-surface p-4 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
+        <div className="flex flex-col rounded-2xl border border-line bg-surface p-3 sm:p-4 min-w-0 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-ink-muted">Active Brands</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+            <span className="text-xs font-medium text-ink-muted truncate">Active Brands</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 shrink-0">
               <CheckCircle2 className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+          <p className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 truncate">
             {stats.activeBrands}
           </p>
-          <span className="text-xs text-ink-muted mt-0.5">Live on storefront</span>
+          <span className="text-xs text-ink-muted mt-0.5 truncate">Live on storefront</span>
         </div>
 
-        <div className="flex flex-col rounded-2xl border border-line bg-surface p-4 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
+        <div className="flex flex-col rounded-2xl border border-line bg-surface p-3 sm:p-4 min-w-0 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-ink-muted">Assigned Products</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
+            <span className="text-xs font-medium text-ink-muted truncate">Assigned Products</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 shrink-0">
               <Package className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+          <p className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-ink truncate">
             {stats.totalAssignedProducts}
           </p>
-          <span className="text-xs text-ink-muted mt-0.5">Catalog items</span>
+          <span className="text-xs text-ink-muted mt-0.5 truncate">Catalog items</span>
         </div>
 
-        <div className="flex flex-col rounded-2xl border border-line bg-surface p-4 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
+        <div className="flex flex-col rounded-2xl border border-line bg-surface p-3 sm:p-4 min-w-0 transition-all duration-200 hover:border-line-strong hover:shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-ink-muted">30d Brand Sales</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+            <span className="text-xs font-medium text-ink-muted truncate">30d Brand Sales</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 shrink-0">
               <TrendingUp className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-ink">
+          <p className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-ink truncate">
             {formatBDT(stats.totalRevenue)}
           </p>
-          <span className="text-xs text-ink-muted mt-0.5">Volume generated</span>
+          <span className="text-xs text-ink-muted mt-0.5 truncate">Volume generated</span>
         </div>
       </div>
 
@@ -326,7 +326,7 @@ export function BrandsManager({
         </div>
 
         {/* Search & Sort */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {/* Search Box */}
           <div className="relative flex-1 sm:w-56">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted" />

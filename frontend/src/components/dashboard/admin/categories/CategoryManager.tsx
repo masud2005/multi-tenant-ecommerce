@@ -217,7 +217,7 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
       ) : (
         <div className="grid gap-6 lg:grid-cols-[320px_1fr] items-start">
           {/* Left column: Tree navigation */}
-          <div className="sticky top-6">
+          <div className="lg:sticky lg:top-6">
             <CategoryTree
               categories={categoriesList}
               activeKey={activeKey}
@@ -227,7 +227,7 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
               openKeys={openKeys}
               onToggleKey={handleToggleKey}
               getProductCount={getProductCount}
-              className="h-full min-h-[520px]"
+              className="h-full lg:min-h-[520px]"
             />
           </div>
 

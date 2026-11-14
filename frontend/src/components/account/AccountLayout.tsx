@@ -100,15 +100,15 @@ export function AccountLayout({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => setConfirmLogout(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-ink hover:bg-subtle transition-colors cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-ink hover:bg-subtle transition-colors cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
             Sign out
           </button>
         </div>
 
-        <div className="mb-5 lg:hidden">
-          <AccountMobileNav />
+        <div className="mb-6 lg:hidden">
+          <AccountMobileNav onSignOut={() => setConfirmLogout(true)} />
         </div>
 
         <div className="lg:grid lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[14.5rem_minmax(0,1fr)] xl:gap-12">

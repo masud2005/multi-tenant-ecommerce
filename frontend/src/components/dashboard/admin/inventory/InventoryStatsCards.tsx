@@ -35,14 +35,14 @@ export function InventoryStatsCards({ stats, loading }: InventoryStatsCardsProps
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
       {cards.map(([label, value, colorClass]) => (
         <div
           key={label}
-          className="rounded-lg border border-line bg-surface px-4 py-3 shadow-xs"
+          className="rounded-lg border border-line bg-surface p-3 sm:px-4 sm:py-3 shadow-xs min-w-0"
         >
-          <p className="text-xs text-ink-muted">{label}</p>
-          <p className={cn('mt-1 text-lg font-semibold tabular-nums', colorClass)}>
+          <p className="text-xs text-ink-muted truncate" title={label}>{label}</p>
+          <p className={cn('mt-1 text-base sm:text-lg font-semibold tabular-nums truncate', colorClass)}>
             {loading && !stats ? '...' : value}
           </p>
         </div>

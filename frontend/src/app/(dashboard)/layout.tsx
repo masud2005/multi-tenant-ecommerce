@@ -11,17 +11,17 @@ export default function DashboardLayout({
   return (
     <AdminGuard>
       <DashboardProvider>
-        <div className="flex h-screen w-full bg-canvas text-ink overflow-hidden">
+        <div className="fixed inset-0 flex h-full w-full max-w-full min-w-0 bg-canvas text-ink overflow-hidden">
           {/* Left Sidebar */}
           <DashboardSidebar />
 
           {/* Main Content Area */}
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-w-0 flex-1 flex-col h-full max-w-full overflow-hidden">
             {/* Top Header / Navbar */}
             <DashboardNavbar />
 
             {/* Dynamic page content */}
-            <main className="flex-1 overflow-y-auto bg-canvas p-6 lg:p-8">
+            <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-canvas p-3 sm:p-5 lg:p-8">
               {children}
             </main>
           </div>

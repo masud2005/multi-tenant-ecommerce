@@ -315,7 +315,7 @@ export function DiscountsManager() {
         </div>
 
         {/* Search & Type Filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {/* Search Box */}
           <div className="relative flex-1 sm:w-60">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted" />
@@ -388,7 +388,7 @@ export function DiscountsManager() {
       ) : (
         <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[680px] text-left text-xs">
               <thead className="border-b border-line bg-subtle/50 text-xs font-semibold uppercase tracking-wider text-ink-muted">
                 <tr>
                   <th scope="col" className="px-5 py-3.5">

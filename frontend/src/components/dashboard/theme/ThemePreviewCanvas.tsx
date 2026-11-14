@@ -320,10 +320,10 @@ export function ThemePreviewCanvas({ theme, focus = 'landing' }: ThemePreviewCan
   return (
     <div className="rounded-lg border border-line bg-subtle p-4">
       {/* Top Preview Control Bar */}
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold text-ink">Live Storefront Preview</p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Device Toggle */}
           <div
             className="flex rounded-md border border-line bg-surface p-0.5"

@@ -116,8 +116,8 @@ export default function AdminShippingPage() {
           }
         />
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6 min-w-0">
             <Panel
               title="Regional Delivery Rates"
               description="Set flat delivery rates for Dhaka city and all other 63 districts."

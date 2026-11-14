@@ -273,7 +273,7 @@ export default function AdminContentPage() {
                     onClick={() => openEntry(entry)}
                     className="flex w-full flex-wrap items-center gap-3 px-5 py-3.5 text-left text-sm hover:bg-canvas transition-colors cursor-pointer"
                   >
-                    <span className="min-w-[160px] flex-1">
+                    <span className="min-w-0 flex-1">
                       <span className="block font-medium text-ink">
                         {entry.title}
                       </span>
