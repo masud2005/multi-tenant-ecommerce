@@ -75,20 +75,33 @@ export function DashboardSidebarContent({
     return groups;
   }, [navItems, can, activeUser, isOwner, isStaffMember]);
 
+  const storeName = tenant.name?.trim() || '';
+  const logoUrl = tenant.logoUrl?.trim() || '';
+
   return (
     <div className="flex h-full flex-col bg-canvas text-ink select-none">
-      {/* Brand Header */}
       <div className="flex h-14 items-center gap-2.5 border-b border-line px-4 shrink-0">
-        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-ink font-display text-lg font-medium text-canvas shrink-0">
-          {tenant.name.charAt(0)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ink leading-tight">{tenant.name}</p>
-          <p className="truncate text-xs text-ink-muted leading-tight">{tenant.domain}</p>
-        </div>
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt={storeName || 'Store logo'}
+            className="h-8 w-8 shrink-0 rounded-md object-contain"
+          />
+        ) : storeName ? (
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-ink font-display text-lg font-medium text-canvas shrink-0">
+            {storeName.charAt(0)}
+          </span>
+        ) : null}
+        {storeName ? (
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink leading-tight">
+            {storeName}
+          </p>
+        ) : (
+          <span className="flex-1" />
+        )}
         <Link
           href="/"
-          target="_blank"
           className="rounded p-1.5 text-ink-muted hover:bg-subtle hover:text-ink transition-colors"
           aria-label="View store"
           title="View store"
@@ -171,20 +184,13 @@ export function DashboardSidebarContent({
         ))}
       </nav>
 
-      {/* View Public Storefront Link at bottom */}
-      <div className="border-t border-line p-3 shrink-0">
-        <Link
-          href="/"
-          target="_blank"
-          className="flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-medium text-ink-soft hover:bg-subtle hover:text-ink transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <ExternalLink className="h-3.5 w-3.5 text-ink-muted" />
-            <span>Live Storefront</span>
-          </div>
-          <span className="text-xs text-ink-muted">Tanti</span>
-        </Link>
-      </div>
+      <Link
+        href="/"
+        className="flex w-full shrink-0 items-center gap-2 border-t border-line px-4 py-3.5 text-xs font-medium text-ink-soft hover:bg-subtle hover:text-ink transition-colors"
+      >
+        <ExternalLink className="h-3.5 w-3.5 text-ink-muted" />
+        <span>Live Storefront</span>
+      </Link>
     </div>
   );
 }

@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowRightIcon } from 'lucide-react';
 import { PaymentMark } from '@/components/ui/PaymentMark';
 import { useTenant } from '@/contexts/TenantContext';
+import { useLandingConfig } from '@/components/store/landing';
 
 const columns = [
   {
@@ -39,10 +41,14 @@ const columns = [
   },
 ];
 
-export function StoreFooter() {
+export function StoreFooter({ homepage = false }: { homepage?: boolean }) {
   const { tenant } = useTenant();
+  const pathname = usePathname();
+  const { config } = useLandingConfig();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const onHomepage = homepage || pathname === '/';
+  const hideSubscribe = onHomepage && config.designs.newsletter?.visible === true;
 
   const subscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +81,7 @@ export function StoreFooter() {
                 {tenant.tagline}
               </p>
             ) : null}
+            {hideSubscribe ? null : (
             <form onSubmit={subscribe} className="mt-8 max-w-sm" noValidate>
               <label htmlFor="newsletter" className="text-sm font-medium">
                 Get 10% off your first order
@@ -102,6 +109,7 @@ export function StoreFooter() {
                 By subscribing you agree to receive marketing emails. Unsubscribe anytime.
               </p>
             </form>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-7">
             {columns.map((col) => (

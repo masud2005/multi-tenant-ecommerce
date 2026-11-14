@@ -313,7 +313,7 @@ export function ThemePreviewCanvas({ theme, focus = 'landing' }: ThemePreviewCan
       <main>
         <LandingHome />
       </main>
-      <StoreFooter />
+      <StoreFooter homepage />
     </div>
   );
 
