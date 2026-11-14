@@ -368,7 +368,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         back={{ href: '/admin/orders', label: 'Orders' }}
         title={order.number}
         meta={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <Badge tone={orderStatusMeta[order.status]?.tone || 'neutral'} dot>
               {orderStatusMeta[order.status]?.label || order.status}
             </Badge>
@@ -382,7 +382,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
         }
         description={`${formatDateTime(order.createdAt)} · ${order.channel === 'manual' ? 'Created by staff' : 'Online store'}`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <Button variant="secondary" size="sm" onClick={fetchOrderDetail} disabled={isLoading} className="cursor-pointer">
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden /> Refresh
             </Button>
@@ -501,7 +501,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             {(order.paymentMethod === 'bkash' || order.paymentMethod === 'nagad') && (
               <div className="mb-4 rounded-lg border border-line bg-subtle/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <span className="font-semibold text-sm text-ink capitalize">
                       {order.paymentMethod} Send Money
                     </span>
@@ -525,7 +525,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                       </div>
                       <div>
                         <span className="text-ink-muted block mb-0.5">Transaction ID (TrxID):</span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                           <span className="font-mono font-bold text-ink text-sm bg-subtle px-1.5 py-0.5 rounded">
                             {trxId}
                           </span>
@@ -595,8 +595,8 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             {order.attempts && order.attempts.length > 0 ? (
               <ul className="divide-y divide-line text-xs">
                 {order.attempts.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-2">
+                  <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       <span className="font-mono text-ink-muted">
                         {a.transactionId ? `TrxID: ${a.transactionId}` : a.ref || 'Direct / COD'}
                       </span>
@@ -604,7 +604,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         <span className="text-ink-soft">({a.senderPhone})</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       <Badge tone={paymentStatusMeta[a.status]?.tone || 'neutral'}>{a.status}</Badge>
                       <span className="font-medium text-ink tabular-nums">{formatBDT(a.amount)}</span>
                       <span className="text-ink-muted">{formatDateTime(a.at)}</span>

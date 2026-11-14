@@ -21,6 +21,7 @@ import {
   Archive,
   Circle,
   Loader2,
+  ChevronLeft,
   ChevronRight,
   HelpCircle,
   ShoppingBag,
@@ -47,6 +48,7 @@ import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/button';
 import { formatDateTime, timeAgo } from '@/utils/format';
+import { cn } from '@/lib/utils';
 
 const quickReplies = [
   'Hello! How can I assist you today?',
@@ -466,7 +468,12 @@ export default function AdminMessagesPage() {
       {/* Split inbox + chat — fills remaining height; message pane scrolls independently */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm md:flex-row">
         {/* LEFT: Conversation inbox */}
-        <div className="flex max-h-[34%] min-h-[9rem] w-full shrink-0 flex-col overflow-hidden border-b border-line bg-canvas/30 md:max-h-none md:h-full md:w-[16.5rem] md:border-b-0 md:border-r xl:w-[19rem]">
+        <div
+          className={cn(
+            'w-full shrink-0 flex-col overflow-hidden border-b border-line bg-canvas/30 md:flex md:h-full md:w-[16.5rem] md:border-b-0 md:border-r xl:w-[19rem]',
+            selectedConvId ? 'hidden md:flex' : 'flex flex-1'
+          )}
+        >
           {/* Search & Filter Bar */}
           <div className="p-3.5 border-b border-line space-y-2 bg-surface">
             <div className="relative">
@@ -586,12 +593,20 @@ export default function AdminMessagesPage() {
         </div>
 
         {/* RIGHT: Active conversation */}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface">
+        <div className={cn('min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface', !selectedConvId ? 'hidden md:flex' : 'flex')}>
           {selectedConversation ? (
             <>
               {/* Chat Workspace Header */}
-              <div className="flex shrink-0 items-center justify-between border-b border-line bg-canvas/40 p-4">
-                <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center justify-between border-b border-line bg-canvas/40 p-3 sm:p-4 gap-2">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedConvId(null)}
+                    className="md:hidden p-1.5 -ml-1 text-ink-muted hover:text-ink hover:bg-subtle rounded-md transition-colors cursor-pointer shrink-0"
+                    aria-label="Back to conversations"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
                   <div className="relative">
                     <div className="w-10 h-10 rounded-full bg-clay/15 text-clay font-bold text-sm flex items-center justify-center ring-2 ring-surface">
                       {selectedConversation.customerName.charAt(0).toUpperCase()}

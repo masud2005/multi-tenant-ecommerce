@@ -194,7 +194,7 @@ export default function AdminNewCategoryPage() {
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-12">
           {/* Main Column */}
-          <div className="space-y-6 lg:col-span-8">
+          <div className="space-y-6 lg:col-span-8 min-w-0">
             {/* General Info */}
             <Panel title="Category details">
               <div className="space-y-4">

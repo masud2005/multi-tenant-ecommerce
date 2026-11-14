@@ -417,7 +417,7 @@ function CustomersContent() {
       <div className="rounded-lg border border-line bg-surface shadow-xs">
         {/* Search & Status Filter Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <div className="relative min-w-[240px] flex-1">
+          <div className="relative w-full sm:w-auto sm:min-w-[240px] flex-1">
             <Search
               className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
               aria-hidden
@@ -432,7 +432,7 @@ function CustomersContent() {
           </div>
 
           <div
-            className="flex items-center gap-1 rounded-lg bg-subtle p-1"
+            className="flex items-center gap-1 rounded-lg bg-subtle p-1 w-full sm:w-auto justify-center sm:justify-start overflow-x-auto scrollbar-none"
             role="group"
             aria-label="Filter by account status"
           >
@@ -534,7 +534,7 @@ function CustomersContent() {
         {active && (
           <div className="space-y-5 px-5 py-5 text-sm">
             {/* Quick Metrics Cards */}
-            <dl className="grid grid-cols-3 gap-3 rounded-lg bg-canvas p-4 border border-line shadow-xs">
+            <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg bg-canvas p-4 border border-line shadow-xs">
               <div>
                 <dt className="text-xs text-ink-muted">Lifetime Spent</dt>
                 <dd className="mt-1 text-base font-bold text-ink">
@@ -557,7 +557,7 @@ function CustomersContent() {
             </dl>
 
             {/* Navigation Tabs for Details */}
-            <div className="flex items-center gap-2 border-b border-line pb-1">
+            <div className="flex items-center gap-2 border-b border-line pb-1 overflow-x-auto scrollbar-none">
               <button
                 type="button"
                 onClick={() => setActiveTab('products')}

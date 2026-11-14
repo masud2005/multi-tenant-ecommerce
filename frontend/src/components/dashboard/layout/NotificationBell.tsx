@@ -115,7 +115,7 @@ export function NotificationBell({}: NotificationBellProps = {}) {
     };
   }, []);
 
-  // Close on outside click
+  // Close on outside click or Escape key
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -123,8 +123,17 @@ export function NotificationBell({}: NotificationBellProps = {}) {
         setOpen(false);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [open]);
 
   const handleMarkAsRead = async (item: NotificationItem) => {
@@ -191,101 +200,111 @@ export function NotificationBell({}: NotificationBellProps = {}) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-84 sm:w-96 rounded-lg border border-line bg-surface shadow-pop animate-in fade-in-0 slide-in-from-top-1 duration-150 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-line px-4 py-3 bg-surface">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-ink">Notifications</p>
-              {unreadCount > 0 && (
-                <span className="rounded-full bg-clay/10 text-clay px-2 py-0.5 text-xs font-semibold">
-                  {unreadCount} unread
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
+        <>
+          {/* Mobile backdrop */}
+          <div
+            className="fixed inset-0 z-40 bg-ink/20 backdrop-blur-[1px] sm:hidden"
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Responsive Notification dropdown popover */}
+          <div className="fixed inset-x-3 top-[3.75rem] z-50 flex max-h-[calc(100dvh-4.75rem)] flex-col rounded-xl border border-line bg-surface shadow-pop overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 sm:max-w-sm sm:max-h-[32rem]">
+            <div className="flex items-center justify-between border-b border-line px-4 py-3 bg-surface shrink-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-ink">Notifications</p>
+                {unreadCount > 0 && (
+                  <span className="rounded-full bg-clay/10 text-clay px-2 py-0.5 text-xs font-semibold">
+                    {unreadCount} unread
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsRead}
+                    disabled={markingAll}
+                    className="text-xs font-medium text-clay hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    {markingAll ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Check className="h-3 w-3" />
+                    )}
+                    Mark all read
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={handleMarkAllAsRead}
-                  disabled={markingAll}
-                  className="text-xs font-medium text-clay hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  onClick={() => setOpen(false)}
+                  className="rounded-md p-1.5 text-ink-muted hover:text-ink hover:bg-subtle transition-colors cursor-pointer"
+                  title="Close notifications"
+                  aria-label="Close notifications"
                 >
-                  {markingAll ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Check className="h-3 w-3" />
-                  )}
-                  Mark all read
+                  <X className="h-4 w-4" />
                 </button>
+              </div>
+            </div>
+
+            <ul className="flex-1 min-h-0 overflow-y-auto divide-y divide-line">
+              {loading && notifications.length === 0 ? (
+                <li className="flex flex-col items-center justify-center py-8 text-ink-muted">
+                  <Loader2 className="h-5 w-5 animate-spin mb-2 text-clay" />
+                  <span className="text-xs">Loading notifications...</span>
+                </li>
+              ) : notifications.length === 0 ? (
+                <li className="flex flex-col items-center justify-center py-10 text-center px-4">
+                  <Bell className="h-8 w-8 text-ink-muted/40 mb-2" />
+                  <p className="text-sm font-medium text-ink">No notifications yet</p>
+                  <p className="text-xs text-ink-muted mt-1">
+                    When new orders or updates arrive, you&apos;ll see them here.
+                  </p>
+                </li>
+              ) : (
+                notifications.map((n) => {
+                  const targetLink = n.link || '/admin';
+                  return (
+                    <li key={n.id} className={!n.isRead ? 'bg-clay/5' : ''}>
+                      <Link
+                        href={targetLink}
+                        onClick={() => handleMarkAsRead(n)}
+                        className="block px-4 py-3 hover:bg-canvas transition-colors relative group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-ink leading-snug flex items-center gap-1.5">
+                              {!n.isRead && (
+                                <span className="h-2 w-2 rounded-full bg-clay shrink-0" />
+                              )}
+                              <span className="truncate">{n.title}</span>
+                            </p>
+                            <p className="mt-0.5 text-xs text-ink-muted leading-relaxed line-clamp-2 break-words">
+                              {n.message}
+                            </p>
+                            <span className="mt-1.5 block text-xs text-ink-muted/80">
+                              {formatRelativeTime(n.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })
               )}
-              <button
-                type="button"
+            </ul>
+
+            <div className="border-t border-line px-4 py-2.5 text-center bg-canvas/40 shrink-0">
+              <Link
+                href="/admin/notifications"
                 onClick={() => setOpen(false)}
-                className="rounded-md p-1 text-ink-muted hover:text-ink hover:bg-subtle transition-colors cursor-pointer"
-                title="Close notifications"
-                aria-label="Close notifications"
+                className="text-xs font-medium text-ink-muted hover:text-clay transition-colors"
               >
-                <X className="h-4 w-4" />
-              </button>
+                View notification settings & history →
+              </Link>
             </div>
           </div>
-
-          <ul className="max-h-96 overflow-y-auto divide-y divide-line">
-            {loading && notifications.length === 0 ? (
-              <li className="flex flex-col items-center justify-center py-8 text-ink-muted">
-                <Loader2 className="h-5 w-5 animate-spin mb-2 text-clay" />
-                <span className="text-xs">Loading notifications...</span>
-              </li>
-            ) : notifications.length === 0 ? (
-              <li className="flex flex-col items-center justify-center py-10 text-center px-4">
-                <Bell className="h-8 w-8 text-ink-muted/40 mb-2" />
-                <p className="text-sm font-medium text-ink">No notifications yet</p>
-                <p className="text-xs text-ink-muted mt-1">
-                  When new orders or updates arrive, you&apos;ll see them here.
-                </p>
-              </li>
-            ) : (
-              notifications.map((n) => {
-                const targetLink = n.link || '/admin';
-                return (
-                  <li key={n.id} className={!n.isRead ? 'bg-clay/5' : ''}>
-                    <Link
-                      href={targetLink}
-                      onClick={() => handleMarkAsRead(n)}
-                      className="block px-4 py-3 hover:bg-canvas transition-colors relative group"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold text-ink leading-snug flex items-center gap-1.5">
-                            {!n.isRead && (
-                              <span className="h-2 w-2 rounded-full bg-clay shrink-0" />
-                            )}
-                            <span className="truncate">{n.title}</span>
-                          </p>
-                          <p className="mt-0.5 text-xs text-ink-muted leading-relaxed line-clamp-2">
-                            {n.message}
-                          </p>
-                          <span className="mt-1.5 block text-xs text-ink-muted/80">
-                            {formatRelativeTime(n.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-
-          <div className="border-t border-line px-4 py-2.5 text-center bg-canvas/40">
-            <Link
-              href="/admin/notifications"
-              onClick={() => setOpen(false)}
-              className="text-xs font-medium text-ink-muted hover:text-ink transition-colors"
-            >
-              View notification settings & history →
-            </Link>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

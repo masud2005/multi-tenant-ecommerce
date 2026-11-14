@@ -27,7 +27,7 @@ export function InventoryFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-y border-line px-4 py-3">
-      <div className="relative min-w-[200px] flex-1">
+      <div className="relative w-full sm:w-auto sm:min-w-[200px] flex-1">
         <Search
           className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
           aria-hidden
@@ -41,7 +41,7 @@ export function InventoryFilters({
         />
       </div>
       <div
-        className="flex rounded-md border border-line p-0.5 text-xs"
+        className="flex w-full sm:w-auto rounded-md border border-line p-0.5 text-xs overflow-x-auto scrollbar-none"
         role="group"
         aria-label="Stock filter"
       >
@@ -52,7 +52,7 @@ export function InventoryFilters({
             onClick={() => onStockFilterChange(key)}
             aria-pressed={stockFilter === key}
             className={cn(
-              'rounded px-2.5 py-1 cursor-pointer transition-colors',
+              'flex-1 sm:flex-initial text-center whitespace-nowrap rounded px-2.5 py-1 cursor-pointer transition-colors',
               stockFilter === key
                 ? 'bg-ink text-canvas font-medium shadow-xs'
                 : 'text-ink-muted hover:text-ink'

@@ -95,15 +95,18 @@ function NavList({
               href={link.href}
               onClick={onNavigate}
               className={cn(
-                'flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all',
+                'group relative flex items-center justify-between rounded-lg pl-3.5 pr-3 py-2 text-sm border transition-all duration-150',
                 active
-                  ? 'bg-ink text-canvas font-semibold shadow-xs'
-                  : 'font-medium text-ink-soft hover:bg-subtle hover:text-ink'
+                  ? 'bg-surface font-semibold text-clay shadow-xs border-clay/30 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1.5 before:rounded-r-full before:bg-clay'
+                  : 'border-transparent text-ink-soft hover:bg-subtle/80 hover:text-ink font-medium'
               )}
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <Icon
-                  className={cn('h-4 w-4 shrink-0', active ? 'text-canvas' : 'text-ink-muted')}
+                  className={cn(
+                    'h-4 w-4 shrink-0 transition-colors',
+                    active ? 'text-clay stroke-[2.2]' : 'text-ink-muted group-hover:text-ink'
+                  )}
                   aria-hidden
                 />
                 <span className="truncate">{link.label}</span>
@@ -111,8 +114,10 @@ function NavList({
               {badge !== null && (
                 <span
                   className={cn(
-                    'flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
-                    active ? 'bg-canvas text-ink' : 'bg-subtle text-ink'
+                    'flex h-5 min-w-5 items-center justify-center rounded-full px-2 text-xs font-semibold tabular-nums leading-none transition-colors',
+                    active
+                      ? 'bg-clay text-white shadow-xs'
+                      : 'bg-subtle text-ink-muted group-hover:bg-line group-hover:text-ink'
                   )}
                 >
                   {badge}
@@ -146,13 +151,13 @@ export function AccountSideNav() {
   return (
     <nav aria-label="Account sections" className="space-y-6">
       <div>
-        <p className="mb-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+        <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted/80">
           Shopping & Orders
         </p>
         <NavList links={main} pathname={pathname} counts={counts} />
       </div>
       <div>
-        <p className="mb-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+        <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-ink-muted/80">
           Settings & Support
         </p>
         <NavList links={settings} pathname={pathname} counts={counts} />
@@ -190,11 +195,11 @@ export function AccountMobileNav({ onSignOut }: { onSignOut?: () => void }) {
       {/* Clean Single Mobile Account Bar with Side Menu Trigger */}
       <div className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-3.5 shadow-2xs">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink text-canvas shadow-xs">
-            <ActiveIcon className="h-5 w-5" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-clay/15 text-clay shadow-xs">
+            <ActiveIcon className="h-5 w-5 stroke-[2.2]" />
           </div>
           <div className="min-w-0">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
               {pathname === '/account' ? 'Dashboard' : 'Account Section'}
             </span>
             <p className="truncate text-base font-semibold text-ink leading-tight mt-0.5">
@@ -305,10 +310,10 @@ export function AccountMobileNav({ onSignOut }: { onSignOut?: () => void }) {
 
           {/* Section 1: Shopping & Orders */}
           <div className="space-y-1.5">
-            <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted/80">
               Shopping & Orders
             </p>
-            <div className="divide-y divide-line/40 rounded-xl border border-line bg-surface overflow-hidden shadow-2xs">
+            <div className="space-y-1">
               {main.map((link) => {
                 const Icon = link.icon;
                 const active = isActive(pathname, link);
@@ -320,28 +325,38 @@ export function AccountMobileNav({ onSignOut }: { onSignOut?: () => void }) {
                     href={link.href}
                     onClick={() => setDrawerOpen(false)}
                     className={cn(
-                      'flex items-center justify-between px-3.5 py-3 text-xs font-medium transition-colors',
+                      'group relative flex items-center justify-between rounded-lg pl-3.5 pr-3 py-2.5 text-xs sm:text-sm border transition-all duration-150',
                       active
-                        ? 'bg-ink text-canvas font-semibold'
-                        : 'text-ink hover:bg-subtle'
+                        ? 'bg-surface font-semibold text-clay shadow-xs border-clay/30 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1.5 before:rounded-r-full before:bg-clay'
+                        : 'border-transparent text-ink hover:bg-subtle/80 font-medium'
                     )}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-canvas' : 'text-ink-muted')} />
+                      <Icon
+                        className={cn(
+                          'h-4 w-4 shrink-0 transition-colors',
+                          active ? 'text-clay stroke-[2.2]' : 'text-ink-muted group-hover:text-ink'
+                        )}
+                      />
                       <span className="truncate">{link.label}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {badge !== null && (
                         <span
                           className={cn(
-                            'flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
-                            active ? 'bg-canvas text-ink' : 'bg-subtle text-ink-soft'
+                            'flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums leading-none transition-colors',
+                            active ? 'bg-clay text-white shadow-2xs' : 'bg-subtle text-ink-muted'
                           )}
                         >
                           {badge}
                         </span>
                       )}
-                      <ChevronRight className={cn('h-3.5 w-3.5', active ? 'text-canvas/60' : 'text-ink-muted')} />
+                      <ChevronRight
+                        className={cn(
+                          'h-3.5 w-3.5 transition-colors',
+                          active ? 'text-clay' : 'text-ink-muted/60 group-hover:text-ink-muted'
+                        )}
+                      />
                     </div>
                   </Link>
                 );
@@ -351,10 +366,10 @@ export function AccountMobileNav({ onSignOut }: { onSignOut?: () => void }) {
 
           {/* Section 2: Account Settings */}
           <div className="space-y-1.5">
-            <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+            <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-ink-muted/80">
               Account Settings
             </p>
-            <div className="divide-y divide-line/40 rounded-xl border border-line bg-surface overflow-hidden shadow-2xs">
+            <div className="space-y-1">
               {settings.map((link) => {
                 const Icon = link.icon;
                 const active = isActive(pathname, link);
@@ -366,28 +381,38 @@ export function AccountMobileNav({ onSignOut }: { onSignOut?: () => void }) {
                     href={link.href}
                     onClick={() => setDrawerOpen(false)}
                     className={cn(
-                      'flex items-center justify-between px-3.5 py-3 text-xs font-medium transition-colors',
+                      'group relative flex items-center justify-between rounded-lg pl-3.5 pr-3 py-2.5 text-xs sm:text-sm border transition-all duration-150',
                       active
-                        ? 'bg-ink text-canvas font-semibold'
-                        : 'text-ink hover:bg-subtle'
+                        ? 'bg-surface font-semibold text-clay shadow-xs border-clay/30 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1.5 before:rounded-r-full before:bg-clay'
+                        : 'border-transparent text-ink hover:bg-subtle/80 font-medium'
                     )}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-canvas' : 'text-ink-muted')} />
+                      <Icon
+                        className={cn(
+                          'h-4 w-4 shrink-0 transition-colors',
+                          active ? 'text-clay stroke-[2.2]' : 'text-ink-muted group-hover:text-ink'
+                        )}
+                      />
                       <span className="truncate">{link.label}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {badge !== null && (
                         <span
                           className={cn(
-                            'flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
-                            active ? 'bg-canvas text-ink' : 'bg-subtle text-ink-soft'
+                            'flex h-4 min-w-4 items-center justify-center rounded-full px-1.5 text-[10px] font-bold tabular-nums leading-none transition-colors',
+                            active ? 'bg-clay text-white shadow-2xs' : 'bg-subtle text-ink-muted'
                           )}
                         >
                           {badge}
                         </span>
                       )}
-                      <ChevronRight className={cn('h-3.5 w-3.5', active ? 'text-canvas/60' : 'text-ink-muted')} />
+                      <ChevronRight
+                        className={cn(
+                          'h-3.5 w-3.5 transition-colors',
+                          active ? 'text-clay' : 'text-ink-muted/60 group-hover:text-ink-muted'
+                        )}
+                      />
                     </div>
                   </Link>
                 );

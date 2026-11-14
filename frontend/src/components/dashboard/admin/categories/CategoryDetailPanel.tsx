@@ -457,7 +457,7 @@ export function CategoryDetailPanel({
         >
           {displayedProducts.length > 0 ? (
             <div className="overflow-x-auto -mx-5">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[500px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-line bg-canvas/50 text-xs text-ink-muted font-medium">
                     <th className="py-2.5 px-5">Product</th>
@@ -564,7 +564,7 @@ export function CategoryDetailPanel({
         }`}
         actions={
           isEditingCategory ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={(e) => {
@@ -592,7 +592,7 @@ export function CategoryDetailPanel({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge
                 tone={
                   status === 'published'
@@ -1037,7 +1037,7 @@ export function CategoryDetailPanel({
           {/* Product Table */}
           {displayedProducts.length > 0 ? (
             <div className="overflow-x-auto -mx-5">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[500px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-line bg-canvas/50 text-xs text-ink-muted font-medium">
                     <th className="py-2.5 px-5">Product</th>

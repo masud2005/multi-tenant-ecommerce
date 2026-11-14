@@ -284,7 +284,7 @@ function ReturnsContent() {
       />
 
       {/* Top Metric Cards */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
         {stats.map(([label, value]) => (
           <div
             key={label}
@@ -328,7 +328,7 @@ function ReturnsContent() {
 
         {/* Search Bar */}
         <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-          <div className="relative min-w-[240px] flex-1">
+          <div className="relative w-full flex-1">
             <Search
               className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
               aria-hidden

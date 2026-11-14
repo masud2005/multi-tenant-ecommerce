@@ -19,32 +19,6 @@ interface WishlistVariantRaw {
   reserved?: number | string;
 }
 
-interface WishlistProductRaw {
-  id?: string;
-  slug?: string;
-  title?: string;
-  brand?: { name?: string } | string;
-  category?: { slug?: string; name?: string } | string;
-  subcategory?: { name?: string };
-  images?: Array<string | { url?: string }>;
-  coverImage?: string;
-  variants?: WishlistVariantRaw[];
-  price?: number | string;
-  salePrice?: number | string | null;
-  totalStock?: number | string;
-  availableColors?: string[];
-  availableSizes?: string[];
-  rating?: number | string;
-  reviewCount?: number | string;
-  shortDescription?: string;
-  preorder?: boolean;
-  isNew?: boolean;
-  isBestseller?: boolean;
-  barcode?: string;
-  savedAt?: string;
-  product?: WishlistProductRaw;
-}
-
 function mapWishlistProductToDomain(item: WishlistItemResponse): Product {
   const p = item.product;
   const imageUrls =

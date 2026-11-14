@@ -285,7 +285,7 @@ export default function AdminNotificationsPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
                 {(
                   [
                     'All',
@@ -315,7 +315,7 @@ export default function AdminNotificationsPage() {
 
             <Panel className="overflow-hidden border-line bg-surface">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="w-full min-w-[640px] text-left text-sm">
                   <thead className="border-b border-line bg-canvas/60 text-xs uppercase tracking-wider text-ink-muted">
                     <tr>
                       <th className="px-5 py-3.5 font-semibold">Event Trigger</th>
@@ -455,7 +455,7 @@ export default function AdminNotificationsPage() {
 
             <Panel className="overflow-hidden border-line bg-surface">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+                <table className="w-full min-w-[640px] text-left text-sm">
                   <thead className="border-b border-line bg-canvas/60 text-xs uppercase tracking-wider text-ink-muted">
                     <tr>
                       <th className="px-5 py-3.5 font-semibold">Title & Details</th>

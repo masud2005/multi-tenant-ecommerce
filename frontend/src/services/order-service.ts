@@ -526,7 +526,6 @@ export const orderService = {
     orderId: string,
     text: string,
     internal: boolean,
-    _by: string,
   ): Promise<boolean> {
     await apiClient.post(`/owner/orders/${encodeURIComponent(orderId)}/notes`, {
       text,

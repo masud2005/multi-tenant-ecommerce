@@ -332,7 +332,7 @@ export function CollectionsManager({
         </div>
 
         {/* Search & Sort Inputs */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {/* Search Box */}
           <div className="relative flex-1 sm:w-60">
             <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted" />

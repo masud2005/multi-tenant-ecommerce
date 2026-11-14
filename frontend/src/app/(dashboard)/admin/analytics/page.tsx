@@ -226,7 +226,7 @@ export default function AdminAnalyticsPage() {
           actions={
             <>
               <div
-                className="flex rounded-md border border-line bg-surface p-0.5 text-xs"
+                className="flex overflow-x-auto scrollbar-none rounded-md border border-line bg-surface p-0.5 text-xs max-w-full"
                 role="group"
                 aria-label="Date range"
               >
@@ -499,41 +499,43 @@ export default function AdminAnalyticsPage() {
                 No customer search queries recorded yet. Type any word in the storefront search bar to test live tracking.
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-line text-left text-xs text-ink-muted">
-                    <th className="px-5 py-2.5 font-medium">Search</th>
-                    <th className="px-5 py-2.5 text-right font-medium">Searches</th>
-                    <th className="px-5 py-2.5 text-right font-medium">Products Found</th>
-                    <th className="px-5 py-2.5 text-right font-medium">Product Clicks</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {searchesData.map((s) => (
-                    <tr key={s.term} className="hover:bg-subtle/30 transition-colors">
-                      <td className="px-5 py-2.5 font-medium text-ink capitalize">
-                        {s.term}
-                      </td>
-                      <td className="px-5 py-2.5 text-right tabular-nums text-ink font-semibold">
-                        {formatNumber(s.count)}
-                      </td>
-                      <td
-                        className={cn(
-                          'px-5 py-2.5 text-right tabular-nums font-medium',
-                          s.results === 0
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-ink'
-                        )}
-                      >
-                        {s.results === 0 ? '0 (No results)' : formatNumber(s.results)}
-                      </td>
-                      <td className="px-5 py-2.5 text-right tabular-nums text-ink font-semibold">
-                        {formatNumber(s.clicks || 0)}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[500px] text-sm">
+                  <thead>
+                    <tr className="border-b border-line text-left text-xs text-ink-muted">
+                      <th className="px-5 py-2.5 font-medium">Search</th>
+                      <th className="px-5 py-2.5 text-right font-medium">Searches</th>
+                      <th className="px-5 py-2.5 text-right font-medium">Products Found</th>
+                      <th className="px-5 py-2.5 text-right font-medium">Product Clicks</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {searchesData.map((s) => (
+                      <tr key={s.term} className="hover:bg-subtle/30 transition-colors">
+                        <td className="px-5 py-2.5 font-medium text-ink capitalize">
+                          {s.term}
+                        </td>
+                        <td className="px-5 py-2.5 text-right tabular-nums text-ink font-semibold">
+                          {formatNumber(s.count)}
+                        </td>
+                        <td
+                          className={cn(
+                            'px-5 py-2.5 text-right tabular-nums font-medium',
+                            s.results === 0
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-ink'
+                          )}
+                        >
+                          {s.results === 0 ? '0 (No results)' : formatNumber(s.results)}
+                        </td>
+                        <td className="px-5 py-2.5 text-right tabular-nums text-ink font-semibold">
+                          {formatNumber(s.clicks || 0)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </Panel>
         </div>

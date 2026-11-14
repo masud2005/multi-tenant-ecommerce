@@ -1,5 +1,5 @@
 // Domain contract types for authentication and session management
-import type { StoredUser, UserRole } from './user';
+import type { StoredUser } from './user';
 
 export type OtpType = 'ACCOUNT_VERIFY' | 'PASSWORD_RESET';
 

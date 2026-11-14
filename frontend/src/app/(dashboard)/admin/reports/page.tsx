@@ -356,7 +356,7 @@ export default function AdminReportsPage() {
                     className="h-4 w-4 text-ink-muted shrink-0"
                     aria-hidden
                   />
-                  <div className="min-w-[200px] flex-1">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-ink">{report.name}</p>
                     <p className="text-xs text-ink-muted">{report.description}</p>
                   </div>

@@ -473,12 +473,12 @@ export default function AdminSettingsPage() {
             title="Store Settings & Configuration"
             description="Manage store branding, payments, and personal account security."
             actions={
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={handleTopRefresh}
-                  className="cursor-pointer"
+                  className="cursor-pointer flex-1 sm:flex-initial"
                 >
                   <RefreshCw className="h-4 w-4 mr-1.5" /> Refresh
                 </Button>
@@ -486,7 +486,7 @@ export default function AdminSettingsPage() {
                   size="sm"
                   loading={isSaving || isSavingProfile || isChangingPw}
                   onClick={handleTopSave}
-                  className="cursor-pointer bg-ink text-canvas hover:bg-ink/90 font-medium px-4"
+                  className="cursor-pointer bg-ink text-canvas hover:bg-ink/90 font-medium px-4 flex-1 sm:flex-initial"
                 >
                   <Save className="h-4 w-4 mr-1.5" /> Save Changes
                 </Button>
@@ -499,7 +499,7 @@ export default function AdminSettingsPage() {
             {/* Left Navigation Sidebar */}
             <nav
               aria-label="Settings sections"
-              className="flex gap-1.5 overflow-x-auto md:flex-col"
+              className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-none md:flex-col md:overflow-visible md:pb-0"
             >
               {sections.map((s) => {
                 const Icon = s.icon;
@@ -945,7 +945,7 @@ export default function AdminSettingsPage() {
                         sessions.map((session) => (
                           <div
                             key={session.id}
-                            className="flex items-start justify-between gap-4 py-4 first:pt-0 last:pb-0"
+                            className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 py-4 first:pt-0 last:pb-0"
                           >
                             <div className="flex items-start gap-3">
                               <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-subtle">

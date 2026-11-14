@@ -34,7 +34,7 @@ export function CategoryTree({
       title="Category tree"
       description="Click a category or subcategory to manage"
       flush
-      className={cn('h-full min-h-[480px] flex flex-col', className)}
+      className={cn('h-full lg:min-h-[480px] flex flex-col', className)}
       bodyClassName="flex-1"
     >
       <ul className="py-2" role="tree">

@@ -540,8 +540,8 @@ export function ProductEditor({ id }: { id?: string }) {
           )
         }
       />
-      <fieldset disabled={readOnly || isSubmitting || isDeleting} className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
+      <fieldset disabled={readOnly || isSubmitting || isDeleting} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6 min-w-0">
           <Panel>
             <div className="space-y-4">
               <Input
@@ -1303,11 +1303,11 @@ export function ProductEditor({ id }: { id?: string }) {
 
       {(dirty || !existing) && !readOnly && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 backdrop-blur-md lg:left-60">
-          <div className="flex w-full items-center justify-between gap-3 px-6 py-3 lg:px-8">
-            <p className="text-sm text-ink-muted">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8">
+            <p className="text-xs sm:text-sm text-ink-muted">
               {existing ? 'Unsaved changes' : 'New product'}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <GuardedButton
                 module="products"
                 action="update"

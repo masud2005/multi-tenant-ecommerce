@@ -33,7 +33,7 @@ export default function AdminProductImportPage() {
           description="CSV bulk import is not available yet. Download the column template to prepare a file, or add products one at a time. For catalog export, use Products → Export or Reports → Inventory."
         />
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <Panel>
             <EmptyState
               icon={UploadCloud}

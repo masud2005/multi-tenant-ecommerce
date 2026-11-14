@@ -34,57 +34,59 @@ export function OrderProgress({ order }: { order: Order }) {
           </span>
         </div>
       )}
-      <ol className="grid grid-cols-6 gap-1" aria-label="Order progress">
-        {fulfillmentSteps.map((s, i) => {
-          const done = i <= current;
-          const isNext = i === current + 1;
-          return (
-            <li
-              key={s.status}
-              className="flex flex-col items-center text-center"
-              aria-current={i === current ? 'step' : undefined}
-            >
-              <div className="flex w-full items-center">
-                <span className={cn('h-0.5 flex-1', i === 0 ? 'bg-transparent' : done ? 'bg-ink' : 'bg-line')} />
+      <div className="overflow-x-auto pb-1 scrollbar-none">
+        <ol className="grid min-w-[480px] sm:min-w-0 grid-cols-6 gap-1" aria-label="Order progress">
+          {fulfillmentSteps.map((s, i) => {
+            const done = i <= current;
+            const isNext = i === current + 1;
+            return (
+              <li
+                key={s.status}
+                className="flex flex-col items-center text-center"
+                aria-current={i === current ? 'step' : undefined}
+              >
+                <div className="flex w-full items-center">
+                  <span className={cn('h-0.5 flex-1', i === 0 ? 'bg-transparent' : done ? 'bg-ink' : 'bg-line')} />
+                  <span
+                    className={cn(
+                      'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all',
+                      done
+                        ? 'border-ink bg-ink text-canvas'
+                        : isNext
+                        ? 'border-clay bg-surface text-clay font-semibold text-xs'
+                        : 'border-line-strong bg-surface text-ink-muted text-xs'
+                    )}
+                  >
+                    {done ? (
+                      <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
+                    ) : (
+                      <span>{i + 1}</span>
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      'h-0.5 flex-1',
+                      i === fulfillmentSteps.length - 1 ? 'bg-transparent' : i < current ? 'bg-ink' : 'bg-line'
+                    )}
+                  />
+                </div>
                 <span
                   className={cn(
-                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all',
+                    'mt-2 text-xs leading-tight sm:text-xs',
                     done
-                      ? 'border-ink bg-ink text-canvas'
+                      ? 'font-medium text-ink'
                       : isNext
-                      ? 'border-clay bg-surface text-clay font-semibold text-xs'
-                      : 'border-line-strong bg-surface text-ink-muted text-xs'
+                      ? 'font-medium text-clay'
+                      : 'text-ink-muted'
                   )}
                 >
-                  {done ? (
-                    <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden />
-                  ) : (
-                    <span>{i + 1}</span>
-                  )}
+                  {s.label}
                 </span>
-                <span
-                  className={cn(
-                    'h-0.5 flex-1',
-                    i === fulfillmentSteps.length - 1 ? 'bg-transparent' : i < current ? 'bg-ink' : 'bg-line'
-                  )}
-                />
-              </div>
-              <span
-                className={cn(
-                  'mt-2 text-xs leading-tight sm:text-xs',
-                  done
-                    ? 'font-medium text-ink'
-                    : isNext
-                    ? 'font-medium text-clay'
-                    : 'text-ink-muted'
-                )}
-              >
-                {s.label}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </div>
   );
 }

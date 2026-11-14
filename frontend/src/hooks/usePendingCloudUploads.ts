@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type CloudUploadResourceType = 'image' | 'raw' | 'video';
 
@@ -28,9 +28,12 @@ export function usePendingCloudUploads({
 }) {
   const [items, setItems] = useState<PendingCloudUpload[]>([]);
   const itemsRef = useRef(items);
-  itemsRef.current = items;
   const discardRef = useRef(discardRemote);
-  discardRef.current = discardRemote;
+
+  useEffect(() => {
+    itemsRef.current = items;
+    discardRef.current = discardRemote;
+  });
 
   const add = useCallback(
     (upload: Omit<PendingCloudUpload, 'key'> & { key?: string }) => {

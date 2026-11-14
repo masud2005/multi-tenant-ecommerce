@@ -51,7 +51,7 @@ export function DashboardMobileSidebar({
       {/* Drawer Overlay */}
       <div
         className={cn(
-          'fixed inset-0 z-50 transition-visibility duration-200',
+          'fixed inset-0 z-50 overflow-hidden transition-visibility duration-200',
           open ? 'visible' : 'invisible pointer-events-none'
         )}
         role="dialog"
