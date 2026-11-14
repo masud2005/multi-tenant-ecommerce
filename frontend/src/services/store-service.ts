@@ -6,18 +6,10 @@ export interface StoreFlags {
   guest?: boolean;
   phoneOtp?: boolean;
   notes?: boolean;
-  maintenance?: boolean;
-  cookie?: boolean;
-  social?: boolean;
-  mfa?: boolean;
   vatIncl?: boolean;
   vatShip?: boolean;
-  photos?: boolean;
-  exchanges?: boolean;
-  finalSale?: boolean;
   vatRate?: string;
   binNumber?: string;
-  returnWindow?: string;
 }
 
 export interface StoreSettingsBag {
