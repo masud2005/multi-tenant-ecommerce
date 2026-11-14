@@ -267,9 +267,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production-frontend
-    defaults:
-      run:
-        working-directory: frontend
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_FRONTEND }}
@@ -322,9 +319,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production-backend
-    defaults:
-      run:
-        working-directory: backend
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_BACKEND }}
@@ -337,18 +331,20 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - name: Install dependencies
+      - name: Install backend dependencies
+        working-directory: backend
         run: npm ci
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       - name: Pull Vercel environment
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
       - name: Run Prisma Database Migrations
+        working-directory: backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          if [ -z "${DATABASE_URL:-}" ] && [ -f .vercel/.env.production.local ]; then
-            export DATABASE_URL=$(grep -E '^DATABASE_URL=' .vercel/.env.production.local | head -n 1 | cut -d '=' -f2- | tr -d '"\r')
+          if [ -z "${DATABASE_URL:-}" ] && [ -f ../.vercel/.env.production.local ]; then
+            export DATABASE_URL=$(grep -E '^DATABASE_URL=' ../.vercel/.env.production.local | head -n 1 | cut -d '=' -f2- | tr -d '"\r')
           fi
           if [ -n "${DATABASE_URL:-}" ]; then
             echo "Applying Prisma migrations to production database..."
