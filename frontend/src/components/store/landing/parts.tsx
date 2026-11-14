@@ -149,7 +149,7 @@ export function ProductPick({ product }: { product: Product }) {
   const image = product.images[0];
 
   return (
-    <article className="group">
+    <article className="group min-w-0">
       <div className="relative overflow-hidden rounded-lg bg-subtle">
         <Link href={`/products/${product.slug}`} className="block">
           {image ? (
@@ -179,29 +179,36 @@ export function ProductPick({ product }: { product: Product }) {
           <Heart className={cn('h-4 w-4', wished && 'fill-clay text-clay')} />
         </button>
       </div>
-      <div className="mt-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link href={`/products/${product.slug}`} className="block truncate text-sm font-medium text-ink">
-            {product.title}
-          </Link>
-          <p className="mt-0.5 text-xs text-ink-muted">{prettyLabel(product.category)}</p>
-        </div>
+      <div className="mt-3 min-w-0">
+        <Link href={`/products/${product.slug}`} className="block truncate text-sm font-medium text-ink hover:underline">
+          {product.title}
+        </Link>
+        <p className="mt-0.5 truncate text-xs text-ink-muted">{prettyLabel(product.category)}</p>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-ink">
-          {formatBDT(price)}
+      <div className="mt-2 flex items-center justify-between gap-2 min-w-0">
+        <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
+          <span className="text-sm font-semibold tabular-nums text-ink">
+            {formatBDT(price)}
+          </span>
           {compare && compare > price && (
-            <span className="ml-2 text-xs font-normal text-ink-muted line-through">
+            <span className="text-xs font-normal tabular-nums text-ink-muted line-through">
               {formatBDT(compare)}
             </span>
           )}
           {off > 0 && <span className="sr-only">, {off}% off</span>}
-        </p>
-        <p className="flex items-center gap-1 text-xs text-ink-muted">
-          <Stars rating={product.rating || 0} />
-          <span>{(product.rating || 0).toFixed(1)}</span>
-          <span>({product.reviewCount || 0})</span>
-        </p>
+        </div>
+        {/* Method 2: Compact rating on mobile (1 star + score), full 5 stars on desktop */}
+        <div className="flex items-center gap-1 text-xs text-ink-muted shrink-0">
+          <span className="flex sm:hidden items-center gap-1">
+            <Star className="h-3.5 w-3.5 fill-clay text-clay" aria-hidden="true" />
+            <span className="font-semibold text-ink">{(product.rating || 0).toFixed(1)}</span>
+          </span>
+          <span className="hidden sm:inline-flex items-center gap-1">
+            <Stars rating={product.rating || 0} />
+            <span className="font-semibold text-ink">{(product.rating || 0).toFixed(1)}</span>
+          </span>
+          <span className="text-[11px] text-ink-muted">({product.reviewCount || 0})</span>
+        </div>
       </div>
     </article>
   );
@@ -264,17 +271,17 @@ export function NewsletterBand({
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Your email address"
               className={cn(
-                'h-12 flex-1 rounded-lg border px-4 text-sm outline-none',
+                'h-12 min-h-[48px] w-full sm:w-auto sm:flex-1 appearance-none rounded-xl border px-4 py-3 text-sm outline-none transition-all shadow-xs',
                 ink
-                  ? 'border-canvas/20 bg-canvas/10 text-canvas placeholder:text-canvas/45 focus:border-canvas/50'
-                  : 'border-line bg-canvas text-ink placeholder:text-ink-muted focus:border-ink'
+                  ? 'border-white/20 bg-white/[0.08] text-white placeholder:text-white/60 focus:border-clay focus:ring-2 focus:ring-clay/30 focus:bg-white/[0.12]'
+                  : 'border-line bg-surface text-ink placeholder:text-ink-muted focus:border-clay focus:ring-2 focus:ring-clay/30'
               )}
             />
             <button
               type="submit"
               className={cn(
-                'inline-flex h-12 items-center justify-center gap-2 rounded-lg px-6 text-sm font-medium',
-                ink ? 'bg-canvas text-ink' : 'bg-ink text-canvas'
+                'inline-flex h-12 min-h-[48px] w-full sm:w-auto items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold transition-all cursor-pointer shadow-xs active:scale-[0.99] shrink-0',
+                ink ? 'bg-clay hover:bg-clay-dark text-white' : 'bg-ink hover:bg-ink/90 text-canvas'
               )}
             >
               Subscribe
