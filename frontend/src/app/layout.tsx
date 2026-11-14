@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -19,6 +19,12 @@ const fraunces = localFont({
 export const metadata: Metadata = {
   title: "Tanti Admin · Multi-Tenant Fashion Platform",
   description: "Merchant administration for Tanti",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 import { Toaster } from "sonner";
