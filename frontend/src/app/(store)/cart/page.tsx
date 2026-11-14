@@ -125,151 +125,153 @@ export default function CartPage() {
           )}
           <ul className="divide-y divide-line border-y border-line">
             {active.map(({ item, product, variant, unitPrice, maxQty, issue }) => (
-              <li key={item.key} className="flex gap-5 py-6">
-                <Link href={`/products/${product.slug}`} className="shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={product.images[0]}
-                    alt=""
-                    className="h-36 w-28 rounded object-cover"
-                  />
-                </Link>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <div>
-                      <Link
-                        href={`/products/${product.slug}`}
-                        className="font-medium hover:underline"
-                      >
-                        {product.title}
-                      </Link>
-                      <p className="mt-0.5 text-sm text-ink/80">{variant.color}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium tabular-nums">
-                        {formatBDT(unitPrice * item.qty)}
-                      </p>
-                      {item.qty > 1 && (
-                        <p className="text-xs tabular-nums text-ink/80">
-                          {formatBDT(unitPrice)} each
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  {issue && (
-                    <p className="mt-2 text-sm font-medium text-danger">
-                      {issue === 'out_of_stock'
-                        ? 'This size just sold out. Choose another size or save it for later.'
-                        : `Only ${maxQty} left — quantity will be reduced at checkout.`}
-                    </p>
-                  )}
-                  <div className="mt-auto flex flex-wrap items-center gap-3 pt-4">
-                    {product.sizes.length > 1 && (
-                      <select
-                        aria-label="Size"
-                        value={variant.id}
-                        onChange={(e) => changeVariant(item.key, e.target.value)}
-                        className="h-9 cursor-pointer rounded-md border border-line-strong bg-surface px-2 text-sm"
-                      >
-                        {product.variants
-                          .filter((v) => v.color === variant.color)
-                          .map((v) => (
-                            <option
-                              key={v.id}
-                              value={v.id}
-                              disabled={!product.preorder && v.stock - v.reserved <= 0}
-                            >
-                              {v.size}
-                              {!product.preorder && v.stock - v.reserved <= 0 ? ' — sold out' : ''}
-                            </option>
-                          ))}
-                      </select>
-                    )}
-                    <div className="inline-flex h-9 items-center rounded-md border border-line-strong">
-                      <button
-                        type="button"
-                        aria-label="Decrease quantity"
-                        disabled={item.qty <= 1}
-                        onClick={() => updateQty(item.key, item.qty - 1)}
-                        className="flex h-full w-9 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <MinusIcon className="h-3.5 w-3.5" />
-                      </button>
-                      <span className="w-8 text-center text-sm tabular-nums">{item.qty}</span>
-                      <button
-                        type="button"
-                        aria-label="Increase quantity"
-                        disabled={item.qty >= maxQty}
-                        onClick={() => updateQty(item.key, item.qty + 1)}
-                        className="flex h-full w-9 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <PlusIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleSaveForLater(item.key)}
-                      className="cursor-pointer text-sm text-ink/80 underline-offset-2 hover:text-ink hover:underline"
-                    >
-                      Save for later
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeFromCart(item.key)}
-                      className="cursor-pointer text-sm text-ink/80 underline-offset-2 hover:text-ink hover:underline"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {saved.length > 0 && (
-            <section className="mt-12" aria-labelledby="saved-h">
-              <h2 id="saved-h" className="flex items-center gap-2 text-sm font-medium">
-                <BookmarkIcon className="h-4 w-4" aria-hidden /> Saved for later ({saved.length})
-              </h2>
-              <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-                {saved.map(({ item, product, variant, unitPrice }) => (
-                  <li
-                    key={item.key}
-                    className="flex gap-4 rounded-md border border-line bg-surface p-3"
-                  >
+                <li key={item.key} className="flex gap-3 sm:gap-5 py-5 sm:py-6">
+                  <Link href={`/products/${product.slug}`} className="shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={product.images[0]}
                       alt=""
-                      className="h-20 w-16 rounded object-cover"
+                      className="h-28 w-20 sm:h-36 sm:w-28 rounded object-cover"
                     />
-                    <div className="flex flex-1 flex-col">
-                      <p className="text-sm font-medium">{product.title}</p>
-                      <p className="text-xs text-ink/80">
-                        {variant.color} · {variant.size} · {formatBDT(unitPrice)}
-                      </p>
-                      <div className="mt-auto flex gap-3 text-sm">
-                        <button
-                          type="button"
-                          onClick={() => toggleSaveForLater(item.key)}
-                          className="cursor-pointer font-medium underline-offset-2 hover:underline"
+                  </Link>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <div>
+                        <Link
+                          href={`/products/${product.slug}`}
+                          className="font-medium hover:underline"
                         >
-                          Move to bag
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeFromCart(item.key)}
-                          className="cursor-pointer text-ink/80 hover:text-ink"
-                        >
-                          Remove
-                        </button>
+                          {product.title}
+                        </Link>
+                        <p className="mt-0.5 text-sm text-ink/80">{variant.color}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium tabular-nums">
+                          {formatBDT(unitPrice * item.qty)}
+                        </p>
+                        {item.qty > 1 && (
+                          <p className="text-xs tabular-nums text-ink/80">
+                            {formatBDT(unitPrice)} each
+                          </p>
+                        )}
                       </div>
                     </div>
-                  </li>
-                ))}
+                    {issue && (
+                      <p className="mt-2 text-sm font-medium text-danger">
+                        {issue === 'out_of_stock'
+                          ? 'This size just sold out. Choose another size or save it for later.'
+                          : `Only ${maxQty} left — quantity will be reduced at checkout.`}
+                      </p>
+                    )}
+                    <div className="mt-auto flex flex-wrap items-center gap-3 pt-4">
+                      {product.sizes.length > 1 && (
+                        <select
+                          aria-label="Size"
+                          value={variant.id}
+                          onChange={(e) => changeVariant(item.key, e.target.value)}
+                          className="h-9 cursor-pointer rounded-md border border-line-strong bg-surface px-2 text-sm"
+                        >
+                          {product.variants
+                            .filter((v) => v.color === variant.color)
+                            .map((v) => (
+                              <option
+                                key={v.id}
+                                value={v.id}
+                                disabled={!product.preorder && v.stock - v.reserved <= 0}
+                              >
+                                {v.size}
+                                {!product.preorder && v.stock - v.reserved <= 0 ? ' — sold out' : ''}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                      <div className="inline-flex h-9 items-center rounded-md border border-line-strong">
+                        <button
+                          type="button"
+                          aria-label="Decrease quantity"
+                          disabled={item.qty <= 1}
+                          onClick={() => updateQty(item.key, item.qty - 1)}
+                          className="flex h-full w-9 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <MinusIcon className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="w-8 text-center text-sm tabular-nums">{item.qty}</span>
+                        <button
+                          type="button"
+                          aria-label="Increase quantity"
+                          disabled={item.qty >= maxQty}
+                          onClick={() => updateQty(item.key, item.qty + 1)}
+                          className="flex h-full w-9 cursor-pointer items-center justify-center disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <PlusIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleSaveForLater(item.key)}
+                        className="cursor-pointer text-sm text-ink/80 underline-offset-2 hover:text-ink hover:underline"
+                      >
+                        Save for later
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(item.key)}
+                        className="cursor-pointer text-sm text-ink/80 underline-offset-2 hover:text-ink hover:underline"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </li>
+            ))}
               </ul>
-            </section>
-          )}
+
+          {
+                saved.length > 0 && (
+                  <section className="mt-12" aria-labelledby="saved-h">
+                    <h2 id="saved-h" className="flex items-center gap-2 text-sm font-medium">
+                      <BookmarkIcon className="h-4 w-4" aria-hidden /> Saved for later ({saved.length})
+                    </h2>
+                    <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+                      {saved.map(({ item, product, variant, unitPrice }) => (
+                        <li
+                          key={item.key}
+                          className="flex gap-4 rounded-md border border-line bg-surface p-3"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={product.images[0]}
+                            alt=""
+                            className="h-20 w-16 rounded object-cover"
+                          />
+                          <div className="flex flex-1 flex-col">
+                            <p className="text-sm font-medium">{product.title}</p>
+                            <p className="text-xs text-ink/80">
+                              {variant.color} · {variant.size} · {formatBDT(unitPrice)}
+                            </p>
+                            <div className="mt-auto flex gap-3 text-sm">
+                              <button
+                                type="button"
+                                onClick={() => toggleSaveForLater(item.key)}
+                                className="cursor-pointer font-medium underline-offset-2 hover:underline"
+                              >
+                                Move to bag
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeFromCart(item.key)}
+                                className="cursor-pointer text-ink/80 hover:text-ink"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )
+              }
         </div>
 
         <aside aria-label="Order summary" className="lg:sticky lg:top-32 lg:self-start">
