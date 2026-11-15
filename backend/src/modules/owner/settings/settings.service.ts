@@ -362,7 +362,9 @@ export class SettingsService {
     }
 
     if (!file.mimetype?.startsWith('image/')) {
-      throw new BadRequestException('Favicon must be an image file (PNG, ICO, SVG, WEBP)');
+      throw new BadRequestException(
+        'Favicon must be an image file (PNG, ICO, SVG, WEBP)',
+      );
     }
 
     const targetTenantId = await this.resolveTenantId(tenantId);
@@ -443,6 +445,9 @@ export class SettingsService {
       `Store favicon removed for tenant: ${updated.name} (${updated.slug})`,
     );
 
-    return ResponseHelper.success(updated, 'Store favicon removed successfully');
+    return ResponseHelper.success(
+      updated,
+      'Store favicon removed successfully',
+    );
   }
 }
