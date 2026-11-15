@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { ReviewsManager } from '@/components/dashboard/admin/reviews';
 
 export const metadata: Metadata = {
-  title: 'Reviews | Admin Dashboard',
+  title: 'Reviews',
   description:
     'Moderate and manage customer product reviews, ratings, and public replies.',
 };

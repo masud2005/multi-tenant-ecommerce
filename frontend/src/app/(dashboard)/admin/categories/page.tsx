@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { CategoryManager } from '@/components/dashboard/admin/categories';
 
 export const metadata: Metadata = {
-  title: 'Categories | Admin Dashboard',
+  title: 'Categories',
   description: 'Hierarchical categories power navigation, filters and breadcrumbs.',
 };
 

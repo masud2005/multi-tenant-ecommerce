@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useStore } from '@/contexts/StoreContext';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -97,6 +98,7 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const [activeKey, setActiveKey] = useState<string>('');
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<'tree' | 'detail'>('tree');
 
   // Sync activeKey when categories are loaded
   useEffect(() => {
@@ -161,6 +163,7 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
     if (!openKeys.includes(key)) {
       setOpenKeys((prev) => [...prev, key]);
     }
+    setMobileTab('detail');
   };
 
   const handleSelectSubcategory = (categoryKey: string, subcategory: string | null) => {
@@ -169,6 +172,7 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
     if (!openKeys.includes(categoryKey)) {
       setOpenKeys((prev) => [...prev, categoryKey]);
     }
+    setMobileTab('detail');
   };
 
   return (
@@ -215,39 +219,80 @@ export function CategoryManager({ initialCategories = [], products = [] }: Categ
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[320px_1fr] items-start">
-          {/* Left column: Tree navigation */}
-          <div className="lg:sticky lg:top-6">
-            <CategoryTree
-              categories={categoriesList}
-              activeKey={activeKey}
-              onSelectCategory={handleSelectCategory}
-              activeSubcategory={activeSubcategory}
-              onSelectSubcategory={handleSelectSubcategory}
-              openKeys={openKeys}
-              onToggleKey={handleToggleKey}
-              getProductCount={getProductCount}
-              className="h-full lg:min-h-[520px]"
-            />
+        <div className="space-y-4">
+          {/* Mobile Tab Switcher (< lg) */}
+          <div className="flex items-center rounded-lg border border-line bg-surface p-1 lg:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileTab('tree')}
+              className={cn(
+                'flex-1 rounded-md py-1.5 text-xs font-medium transition-all text-center cursor-pointer',
+                mobileTab === 'tree'
+                  ? 'bg-ink text-canvas shadow-xs font-semibold'
+                  : 'text-ink-muted hover:text-ink'
+              )}
+            >
+              Category Tree ({categoriesList.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('detail')}
+              className={cn(
+                'flex-1 rounded-md py-1.5 text-xs font-medium transition-all text-center cursor-pointer truncate px-2',
+                mobileTab === 'detail'
+                  ? 'bg-ink text-canvas shadow-xs font-semibold'
+                  : 'text-ink-muted hover:text-ink'
+              )}
+            >
+              Details: {activeCategory.name}
+            </button>
           </div>
 
-          {/* Right column: Category / Subcategory Detail Panel */}
-          <div className="w-full space-y-6">
-            <CategoryDetailPanel
-              key={`${activeCategory.key}-${activeSubcategory || 'main'}`}
-              category={activeCategory}
-              activeSubcategory={activeSubcategory}
-              onSelectSubcategory={setActiveSubcategory}
-              onSelectCategory={handleSelectCategory}
-              allCategories={categoriesList}
-              products={productsList}
-              productCount={getProductCount(
-                activeCategory.key,
-                activeSubcategory || undefined
+          <div className="grid gap-6 lg:grid-cols-[320px_1fr] items-start">
+            {/* Left column: Tree navigation */}
+            <div className={cn('lg:sticky lg:top-6', mobileTab === 'detail' && 'hidden lg:block')}>
+              <CategoryTree
+                categories={categoriesList}
+                activeKey={activeKey}
+                onSelectCategory={handleSelectCategory}
+                activeSubcategory={activeSubcategory}
+                onSelectSubcategory={handleSelectSubcategory}
+                openKeys={openKeys}
+                onToggleKey={handleToggleKey}
+                getProductCount={getProductCount}
+                className="h-full lg:min-h-[520px]"
+              />
+            </div>
+
+            {/* Right column: Category / Subcategory Detail Panel */}
+            <div className={cn('w-full space-y-6', mobileTab === 'tree' && 'hidden lg:block')}>
+              {mobileTab === 'detail' && (
+                <div className="flex items-center lg:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setMobileTab('tree')}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-clay hover:underline cursor-pointer"
+                  >
+                    ← Back to Category Tree
+                  </button>
+                </div>
               )}
-              getProductCount={getProductCount}
-              onRefresh={fetchCategories}
-            />
+              <CategoryDetailPanel
+                key={`${activeCategory.key}-${activeSubcategory || 'main'}`}
+                category={activeCategory}
+                activeSubcategory={activeSubcategory}
+                onSelectSubcategory={setActiveSubcategory}
+                onSelectCategory={handleSelectCategory}
+                allCategories={categoriesList}
+                products={productsList}
+                productCount={getProductCount(
+                  activeCategory.key,
+                  activeSubcategory || undefined
+                )}
+                getProductCount={getProductCount}
+                onRefresh={fetchCategories}
+              />
+            </div>
           </div>
         </div>
       )}

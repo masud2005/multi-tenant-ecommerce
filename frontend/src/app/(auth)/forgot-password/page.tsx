@@ -4,7 +4,7 @@ import { AuthLayout } from '@/components/auth/auth-layout';
 import { ForgotPasswordForm } from '@/components/auth/forgot-password-form';
 
 export const metadata: Metadata = {
-  title: 'Reset your password | Tanti',
+  title: 'Reset Password',
   description: 'Enter your email to receive a password reset code.',
 };
 

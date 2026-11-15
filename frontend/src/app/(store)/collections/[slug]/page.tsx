@@ -13,7 +13,7 @@ export async function generateMetadata({
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
   return {
-    title: `${capitalized} Collection | Tanti`,
+    title: `${capitalized} Collection`,
     description: `Explore the ${capitalized} collection.`,
   };
 }

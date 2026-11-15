@@ -13,7 +13,7 @@ export async function generateMetadata({
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
   return {
-    title: `${brandName} | Tanti Brand Showcase`,
+    title: brandName,
     description: `Browse pieces by ${brandName}.`,
   };
 }

@@ -15,7 +15,7 @@ export function StoreShell({ children }: { children: React.ReactNode }) {
       >
         Skip to content
       </a>
-      <React.Suspense fallback={<header className="h-16 border-b border-line bg-surface" />}>
+      <React.Suspense fallback={<header className="h-16 sm:h-20 border-b border-line bg-surface" />}>
         <StoreHeader />
       </React.Suspense>
       <main id="main" className="flex-1">
