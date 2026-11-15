@@ -16,10 +16,65 @@ const fraunces = localFont({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Tanti Admin · Multi-Tenant Fashion Platform",
-  description: "Merchant administration for Tanti",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const backendUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.INTERNAL_API_URL ||
+    'http://localhost:5000/api/v1';
+
+  let storeName = '';
+  let metaTitle = '';
+  let metaDescription = '';
+  let faviconUrl = '';
+
+  try {
+    const res = await fetch(`${backendUrl}/customer/store-info`, {
+      cache: 'no-store',
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const store = json?.data;
+      storeName = typeof store?.name === 'string' ? store.name.trim() : '';
+      const seo = store?.settings?.seo;
+      metaTitle = typeof seo?.metaTitle === 'string' ? seo.metaTitle.trim() : '';
+      metaDescription =
+        (typeof seo?.metaDescription === 'string' && seo.metaDescription.trim()) ||
+        (typeof store?.tagline === 'string' && store.tagline.trim()) ||
+        '';
+      const favicon = store?.favicon;
+      if (typeof favicon === 'string' && favicon.trim()) {
+        faviconUrl = favicon.trim().replace(/^http:\/\//i, 'https://');
+      }
+    }
+  } catch {
+    // Graceful fallback when backend is temporarily unreachable
+  }
+
+  const brand = metaTitle || storeName || 'Store';
+  const homeTitle = metaTitle
+    ? (metaTitle.includes('|') ? metaTitle : `Home | ${metaTitle}`)
+    : (storeName ? `Home | ${storeName}` : 'Home');
+
+  return {
+    title: {
+      default: homeTitle,
+      template: `%s | ${brand}`,
+    },
+    description: metaDescription || undefined,
+    icons: faviconUrl
+      ? {
+          icon: [
+            { url: faviconUrl, type: 'image/png' },
+            { url: '/favicon.ico' },
+          ],
+          shortcut: faviconUrl,
+          apple: faviconUrl,
+        }
+      : {
+          icon: '/favicon.ico',
+        },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -31,6 +86,7 @@ import { Toaster } from "sonner";
 import { TenantProvider } from "@/contexts/TenantContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { StoreThemeInjector } from "@/components/store/theme/StoreThemeInjector";
+import { StoreMetadataInjector } from "@/components/store/theme/StoreMetadataInjector";
 
 export default function RootLayout({
   children,
@@ -79,6 +135,7 @@ export default function RootLayout({
         <TenantProvider>
           <ThemeProvider>
             <StoreThemeInjector />
+            <StoreMetadataInjector />
             {children}
             <Toaster position="bottom-center" />
           </ThemeProvider>

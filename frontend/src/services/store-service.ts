@@ -27,6 +27,10 @@ export interface StoreSettingsBag {
   orderNumberFormat?: string;
   flags?: StoreFlags;
   pm?: { bkash?: boolean; nagad?: boolean; cod?: boolean };
+  seo?: {
+    metaTitle?: string;
+    metaDescription?: string;
+  };
   payment?: {
     bkashNumber?: string;
     bkashType?: string;
@@ -109,5 +113,17 @@ export const storeService = {
   // 5. Remove store logo
   async removeOwnerLogo(): Promise<ApiResponse<OwnerSettingsData>> {
     return await apiClient.delete<ApiResponse<OwnerSettingsData>>('/owner/settings/logo');
+  },
+
+  // 6. Upload / replace store favicon
+  async uploadOwnerFavicon(file: File): Promise<ApiResponse<OwnerSettingsData>> {
+    const formData = new FormData();
+    formData.append('favicon', file);
+    return await apiClient.patch<ApiResponse<OwnerSettingsData>>('/owner/settings/favicon', formData);
+  },
+
+  // 7. Remove store favicon
+  async removeOwnerFavicon(): Promise<ApiResponse<OwnerSettingsData>> {
+    return await apiClient.delete<ApiResponse<OwnerSettingsData>>('/owner/settings/favicon');
   },
 };

@@ -97,7 +97,7 @@ export function StoreHeader() {
           )}
         >
           <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between gap-2 sm:gap-4">
+            <div className="flex h-16 sm:h-20 items-center justify-between gap-2 sm:gap-4">
               {/* Mobile Menu Button */}
               <button
                 type="button"
@@ -111,7 +111,7 @@ export function StoreHeader() {
               {/* Store brand: uploaded logo, else name, else empty — no mock assets */}
               <Link
                 href="/"
-                className="flex min-h-9 min-w-0 items-center shrink"
+                className="flex items-center shrink-0 transition-opacity hover:opacity-90 py-0.5"
                 aria-label={tenant.name?.trim() || 'Store home'}
               >
                 {!tenantLoading && tenant.logoUrl?.trim() ? (
@@ -119,10 +119,10 @@ export function StoreHeader() {
                   <img
                     src={tenant.logoUrl}
                     alt={tenant.name?.trim() || 'Store logo'}
-                    className="h-8 sm:h-9 w-auto max-w-[120px] sm:max-w-[160px] object-contain"
+                    className="h-11 sm:h-14 md:h-16 w-auto max-w-[160px] min-[390px]:max-w-[190px] sm:max-w-[280px] md:max-w-[320px] object-contain object-left"
                   />
                 ) : !tenantLoading && tenant.name?.trim() ? (
-                  <span className="font-display text-lg sm:text-2xl font-bold tracking-tight text-ink truncate max-w-[130px] sm:max-w-none">
+                  <span className="font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-ink truncate max-w-[150px] min-[390px]:max-w-[180px] sm:max-w-none">
                     {tenant.name}
                   </span>
                 ) : null}
@@ -293,10 +293,10 @@ export function StoreHeader() {
                 <img
                   src={tenant.logoUrl}
                   alt={tenant.name?.trim() || 'Store logo'}
-                  className="h-7 w-auto max-w-[130px] object-contain"
+                  className="h-10 sm:h-11 w-auto max-w-[170px] object-contain object-left"
                 />
               ) : (
-                <span className="font-display text-base font-bold tracking-tight text-ink">
+                <span className="font-display text-lg font-bold tracking-tight text-ink">
                   {tenant.name || 'Menu'}
                 </span>
               )}
@@ -597,8 +597,8 @@ export function StoreHeader() {
                           aria-hidden
                           className={
                             !tenantLoading && Boolean(tenant.announcementEnabled && tenant.announcement?.trim())
-                              ? 'h-[5.75rem]'
-                              : 'h-16'
+                              ? 'h-[5.75rem] sm:h-[6.75rem]'
+                              : 'h-16 sm:h-20'
                           }
                         />
                       )}

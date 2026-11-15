@@ -237,6 +237,10 @@ export class SettingsService {
           ...((existingSettings.authPage as Record<string, unknown>) || {}),
           ...((incoming.authPage as Record<string, unknown>) || {}),
         },
+        seo: {
+          ...((existingSettings.seo as Record<string, unknown>) || {}),
+          ...((incoming.seo as Record<string, unknown>) || {}),
+        },
       });
     }
 
@@ -349,5 +353,96 @@ export class SettingsService {
     );
 
     return ResponseHelper.success(updated, 'Store logo removed successfully');
+  }
+
+  // 5. Upload / replace store favicon
+  async uploadFavicon(file: Express.Multer.File, tenantId?: string) {
+    if (!file) {
+      throw new BadRequestException('Favicon image file is required');
+    }
+
+    if (!file.mimetype?.startsWith('image/')) {
+      throw new BadRequestException('Favicon must be an image file (PNG, ICO, SVG, WEBP)');
+    }
+
+    const targetTenantId = await this.resolveTenantId(tenantId);
+    const existing = await this.prisma.tenant.findUnique({
+      where: { id: targetTenantId },
+      select: { id: true, favicon: true, name: true, slug: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Store not found');
+    }
+
+    const uploadResult = await this.storageService.uploadFile(file, {
+      folder: 'store/favicons',
+      publicId: `tenant-${existing.id}-favicon`,
+      overwrite: true,
+      tags: ['store-favicon', existing.slug],
+    });
+
+    try {
+      const updated = await this.prisma.tenant.update({
+        where: { id: targetTenantId },
+        data: {
+          favicon: uploadResult.url.replace(/^http:\/\//i, 'https://'),
+          updatedAt: new Date(),
+        },
+        select: this.settingsSelect,
+      });
+
+      if (
+        existing.favicon &&
+        existing.favicon !== uploadResult.url &&
+        !existing.favicon.includes(`tenant-${existing.id}-favicon`)
+      ) {
+        this.storageService.deleteFile(existing.favicon).catch(() => {});
+      }
+
+      this.logger.log(
+        `Store favicon uploaded for tenant: ${updated.name} (${updated.slug})`,
+      );
+
+      return ResponseHelper.success(
+        updated,
+        'Store favicon uploaded successfully',
+      );
+    } catch (error) {
+      await this.storageService.deleteFile(uploadResult.url).catch(() => {});
+      throw error;
+    }
+  }
+
+  // 6. Remove store favicon
+  async removeFavicon(tenantId?: string) {
+    const targetTenantId = await this.resolveTenantId(tenantId);
+    const existing = await this.prisma.tenant.findUnique({
+      where: { id: targetTenantId },
+      select: { id: true, favicon: true, name: true, slug: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Store not found');
+    }
+
+    const updated = await this.prisma.tenant.update({
+      where: { id: targetTenantId },
+      data: {
+        favicon: null,
+        updatedAt: new Date(),
+      },
+      select: this.settingsSelect,
+    });
+
+    if (existing.favicon) {
+      this.storageService.deleteFile(existing.favicon).catch(() => {});
+    }
+
+    this.logger.log(
+      `Store favicon removed for tenant: ${updated.name} (${updated.slug})`,
+    );
+
+    return ResponseHelper.success(updated, 'Store favicon removed successfully');
   }
 }

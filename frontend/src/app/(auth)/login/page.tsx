@@ -4,8 +4,8 @@ import { AuthLayout } from '@/components/auth/auth-layout';
 import { LoginForm } from '@/components/auth/login-form';
 
 export const metadata: Metadata = {
-  title: 'Sign In | Tanti',
-  description: 'Sign in to your Tanti account to track orders and save addresses.',
+  title: 'Sign In',
+  description: 'Sign in to your account to track orders and save addresses.',
 };
 
 export default function LoginPage() {

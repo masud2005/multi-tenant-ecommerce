@@ -3,8 +3,8 @@ import { Metadata } from 'next';
 import { ShopView } from '@/components/store/shop';
 
 export const metadata: Metadata = {
-  title: 'Search Results | Tanti',
-  description: 'Search results for products in Tanti collection.',
+  title: 'Search Results',
+  description: 'Search results for products.',
 };
 
 export default function SearchPage() {

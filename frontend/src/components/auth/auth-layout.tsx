@@ -42,17 +42,17 @@ export function AuthLayout({
       <div className="flex flex-col px-6 py-8 sm:px-12">
         <Link
           href="/"
-          className="flex min-h-9 min-w-[2.5rem] items-center"
+          className="flex min-h-10 sm:min-h-12 min-w-[2.5rem] items-center transition-opacity hover:opacity-90"
           aria-label={tenant.name?.trim() || 'Store home'}
         >
           {!isLoading && tenant.logoUrl?.trim() ? (
             <img
               src={tenant.logoUrl}
               alt={tenant.name?.trim() || 'Store logo'}
-              className="h-9 w-auto max-w-[160px] object-contain"
+              className="h-10 sm:h-12 w-auto max-w-[180px] sm:max-w-[240px] object-contain object-left"
             />
           ) : !isLoading && tenant.name?.trim() ? (
-            <span className="font-display text-2xl text-ink">{tenant.name}</span>
+            <span className="font-display text-2xl sm:text-3xl font-bold text-ink">{tenant.name}</span>
           ) : null}
         </Link>
         <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">

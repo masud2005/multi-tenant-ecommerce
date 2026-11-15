@@ -22,10 +22,12 @@ import {
   Loader2,
   MapPin,
   KeyRound,
+  Globe,
 } from 'lucide-react';
 import { useAdmin } from '@/contexts/AdminContext';
 import { useTenant } from '@/contexts/TenantContext';
 import { storeService, type UpdateStoreSettingsPayload } from '@/services/store-service';
+import { updateFaviconInDOM } from '@/components/store/theme/StoreMetadataInjector';
 import { authService, type AuthDeviceSession } from '@/services/auth';
 import { PageHeader } from '@/components/dashboard/shared/PageHeader';
 import { Panel } from '@/components/dashboard/shared/Panel';
@@ -73,6 +75,9 @@ export default function AdminSettingsPage() {
   const [isLogoUploading, setIsLogoUploading] = useState(false);
   const [isLogoRemoving, setIsLogoRemoving] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [isFaviconUploading, setIsFaviconUploading] = useState(false);
+  const [isFaviconRemoving, setIsFaviconRemoving] = useState(false);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Store Identity Form State — no mock branding defaults
   const [storeForm, setStoreForm] = useState({
@@ -80,6 +85,8 @@ export default function AdminSettingsPage() {
     tagline: '',
     logo: '',
     favicon: '',
+    metaTitle: '',
+    metaDescription: '',
   });
 
   // Payment methods — start OFF until owner settings load (avoid fake “enabled” UI)
@@ -130,12 +137,18 @@ export default function AdminSettingsPage() {
             const res = await storeService.getOwnerSettings();
             if (res && res.data) {
               const d = res.data;
+              const seo = (d.settings?.seo as Record<string, unknown>) || {};
               setStoreForm((prev) => ({
                 ...prev,
                 name: typeof d.name === 'string' ? d.name : '',
                 tagline: typeof d.tagline === 'string' ? d.tagline : '',
                 logo: typeof d.logo === 'string' ? d.logo : '',
                 favicon: typeof d.favicon === 'string' ? d.favicon : '',
+                metaTitle: typeof seo.metaTitle === 'string' ? seo.metaTitle : '',
+                metaDescription:
+                  typeof seo.metaDescription === 'string'
+                    ? seo.metaDescription
+                    : '',
               }));
 
               if (d.settings?.payment) {
@@ -262,6 +275,10 @@ export default function AdminSettingsPage() {
                 logo: storeForm.logo || undefined,
                 favicon: storeForm.favicon || undefined,
                 settings: {
+                  seo: {
+                    metaTitle: storeForm.metaTitle.trim(),
+                    metaDescription: storeForm.metaDescription.trim(),
+                  },
                   pm: {
                     bkash: !!paymentConfig.bkashEnabled,
                     nagad: !!paymentConfig.nagadEnabled,
@@ -338,6 +355,51 @@ export default function AdminSettingsPage() {
       } finally {
         setIsLogoRemoving(false);
         if (logoInputRef.current) logoInputRef.current.value = '';
+      }
+    };
+
+    const handleFaviconUpload = async (file: File | null | undefined) => {
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please choose a valid icon/image file (PNG, ICO, SVG, WEBP)');
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Favicon file must be under 2MB');
+        return;
+      }
+
+      try {
+        setIsFaviconUploading(true);
+        const res = await storeService.uploadOwnerFavicon(file);
+        const faviconUrl =
+          typeof res?.data?.favicon === 'string' ? res.data.favicon : '';
+        setStoreForm((prev) => ({ ...prev, favicon: faviconUrl }));
+        updateFaviconInDOM(faviconUrl);
+        await refetchTenant();
+        toast.success('Store favicon uploaded — live on browser tabs');
+      } catch (err: unknown) {
+        toast.error(asApiError(err).message || 'Failed to upload store favicon');
+      } finally {
+        setIsFaviconUploading(false);
+        if (faviconInputRef.current) faviconInputRef.current.value = '';
+      }
+    };
+
+    const handleFaviconRemove = async () => {
+      try {
+        setIsFaviconRemoving(true);
+        await storeService.removeOwnerFavicon();
+        setStoreForm((prev) => ({ ...prev, favicon: '' }));
+        updateFaviconInDOM('/favicon.ico');
+        await refetchTenant();
+        toast.success('Favicon removed — default platform icon will show');
+      } catch (err: unknown) {
+        toast.error(asApiError(err).message || 'Failed to remove store favicon');
+      } finally {
+        setIsFaviconRemoving(false);
+        if (faviconInputRef.current) faviconInputRef.current.value = '';
       }
     };
 
@@ -538,7 +600,7 @@ export default function AdminSettingsPage() {
                       <div className="sm:col-span-2">
                         <p className="mb-1.5 text-sm font-medium text-ink">Store logo</p>
                         <div className="flex flex-col gap-4 rounded-lg border border-line bg-subtle/30 p-4 sm:flex-row sm:items-center">
-                          <div className="flex h-20 w-40 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-line-strong bg-surface">
+                          <div className="flex h-20 w-48 sm:w-56 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-line-strong bg-surface p-2">
                             {storeForm.logo ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -604,6 +666,72 @@ export default function AdminSettingsPage() {
                         </div>
                       </div>
 
+                      {/* Store Favicon Upload */}
+                      <div className="sm:col-span-2">
+                        <p className="mb-1.5 text-sm font-medium text-ink">Store favicon</p>
+                        <div className="flex flex-col gap-4 rounded-lg border border-line bg-subtle/30 p-4 sm:flex-row sm:items-center">
+                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-line-strong bg-surface p-2 shadow-2xs">
+                            {storeForm.favicon ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={storeForm.favicon}
+                                alt="Store favicon preview"
+                                className="h-8 w-8 object-contain"
+                              />
+                            ) : (
+                              <div className="flex flex-col items-center gap-1 text-center">
+                                <Globe className="h-5 w-5 text-ink-muted" aria-hidden />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <p className="text-xs text-ink-muted">
+                              PNG/ICO/SVG · max 2MB · Recommended{' '}
+                              <span className="font-medium text-ink">32 × 32 px</span> or{' '}
+                              <span className="font-medium text-ink">64 × 64 px</span>
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                ref={faviconInputRef}
+                                type="file"
+                                accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/svg+xml,image/webp,image/jpeg"
+                                className="sr-only"
+                                onChange={(e) =>
+                                  handleFaviconUpload(e.target.files?.[0])
+                                }
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                loading={isFaviconUploading}
+                                disabled={isFaviconUploading || isFaviconRemoving || isLoading}
+                                onClick={() => faviconInputRef.current?.click()}
+                                className="cursor-pointer"
+                              >
+                                <Upload className="h-4 w-4" aria-hidden />
+                                {storeForm.favicon ? 'Replace favicon' : 'Upload favicon'}
+                              </Button>
+                              {storeForm.favicon ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  loading={isFaviconRemoving}
+                                  disabled={isFaviconUploading || isFaviconRemoving}
+                                  onClick={handleFaviconRemove}
+                                  className="cursor-pointer text-danger hover:text-danger"
+                                >
+                                  <Trash2 className="h-4 w-4" aria-hidden />
+                                  Remove
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="sm:col-span-2">
                         <Input
                           label="Store brand name"
@@ -624,6 +752,42 @@ export default function AdminSettingsPage() {
                           }
                           placeholder="e.g. Handloom & Contemporary Bangladeshi Fashion"
                           hint="A brief sentence describing your craft and uniqueness"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2 pt-2 border-t border-line/60">
+                        <p className="text-xs font-bold text-ink uppercase tracking-wider mb-1">
+                          Search Engine Optimization (SEO) & Tab Title
+                        </p>
+                        <p className="text-xs text-ink-muted mb-3">
+                          Customize how your store appears on browser tabs, bookmarks, and search engines.
+                        </p>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Input
+                          label="SEO Meta Title (Browser Tab & Search Title)"
+                          value={storeForm.metaTitle}
+                          onChange={(e) =>
+                            setStoreForm({ ...storeForm, metaTitle: e.target.value })
+                          }
+                          placeholder="e.g. Big Deshi"
+                          hint="Custom title shown on browser tabs and Google search results. On the homepage, it appears as Home | Title."
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Input
+                          label="SEO Meta Description"
+                          value={storeForm.metaDescription}
+                          onChange={(e) =>
+                            setStoreForm({
+                              ...storeForm,
+                              metaDescription: e.target.value,
+                            })
+                          }
+                          placeholder="e.g. Premium Bangladeshi handloom, lifestyle products and traditional fashion delivered across Bangladesh."
+                          hint="Summary shown in Google search snippets and social media previews."
                         />
                       </div>
                     </div>

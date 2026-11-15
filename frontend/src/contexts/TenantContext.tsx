@@ -126,6 +126,7 @@ export function TenantProvider({
             supportTeam: raw.contact?.supportTeam || '',
           },
           socials: raw.socials || {},
+          settings: raw.settings,
           shipping: parseStoreShipping(raw.settings?.shipping),
         };
         setLiveTenant(mapped);

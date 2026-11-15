@@ -3,8 +3,8 @@ import { Metadata } from 'next';
 import { ShopView } from '@/components/store/shop';
 
 export const metadata: Metadata = {
-  title: 'Shop All | Tanti Lifestyle',
-  description: 'Explore handloom kurtas, panjabis, jamdani sarees, footwear and accessories.',
+  title: 'Shop All',
+  description: 'Explore our wide selection of quality products.',
 };
 
 export default function ShopPage() {

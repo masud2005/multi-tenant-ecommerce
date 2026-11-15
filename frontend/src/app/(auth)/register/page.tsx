@@ -4,8 +4,8 @@ import { AuthLayout } from '@/components/auth/auth-layout';
 import { RegisterForm } from '@/components/auth/register-form';
 
 export const metadata: Metadata = {
-  title: 'Create your account | Tanti',
-  description: 'Get 10% off your first order and faster checkout with Tanti.',
+  title: 'Create Account',
+  description: 'Create your account for faster checkout and order tracking.',
 };
 
 export default function RegisterPage() {

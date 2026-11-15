@@ -1,7 +1,15 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { DashboardSidebar, DashboardNavbar } from '@/components/dashboard';
 import { DashboardProvider } from '@/providers/DashboardProvider';
 import { AdminGuard } from '@/components/auth/AdminGuard';
+
+export const metadata: Metadata = {
+  title: {
+    template: '%s · Admin',
+    default: 'Dashboard · Admin',
+  },
+};
 
 export default function DashboardLayout({
   children,

@@ -4,8 +4,8 @@ import { AuthLayout } from '@/components/auth/auth-layout';
 import { ResetPasswordForm } from '@/components/auth/reset-password-form';
 
 export const metadata: Metadata = {
-  title: 'Set a new password | Tanti',
-  description: 'Set a new secure password for your Tanti account.',
+  title: 'Set New Password',
+  description: 'Set a new secure password for your account.',
 };
 
 export default function ResetPasswordPage() {

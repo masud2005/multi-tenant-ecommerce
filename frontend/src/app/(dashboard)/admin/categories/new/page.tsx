@@ -16,6 +16,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useStore } from '@/contexts/StoreContext';
+import { useTenant } from '@/contexts/TenantContext';
 import { productService } from '@/services/product-service';
 import { categoryService } from '@/services/category-service';
 import { images } from '@/data/images';
@@ -55,6 +56,8 @@ function slugify(text: string) {
 export default function AdminNewCategoryPage() {
   const router = useRouter();
   const { categories, addCategory } = useStore();
+  const { tenant } = useTenant();
+  const storeName = tenant.name?.trim() || 'Store';
 
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -122,10 +125,10 @@ export default function AdminNewCategoryPage() {
       image: customImageUrl.trim() || image,
       subcategories: subcategories,
       parentKey: parentKey === 'none' ? undefined : parentKey,
-      seoTitle: seoTitle.trim() || `${name.trim()} | Tanti`,
+      seoTitle: seoTitle.trim() || (name.trim() ? `${name.trim()} | ${storeName}` : storeName),
       seoDescription:
         seoDescription.trim() ||
-        `Shop ${name.toLowerCase()} — handcrafted apparel & lifestyle essentials.`,
+        (name.trim() ? `Shop ${name.toLowerCase()} items at ${storeName}.` : `Browse products at ${storeName}.`),
       status,
     };
 
@@ -360,21 +363,21 @@ export default function AdminNewCategoryPage() {
                 <div className="rounded-md border border-line bg-canvas p-4 space-y-1">
                   <p className="text-xs text-ink-muted flex items-center gap-1 font-mono">
                     <Globe className="h-3.5 w-3.5" />
-                    https://tanti.com.bd/shop?category={slug || 'new-category'}
+                    {tenant.domain || 'store.com'}/shop?category={slug || 'new-category'}
                   </p>
                   <p className="text-base font-semibold text-clay line-clamp-1">
-                    {seoTitle || `${name || 'Category Name'} | Tanti`}
+                    {seoTitle || `${name || 'Category Name'} | ${storeName}`}
                   </p>
                   <p className="text-xs text-ink-soft line-clamp-2">
                     {seoDescription ||
                       description ||
-                      `Shop ${name || 'items'} — discover fine artisanal craftsmanship and sustainable handloom fashion.`}
+                      `Shop ${name || 'items'} at ${storeName}.`}
                   </p>
                 </div>
 
                 <Input
                   label="Page title"
-                  placeholder={`${name || 'Category'} | Tanti`}
+                  placeholder={`${name || 'Category'} | ${storeName}`}
                   value={seoTitle}
                   onChange={(e) => setSeoTitle(e.target.value)}
                   hint="Keep title under 60 characters for best Google results"

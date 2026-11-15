@@ -131,4 +131,57 @@ export class SettingsController {
     const tenantId = tenantHeader || user?.tenantId;
     return this.settingsService.removeLogo(tenantId);
   }
+
+  // 5. Upload / replace store favicon
+  @Patch('favicon')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('favicon'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        favicon: {
+          type: 'string',
+          format: 'binary',
+          description: 'Store favicon image file (ICO, PNG, SVG)',
+        },
+      },
+      required: ['favicon'],
+    },
+  })
+  @ApiOperation({ summary: 'Upload or replace the store favicon' })
+  @ApiResponse({
+    status: 200,
+    description: 'Store favicon uploaded successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or missing image file' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
+  async uploadFavicon(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user?: AuthUser,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.settingsService.uploadFavicon(file, tenantId);
+  }
+
+  // 6. Remove store favicon
+  @Delete('favicon')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove the store favicon' })
+  @ApiResponse({
+    status: 200,
+    description: 'Store favicon removed successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Owner role required' })
+  async removeFavicon(
+    @CurrentUser() user?: AuthUser,
+    @Headers('x-tenant-id') tenantHeader?: string,
+  ) {
+    const tenantId = tenantHeader || user?.tenantId;
+    return this.settingsService.removeFavicon(tenantId);
+  }
 }

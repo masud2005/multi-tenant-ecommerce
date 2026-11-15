@@ -134,17 +134,31 @@ export function StoreFooter({ homepage = false }: { homepage?: boolean }) {
           <div className="lg:col-span-5 space-y-6">
             <div>
               {tenant.logoUrl?.trim() ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={tenant.logoUrl}
-                  alt={tenant.name?.trim() || 'Store logo'}
-                  className="h-10 w-auto max-w-[200px] object-contain"
-                />
+                <Link
+                  href="/"
+                  className="inline-block transition-opacity hover:opacity-90"
+                  aria-label={tenant.name?.trim() || 'Store home'}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={tenant.logoUrl}
+                    alt={tenant.name?.trim() || 'Store logo'}
+                    className="h-12 sm:h-14 md:h-16 w-auto max-w-[220px] sm:max-w-[280px] md:max-w-[320px] object-contain object-left"
+                  />
+                </Link>
               ) : tenant.name?.trim() ? (
-                <p className="font-display text-3xl">{tenant.name}</p>
+                <Link
+                  href="/"
+                  className="inline-block transition-opacity hover:opacity-90"
+                  aria-label={tenant.name?.trim() || 'Store home'}
+                >
+                  <p className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-canvas">
+                    {tenant.name}
+                  </p>
+                </Link>
               ) : null}
               {tenant.tagline?.trim() ? (
-                <p className="mt-3 max-w-sm text-sm text-canvas/70">
+                <p className="mt-3 max-w-sm text-sm text-canvas/70 leading-relaxed">
                   {tenant.tagline}
                 </p>
               ) : null}

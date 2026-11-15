@@ -73,6 +73,10 @@ export interface Tenant {
     authPage?: unknown;
     shipping?: unknown;
     orderNumberFormat?: string;
+    seo?: {
+      metaTitle?: string;
+      metaDescription?: string;
+    };
     pm?: { bkash?: boolean; nagad?: boolean; cod?: boolean };
     payment?: {
       bkashNumber?: string;
