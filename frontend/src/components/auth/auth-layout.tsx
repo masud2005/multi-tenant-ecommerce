@@ -42,17 +42,22 @@ export function AuthLayout({
       <div className="flex flex-col px-6 py-8 sm:px-12">
         <Link
           href="/"
-          className="flex min-h-10 sm:min-h-12 min-w-[2.5rem] items-center transition-opacity hover:opacity-90"
+          className="flex items-center shrink-0 transition-opacity hover:opacity-90 py-1"
           aria-label={tenant.name?.trim() || 'Store home'}
         >
-          {!isLoading && tenant.logoUrl?.trim() ? (
+          {isLoading ? (
+            <Skeleton className="h-11 sm:h-14 md:h-16 w-36 sm:w-48 rounded-md" />
+          ) : tenant.logoUrl?.trim() ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={tenant.logoUrl}
               alt={tenant.name?.trim() || 'Store logo'}
-              className="h-10 sm:h-12 w-auto max-w-[180px] sm:max-w-[240px] object-contain object-left"
+              className="h-11 sm:h-14 md:h-16 w-auto max-w-[180px] min-[390px]:max-w-[220px] sm:max-w-[280px] md:max-w-[320px] object-contain object-left"
             />
-          ) : !isLoading && tenant.name?.trim() ? (
-            <span className="font-display text-2xl sm:text-3xl font-bold text-ink">{tenant.name}</span>
+          ) : tenant.name?.trim() ? (
+            <span className="font-display text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-ink truncate max-w-[220px] sm:max-w-none">
+              {tenant.name}
+            </span>
           ) : null}
         </Link>
         <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">
