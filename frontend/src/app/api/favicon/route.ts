@@ -12,9 +12,13 @@ export async function GET() {
       process.env.NEXT_PUBLIC_API_URL ||
       'http://localhost:5000/api/v1';
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
     const res = await fetch(`${backendUrl}/customer/store-info`, {
       cache: 'no-store',
+      signal: controller.signal,
     });
+    clearTimeout(timer);
 
     if (res.ok) {
       const json = await res.json();
@@ -24,7 +28,13 @@ export async function GET() {
         const secureUrl = favicon.trim().replace(/^http:\/\//i, 'https://');
 
         try {
-          const imgRes = await fetch(secureUrl, { cache: 'no-store' });
+          const imgController = new AbortController();
+          const imgTimer = setTimeout(() => imgController.abort(), 3000);
+          const imgRes = await fetch(secureUrl, {
+            cache: 'no-store',
+            signal: imgController.signal,
+          });
+          clearTimeout(imgTimer);
           if (imgRes.ok) {
             const buffer = await imgRes.arrayBuffer();
             const contentType =

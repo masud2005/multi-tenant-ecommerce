@@ -2,9 +2,6 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 const inter = localFont({
   src: "../fonts/inter-latin.woff2",
   variable: "--font-sans",
@@ -31,9 +28,13 @@ export async function generateMetadata(): Promise<Metadata> {
   let faviconUrl = '';
 
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
     const res = await fetch(`${backendUrl}/customer/store-info`, {
-      cache: 'no-store',
+      next: { revalidate: 30 },
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     if (res.ok) {
       const json = await res.json();
       const store = json?.data;
@@ -64,17 +65,16 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${brand}`,
     },
     description: metaDescription || undefined,
-    icons: faviconUrl
-      ? {
-          icon: [{ url: faviconUrl, type: 'image/png' }],
-          shortcut: faviconUrl,
-          apple: faviconUrl,
-        }
-      : {
-          icon: '/api/favicon',
-          shortcut: '/api/favicon',
-          apple: '/api/favicon',
+    icons: {
+      icon: [
+        {
+          url: faviconUrl || '/api/favicon',
+          type: (faviconUrl || '').endsWith('.svg') ? 'image/svg+xml' : 'image/png',
         },
+      ],
+      shortcut: faviconUrl || '/api/favicon',
+      apple: faviconUrl || '/api/favicon',
+    },
   };
 }
 

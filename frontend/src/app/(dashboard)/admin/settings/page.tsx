@@ -376,7 +376,7 @@ export default function AdminSettingsPage() {
         const faviconUrl =
           typeof res?.data?.favicon === 'string' ? res.data.favicon : '';
         setStoreForm((prev) => ({ ...prev, favicon: faviconUrl }));
-        updateFaviconInDOM(faviconUrl);
+        updateFaviconInDOM(faviconUrl, true);
         await refetchTenant();
         toast.success('Store favicon uploaded — live on browser tabs');
       } catch (err: unknown) {
@@ -392,7 +392,7 @@ export default function AdminSettingsPage() {
         setIsFaviconRemoving(true);
         await storeService.removeOwnerFavicon();
         setStoreForm((prev) => ({ ...prev, favicon: '' }));
-        updateFaviconInDOM(null);
+        updateFaviconInDOM(null, true);
         await refetchTenant();
         toast.success('Favicon removed — default platform icon will show');
       } catch (err: unknown) {

@@ -4,39 +4,38 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useTenant } from '@/contexts/TenantContext';
 
-export function updateFaviconInDOM(url?: string | null) {
+export function updateFaviconInDOM(url?: string | null, forceCacheBust = false) {
   if (typeof document === 'undefined') return;
 
   const targetUrl =
     url && url.trim()
       ? url.trim().replace(/^http:\/\//i, 'https://')
       : '/api/favicon';
-  const cacheBustedUrl = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+  const finalUrl = forceCacheBust
+    ? `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}v=${Date.now()}`
+    : targetUrl;
+  const isSvg = targetUrl.endsWith('.svg');
+  const type = isSvg ? 'image/svg+xml' : 'image/png';
 
-  // 1. Remove all existing icon links to prevent duplicate, stale or 404 links
-  const existing = document.querySelectorAll<HTMLLinkElement>(
-    "link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']"
-  );
-  existing.forEach((el) => el.remove());
+  const rels = ['icon', 'shortcut icon', 'apple-touch-icon'];
 
-  // 2. Insert fresh primary icon link
-  const iconLink = document.createElement('link');
-  iconLink.rel = 'icon';
-  iconLink.type = targetUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
-  iconLink.href = cacheBustedUrl;
-  document.head.appendChild(iconLink);
-
-  // 3. Insert fresh shortcut icon link
-  const shortcutLink = document.createElement('link');
-  shortcutLink.rel = 'shortcut icon';
-  shortcutLink.href = cacheBustedUrl;
-  document.head.appendChild(shortcutLink);
-
-  // 4. Insert fresh apple-touch-icon link
-  const appleLink = document.createElement('link');
-  appleLink.rel = 'apple-touch-icon';
-  appleLink.href = cacheBustedUrl;
-  document.head.appendChild(appleLink);
+  rels.forEach((rel) => {
+    let link = document.querySelector<HTMLLinkElement>(`link[rel='${rel}']`);
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = rel;
+      if (rel === 'icon') {
+        link.type = type;
+      }
+      document.head.appendChild(link);
+    }
+    if (link.getAttribute('href') !== finalUrl) {
+      link.href = finalUrl;
+      if (rel === 'icon') {
+        link.type = type;
+      }
+    }
+  });
 }
 
 function resolveStorefrontPageTitle(pathname: string): string {
@@ -227,10 +226,12 @@ export function StoreMetadataInjector() {
   const { tenant } = useTenant();
   const pathname = usePathname();
 
-  // 1. Dynamic Favicon injection on tenant change AND route change
+  // 1. Dynamic Favicon injection - ONLY when tenant favicon URL actually changes
   useEffect(() => {
-    updateFaviconInDOM(tenant.faviconUrl);
-  }, [tenant.faviconUrl, pathname]);
+    if (tenant.faviconUrl) {
+      updateFaviconInDOM(tenant.faviconUrl);
+    }
+  }, [tenant.faviconUrl]);
 
   // 2. Dynamic Title & Description injection
   useEffect(() => {
