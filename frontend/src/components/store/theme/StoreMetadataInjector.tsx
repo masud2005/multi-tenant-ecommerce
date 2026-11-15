@@ -44,6 +44,190 @@ export function updateFaviconInDOM(url?: string | null) {
   appleLink.href = cacheBustedUrl;
 }
 
+function resolveStorefrontPageTitle(pathname: string): string {
+  const clean = pathname.replace(/\/+$/, '') || '/';
+
+  // 1. Static Storefront & Auth Routes
+  const staticTitles: Record<string, string> = {
+    '/': 'Home',
+    '/shop': 'Shop All',
+    '/search': 'Search Results',
+    '/cart': 'Cart',
+    '/checkout': 'Checkout',
+    '/collections': 'Collections',
+    '/about': 'About Us',
+    '/contact': 'Contact Us',
+    '/faq': 'FAQ',
+    '/track': 'Track Order',
+    '/wishlist': 'Wishlist',
+    '/login': 'Sign In',
+    '/register': 'Create Account',
+    '/forgot-password': 'Reset Password',
+    '/reset-password': 'Set New Password',
+    '/verify': 'Verify Account',
+    '/staff/accept-invite': 'Staff Invitation',
+    // Customer account routes
+    '/account': 'My Account',
+    '/account/orders': 'My Orders',
+    '/account/addresses': 'My Addresses',
+    '/account/profile': 'My Profile',
+    '/account/returns': 'Returns & Exchanges',
+    '/account/reviews': 'My Reviews',
+    '/account/security': 'Account Security',
+    '/account/support': 'Help & Support',
+  };
+
+  if (staticTitles[clean]) {
+    return staticTitles[clean];
+  }
+
+  // 2. Customer Account Order Dynamic Routes
+  if (clean.startsWith('/account/orders/')) {
+    if (clean.endsWith('/return')) {
+      return 'Request Return';
+    }
+    const orderNo = clean.split('/')[3];
+    return orderNo ? `Order #${orderNo}` : 'Order Details';
+  }
+
+  // 3. Products: /products/[slug]
+  if (clean.startsWith('/products/')) {
+    const slug = clean.replace(/^\/products\//, '');
+    if (slug) {
+      return slug
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+    return 'Product Details';
+  }
+
+  // 4. Collections: /collections/[slug]
+  if (clean.startsWith('/collections/')) {
+    const slug = clean.replace(/^\/collections\//, '');
+    if (slug) {
+      const name = slug
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+      return `${name} Collection`;
+    }
+    return 'Collections';
+  }
+
+  // 5. Brands: /brands/[slug]
+  if (clean.startsWith('/brands/')) {
+    const slug = clean.replace(/^\/brands\//, '');
+    if (slug) {
+      return slug
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+    return 'Brands';
+  }
+
+  // 6. Category: /category/[slug]
+  if (clean.startsWith('/category/')) {
+    const slug = clean.replace(/^\/category\//, '');
+    if (slug) {
+      return slug
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+    }
+    return 'Category';
+  }
+
+  // 7. Policies: /policies/[slug]
+  if (clean.startsWith('/policies/')) {
+    const slug = clean.replace(/^\/policies\//, '');
+    const policyMap: Record<string, string> = {
+      shipping: 'Shipping Policy',
+      returns: 'Returns & Exchange Policy',
+      privacy: 'Privacy Policy',
+      terms: 'Terms of Service',
+      cookies: 'Cookie Policy',
+    };
+    if (policyMap[slug.toLowerCase()]) {
+      return policyMap[slug.toLowerCase()];
+    }
+    if (slug) {
+      return `${slug
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ')} Policy`;
+    }
+    return 'Policy';
+  }
+
+  // 8. Order confirmation & payment
+  if (clean.startsWith('/order-confirmation')) {
+    return 'Order Confirmation';
+  }
+  if (clean.startsWith('/pay')) {
+    return 'Complete Payment';
+  }
+
+  // 9. Fallback from last URL segment
+  const lastSegment = clean.split('/').filter(Boolean).pop();
+  if (lastSegment) {
+    return lastSegment
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  return 'Home';
+}
+
+function resolveAdminPageTitle(pathname: string): string {
+  const subpath = pathname.replace(/^\/admin\/?/, '').replace(/\/+$/, '');
+  if (!subpath) return 'Dashboard';
+
+  const adminMap: Record<string, string> = {
+    analytics: 'Analytics',
+    audit: 'Audit Logs',
+    brands: 'Brands',
+    categories: 'Categories',
+    'categories/new': 'New Category',
+    collections: 'Collections',
+    content: 'Content',
+    customers: 'Customers',
+    discounts: 'Discounts',
+    inventory: 'Inventory',
+    media: 'Media',
+    messages: 'Messages',
+    notifications: 'Notifications',
+    orders: 'Orders',
+    payments: 'Payments',
+    products: 'Products',
+    'products/new': 'New Product',
+    'products/import': 'Import Products',
+    reports: 'Reports',
+    returns: 'Returns',
+    reviews: 'Reviews',
+    settings: 'Settings',
+    shipping: 'Shipping',
+    staff: 'Staff',
+    theme: 'Theme Editor',
+  };
+
+  if (adminMap[subpath]) {
+    return adminMap[subpath];
+  }
+
+  if (subpath.startsWith('orders/')) return 'Order Details';
+  if (subpath.startsWith('products/')) return 'Product Details';
+
+  const firstSeg = subpath.split('/')[0];
+  return (
+    adminMap[firstSeg] ||
+    firstSeg
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
 export function StoreMetadataInjector() {
   const { tenant } = useTenant();
   const pathname = usePathname();
@@ -76,13 +260,7 @@ export function StoreMetadataInjector() {
 
     // 2a. Admin dashboard routes (e.g. /admin/settings -> Settings · Big Deshi Admin)
     if (pathname.startsWith('/admin')) {
-      const subpath = pathname.replace(/^\/admin\/?/, '');
-      const pageLabel = subpath
-        ? subpath
-            .split('/')[0]
-            .replace(/-/g, ' ')
-            .replace(/\b\w/g, (c) => c.toUpperCase())
-        : 'Dashboard';
+      const pageLabel = resolveAdminPageTitle(pathname);
       const adminBrand = storeName || brand;
       document.title = adminBrand
         ? `${pageLabel} · ${adminBrand} Admin`
@@ -117,24 +295,10 @@ export function StoreMetadataInjector() {
       return;
     }
 
-    // 2c. Other storefront & auth routes (Shop, Collections, Cart, Product, Login, etc.)
-    if (brand) {
-      let current = document.title || '';
-      // Strip any legacy static brand suffixes
-      current = current
-        .replace(/\s*\|\s*Tanti(?:\s+Lifestyle|\s+Brand\s+Showcase)?/gi, '')
-        .replace(/\s*\|\s*Multi-Tenant\s+E-Commerce/gi, '')
-        .replace(/\s*·\s*Multi-Tenant\s+E-Commerce/gi, '')
-        .trim();
-
-      if (current.includes('|')) {
-        const parts = current.split('|');
-        const pagePart = parts[0].trim();
-        document.title = pagePart ? `${pagePart} | ${brand}` : brand;
-      } else if (current) {
-        document.title = `${current} | ${brand}`;
-      }
-    }
+    // 2c. All other Storefront & Auth routes
+    const pageLabel = resolveStorefrontPageTitle(pathname);
+    const storefrontBrand = brand || 'Store';
+    document.title = `${pageLabel} | ${storefrontBrand}`;
   }, [tenant.name, tenant.tagline, tenant.settings, pathname]);
 
   return null;

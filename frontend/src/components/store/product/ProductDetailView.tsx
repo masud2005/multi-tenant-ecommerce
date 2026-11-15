@@ -79,11 +79,19 @@ export function ProductDetailView({ slug }: { slug: string }) {
     trackView,
     recentlyViewed,
   } = useStore();
-  const { shipping } = useTenant();
+  const { shipping, tenant } = useTenant();
+  const storeName = tenant.name?.trim() || '';
 
   const product = products.find(
     (p) => p.slug === slug && p.status === 'published'
   );
+
+  useEffect(() => {
+    if (product?.title && typeof document !== 'undefined') {
+      const brand = storeName || 'Store';
+      document.title = `${product.title} | ${brand}`;
+    }
+  }, [product?.title, storeName]);
   const [image, setImage] = useState(0);
   const [color, setColor] = useState('');
   const [size, setSize] = useState<string | null>(null);
