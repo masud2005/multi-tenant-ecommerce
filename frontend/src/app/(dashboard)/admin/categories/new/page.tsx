@@ -212,14 +212,13 @@ export default function AdminNewCategoryPage() {
                 <div>
                   <Input
                     label="URL handle (Slug)"
-                    prefix="/shop?category="
                     placeholder="traditional-wear"
                     value={slug}
                     onChange={(e) => {
                       setSlug(slugify(e.target.value));
                       setSlugManuallyEdited(true);
                     }}
-                    hint="The unique web URL for this category on the storefront"
+                    hint="Storefront link: /shop?category=<slug>"
                   />
                 </div>
                 <Textarea

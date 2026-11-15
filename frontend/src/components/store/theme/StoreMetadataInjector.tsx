@@ -6,42 +6,37 @@ import { useTenant } from '@/contexts/TenantContext';
 
 export function updateFaviconInDOM(url?: string | null) {
   if (typeof document === 'undefined') return;
-  if (!url || !url.trim()) return;
 
-  const secureUrl = url.trim().replace(/^http:\/\//i, 'https://');
-  const cacheBustedUrl = `${secureUrl}${secureUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+  const targetUrl =
+    url && url.trim()
+      ? url.trim().replace(/^http:\/\//i, 'https://')
+      : '/api/favicon';
+  const cacheBustedUrl = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
 
-  // Find or create primary icon link
-  let iconLink = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-  if (!iconLink) {
-    iconLink = document.createElement('link');
-    iconLink.rel = 'icon';
-    document.head.appendChild(iconLink);
-  }
-  iconLink.type = 'image/png';
+  // 1. Remove all existing icon links to prevent duplicate, stale or 404 links
+  const existing = document.querySelectorAll<HTMLLinkElement>(
+    "link[rel='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']"
+  );
+  existing.forEach((el) => el.remove());
+
+  // 2. Insert fresh primary icon link
+  const iconLink = document.createElement('link');
+  iconLink.rel = 'icon';
+  iconLink.type = targetUrl.endsWith('.svg') ? 'image/svg+xml' : 'image/png';
   iconLink.href = cacheBustedUrl;
+  document.head.appendChild(iconLink);
 
-  // Shortcut icon
-  let shortcutLink = document.querySelector<HTMLLinkElement>(
-    "link[rel='shortcut icon']"
-  );
-  if (!shortcutLink) {
-    shortcutLink = document.createElement('link');
-    shortcutLink.rel = 'shortcut icon';
-    document.head.appendChild(shortcutLink);
-  }
+  // 3. Insert fresh shortcut icon link
+  const shortcutLink = document.createElement('link');
+  shortcutLink.rel = 'shortcut icon';
   shortcutLink.href = cacheBustedUrl;
+  document.head.appendChild(shortcutLink);
 
-  // Apple touch icon
-  let appleLink = document.querySelector<HTMLLinkElement>(
-    "link[rel='apple-touch-icon']"
-  );
-  if (!appleLink) {
-    appleLink = document.createElement('link');
-    appleLink.rel = 'apple-touch-icon';
-    document.head.appendChild(appleLink);
-  }
+  // 4. Insert fresh apple-touch-icon link
+  const appleLink = document.createElement('link');
+  appleLink.rel = 'apple-touch-icon';
   appleLink.href = cacheBustedUrl;
+  document.head.appendChild(appleLink);
 }
 
 function resolveStorefrontPageTitle(pathname: string): string {
@@ -234,9 +229,7 @@ export function StoreMetadataInjector() {
 
   // 1. Dynamic Favicon injection on tenant change AND route change
   useEffect(() => {
-    if (tenant.faviconUrl) {
-      updateFaviconInDOM(tenant.faviconUrl);
-    }
+    updateFaviconInDOM(tenant.faviconUrl);
   }, [tenant.faviconUrl, pathname]);
 
   // 2. Dynamic Title & Description injection

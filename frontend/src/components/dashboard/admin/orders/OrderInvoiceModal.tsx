@@ -77,7 +77,7 @@ export function OrderInvoiceModal({ open, onClose, order, tenant }: OrderInvoice
         </div>
 
         <div className="rounded-lg border border-line bg-surface p-5 text-ink space-y-5 shadow-xs">
-          <div className="flex items-start justify-between border-b border-line pb-4 gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between border-b border-line pb-4 gap-3 sm:gap-4">
             <div>
               {store.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -99,7 +99,7 @@ export function OrderInvoiceModal({ open, onClose, order, tenant }: OrderInvoice
                 <p className="text-xs text-ink-soft mt-0.5">{channelLine}</p>
               ) : null}
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right shrink-0">
               <span className="inline-block rounded bg-subtle px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-ink">
                 Tax Invoice / চালান
               </span>

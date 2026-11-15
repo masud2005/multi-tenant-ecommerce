@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const inter = localFont({
   src: "../fonts/inter-latin.woff2",
   variable: "--font-sans",
@@ -63,15 +66,14 @@ export async function generateMetadata(): Promise<Metadata> {
     description: metaDescription || undefined,
     icons: faviconUrl
       ? {
-          icon: [
-            { url: faviconUrl, type: 'image/png' },
-            { url: '/favicon.ico' },
-          ],
+          icon: [{ url: faviconUrl, type: 'image/png' }],
           shortcut: faviconUrl,
           apple: faviconUrl,
         }
       : {
-          icon: '/favicon.ico',
+          icon: '/api/favicon',
+          shortcut: '/api/favicon',
+          apple: '/api/favicon',
         },
   };
 }

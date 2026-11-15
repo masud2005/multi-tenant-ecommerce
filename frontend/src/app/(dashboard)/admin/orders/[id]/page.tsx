@@ -387,7 +387,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden /> Refresh
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setInvoiceOpen(true)} className="cursor-pointer">
-              <Printer className="h-4 w-4" aria-hidden /> Print Cash Memo / Invoice
+              <Printer className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Print Cash Memo / Invoice</span>
+              <span className="sm:hidden">Invoice</span>
             </Button>
             {isPaid && can('payments', 'refund') && refundable > 0 && (
               <GuardedButton
@@ -439,21 +441,21 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <Panel title={`Items (${order.items.reduce((s, i) => s + i.qty, 0)})`}>
             <div className="divide-y divide-line">
               {order.items.map((i, idx) => (
-                <div key={i.variantId || idx} className="flex items-center gap-4 py-3">
+                <div key={i.variantId || idx} className="flex items-center gap-3 sm:gap-4 py-3">
                   {i.image ? (
-                    <img src={i.image} alt={i.title} className="h-14 w-11 rounded object-cover border border-line" />
+                    <img src={i.image} alt={i.title} className="h-12 w-10 sm:h-14 sm:w-11 shrink-0 rounded object-cover border border-line" />
                   ) : (
-                    <div className="h-14 w-11 rounded bg-canvas border border-line flex items-center justify-center text-xs text-ink-muted">
+                    <div className="h-12 w-10 sm:h-14 sm:w-11 shrink-0 rounded bg-canvas border border-line flex items-center justify-center text-[10px] text-ink-muted">
                       No img
                     </div>
                   )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-ink">{i.title}</p>
-                    <p className="text-xs text-ink-muted">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <p className="text-sm font-medium text-ink break-words line-clamp-2">{i.title}</p>
+                    <p className="text-xs text-ink-muted truncate">
                       {(i.color || i.size) ? `${i.color || ''} ${i.size ? `/ ${i.size}` : ''} · ` : ''}SKU: {i.sku || 'N/A'}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="text-sm font-medium text-ink tabular-nums">{formatBDT(i.price * i.qty)}</p>
                     <p className="text-xs text-ink-muted tabular-nums">
                       {i.qty} × {formatBDT(i.price)}
@@ -519,14 +521,14 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
                   return (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-canvas rounded-md p-3 border border-line">
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-ink-muted block mb-0.5">Customer Sender Number:</span>
-                        <span className="font-mono font-medium text-ink text-sm">{senderPhone}</span>
+                        <span className="font-mono font-medium text-ink text-sm break-all">{senderPhone}</span>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-ink-muted block mb-0.5">Transaction ID (TrxID):</span>
                         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                          <span className="font-mono font-bold text-ink text-sm bg-subtle px-1.5 py-0.5 rounded">
+                          <span className="font-mono font-bold text-ink text-sm bg-subtle px-1.5 py-0.5 rounded break-all">
                             {trxId}
                           </span>
                           {trxId !== 'Not provided' && (
@@ -536,7 +538,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                                 navigator.clipboard.writeText(trxId);
                                 toast.success('Transaction ID copied to clipboard');
                               }}
-                              className="text-ink-muted hover:text-ink cursor-pointer"
+                              className="text-ink-muted hover:text-ink cursor-pointer shrink-0"
                               title="Copy TrxID"
                             >
                               <Copy className="h-3.5 w-3.5" />
@@ -550,13 +552,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
                 {/* Owner manual payment action buttons */}
                 {canUpdate && order.paymentStatus !== 'paid' && (
-                  <div className="pt-2 flex flex-wrap items-center gap-2 justify-end">
+                  <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 justify-end">
                     <Button
                       size="sm"
                       variant="secondary"
                       onClick={() => setRejectOpen(true)}
                       disabled={isVerifyingPayment || isUpdating}
-                      className="cursor-pointer text-danger hover:bg-danger/10 border-danger/20"
+                      className="cursor-pointer text-danger hover:bg-danger/10 border-danger/20 w-full sm:w-auto justify-center"
                     >
                       <XCircle className="h-3.5 w-3.5 mr-1" />
                       Reject Payment
@@ -570,7 +572,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                         )
                       }
                       disabled={isVerifyingPayment || isUpdating}
-                      className="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto justify-center"
                     >
                       {isVerifyingPayment ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
@@ -643,18 +645,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* Timeline & Notes */}
           <Panel title="Timeline & notes">
-            <div className="mb-4 flex gap-2">
+            <div className="mb-4 flex flex-col sm:flex-row gap-2">
               <input
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Add a staff note…"
-                className="h-9 flex-1 rounded-md border border-line bg-canvas px-3 text-sm text-ink placeholder:text-ink-muted focus:border-clay focus:outline-none"
+                className="h-9 min-w-0 flex-1 rounded-md border border-line bg-canvas px-3 text-sm text-ink placeholder:text-ink-muted focus:border-clay focus:outline-none"
               />
               <Button
                 size="sm"
                 onClick={handleAddNote}
                 disabled={isAddingNote || !note.trim()}
-                className="cursor-pointer"
+                className="cursor-pointer w-full sm:w-auto justify-center"
               >
                 {isAddingNote ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 Add note

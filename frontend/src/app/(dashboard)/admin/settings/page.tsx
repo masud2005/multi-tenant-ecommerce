@@ -392,7 +392,7 @@ export default function AdminSettingsPage() {
         setIsFaviconRemoving(true);
         await storeService.removeOwnerFavicon();
         setStoreForm((prev) => ({ ...prev, favicon: '' }));
-        updateFaviconInDOM('/favicon.ico');
+        updateFaviconInDOM(null);
         await refetchTenant();
         toast.success('Favicon removed — default platform icon will show');
       } catch (err: unknown) {

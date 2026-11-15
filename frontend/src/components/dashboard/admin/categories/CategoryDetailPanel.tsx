@@ -625,7 +625,7 @@ export function CategoryDetailPanel({
           <div className="grid gap-6 sm:grid-cols-[160px_1fr] items-start">
             {/* Media column */}
             <div className="space-y-2">
-              <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[6px] border border-line bg-subtle shadow-2xs">
+              <div className="relative aspect-[3/4] w-full max-w-[160px] mx-auto sm:mx-0 overflow-hidden rounded-[6px] border border-line bg-subtle shadow-2xs">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
@@ -757,7 +757,7 @@ export function CategoryDetailPanel({
                   Close
                 </button>
               </div>
-              <div className="grid grid-cols-4 sm:grid-cols-9 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-9 gap-2">
                 {sampleImages.map((s) => (
                   <button
                     key={s.label}
