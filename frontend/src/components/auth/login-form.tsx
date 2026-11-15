@@ -113,7 +113,7 @@ function LoginFormContent() {
         </Button>
       </form>
 
-      {/* Demo Credentials Helper */}
+      {/* Demo Credentials Helper (Temporarily commented out)
       <div className="mt-6 rounded-lg border border-line bg-surface p-3.5 text-xs">
         <div className="flex items-center justify-between">
           <span className="font-semibold text-ink">Demo Accounts:</span>
@@ -146,6 +146,7 @@ function LoginFormContent() {
           </button>
         </div>
       </div>
+      */}
     </>
   );
 }
